@@ -2,11 +2,15 @@ name: Renovate
 
 # Renovate CLI（セルフホスト）で実行する。
 # CLI は常駐せず webhook も受けないため、PR が作られるのはこのワークフローが
-# 走ったときだけ。cron の間隔がそのまま更新PRの頻度になる。
+# 走ったときだけ。cron の間隔がそのまま更新を確認する頻度になる。
+#
+# 更新の早い AI ツールを毎日取り込むため毎日実行する。AI ツール以外の更新PRを作る曜日は
+# renovate.json5 の schedule で火曜に限定している（このワークフローを手動実行しても、
+# 火曜以外は AI ツールと脆弱性修正以外の新しいPRは作られない）。
 on:
   schedule:
-    # 毎週月曜 21:00 UTC = 火曜 06:00 JST
-    - cron: '0 21 * * 1'
+    # 毎日 21:00 UTC = 06:00 JST
+    - cron: '0 21 * * *'
   workflow_dispatch:
     inputs:
       dryRun:

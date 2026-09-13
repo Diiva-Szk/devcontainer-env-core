@@ -112,7 +112,7 @@ CLI ツールと言語ランタイム（Python / Node.js）は [mise](https://mi
 
 ```mermaid
 flowchart TD
-    cron["⏰ schedule (毎週火 06:00 JST)"] --> renovate
+    cron["⏰ schedule (毎日 06:00 JST)"] --> renovate
 
     subgraph renovate_wf["renovate.yml"]
         renovate["Renovate 実行<br/>(GitHub App token で PR 作成)"]
@@ -133,6 +133,7 @@ flowchart TD
 ```
 
 - **Renovate が起点:** `GITHUB_TOKEN` 発の push は他ワークフローを起動しないため、GitHub App のトークンで PR を作ります。これにより生成された PR が下流の CI を起動できます。
+- **実行間隔:** `renovate.yml` は毎日 06:00 JST に実行します。新しい更新 PR を作るのは、AI ツールは毎日、それ以外は火曜のみです（[更新のタイミング](#更新のタイミング)）。
 - **lock → build の連鎖:** mise は `locked = true` のため、`config.toml` だけ更新すると `mise.lock` と不一致になりビルドが失敗します。Renovate には lock を更新させず（`skipArtifactsUpdate`）、`update-mise-lock` が PR ブランチへ lock を push します。push は GitHub App のトークンで行うため、その push が改めて `build-images` を起こします。push したコミットは `gitIgnoredAuthors` により Renovate から「人の編集」とみなされません。
 - **validate → publish:** `publish` は `needs: validate` かつ `if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'` です。PR ではパース検証のみ行い、`main` からのみ GHCR へ publish します（手動実行で別ブランチを選んでも publish しません）。
 - **version bump との連動:** Feature の `version` を上げないと `publish` は何も配信しません。Renovate の `postUpgradeTasks` が `scripts/bump-feature-version.sh` で patch を上げます。手作業で Feature を変更した場合は `version` を上げてください。
@@ -146,9 +147,23 @@ flowchart TD
 
 ## Renovate
 
+### 更新のタイミング
+
+| 対象 | 新しい PR を作る曜日（`schedule`） | 待機期間（`minimumReleaseAge`） |
+| --- | --- | --- |
+| AI ツール（`docker-images/ai/opt/mise/config.toml`） | 毎日 | 1日（Kiro CLI はなし） |
+| VS Code 拡張機能（`devcontainer-features/`） | 火曜 | 14日 |
+| その他（Docker イメージ・mise の他のツール・Node.js・npm・PyPI など） | 火曜 | 7日 |
+| 脆弱性修正（`vulnerabilityAlerts`） | 毎日（Renovate の既定で `schedule` の制限を受けない） | なし |
+
+- `renovate.yml` は毎日実行し、`renovate.json5` の `schedule`（`* 0-11 * * 2` = 火曜 0〜11時 JST）で AI ツール以外の PR 作成を火曜に限定しています。GitHub Actions のスケジュール実行は遅れることがあるため、枠を広めに取っています。
+- `schedule` は新しいブランチ・PR の作成を制限するもので、既存 PR のリベースなどは時間外でも行われます。
+- `renovate.yml` を手動実行しても、火曜以外は AI ツールと脆弱性修正以外の新しい PR は作られません。
+- AI ツールのルールは、Kiro CLI の `minimumReleaseAge: null` より前に置いています。packageRules は後のルールが優先されるため、順序を入れ替えると Kiro にも待機期間が適用され、リリース日時の無い Kiro の更新が永久に pending になります。
+
 ### 待機期間 (minimumReleaseAge)
 
-公開直後の版は取り込まず、Docker イメージ・GitHub のリリース/タグ・Node.js・npm・PyPI は7日、VS Code 拡張機能は14日待ってから PR を作ります。`internalChecksFilter: strict` のため、待機中は PR を作らず Dependency Dashboard に表示されます。
+公開直後の版は取り込まず、上表の待機期間を経た版だけを PR にします。`internalChecksFilter: strict` のため、待機中は PR を作らず Dependency Dashboard に表示されます。
 
 待機期間はリリース日時を取得できるデータソースでしか機能しません。Renovate 42 以降の既定（`minimumReleaseAgeBehaviour: timestamp-required`）では、リリース日時が取れない版は **永久に pending** になり、既存の PR ブランチも更新されなくなります。新しい依存を追加する際は、データソースがリリース日時を返すことを確認してください。
 

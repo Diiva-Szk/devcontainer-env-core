@@ -34,6 +34,14 @@
   // 403 になる前にページングを止めている（dockerMaxPages はセルフホスト専用設定のため
   // ここには書けない）。
   internalChecksFilter: 'strict',
+  // 更新PRを作る曜日を火曜に限定する（renovate.yml は毎日 06:00 JST に実行される）。
+  // 更新の早い AI ツールは packageRules で毎日に上書きしている。
+  // 脆弱性修正（vulnerabilityAlerts）は Renovate の既定で schedule の制限を受けない。
+  // 既存のPRのリベース等は schedule の時間外でも行われる（updateNotScheduled の既定）。
+  // 分の指定は Renovate が対応していないため * にする。
+  schedule: [
+    '* 0-11 * * 2',
+  ],
   // update-mise-lock ワークフローが Renovate のPRブランチへ mise.lock を push する。
   // そのコミットを「人による編集」とみなされると Renovate がPRの更新を止めるため無視させる。
   gitIgnoredAuthors: [
@@ -150,6 +158,21 @@
         'pypi',
       ],
       minimumReleaseAge: '7 days',
+    },
+    {
+      // AI ツール（ai コンテナの mise 設定）は更新が早いため、毎日チェックし待機期間を1日にする。
+      // 公開直後に取り下げられた版は避けつつ、数日おきのリリースに追従する。
+      //
+      // 【順序に注意】packageRules は後のルールが優先される。このルールは Kiro CLI の
+      // minimumReleaseAge: null より前に置くこと。後ろに置くと Kiro にも '1 day' が適用され、
+      // リリース日時の無い Kiro の更新が永久に pending になる。
+      matchFileNames: [
+        'docker-images/ai/opt/mise/config.toml',
+      ],
+      schedule: [
+        'at any time',
+      ],
+      minimumReleaseAge: '1 day',
     },
     {
       // 拡張機能は全プロジェクトのエディタへ配信されるため、より長く寝かせる。
