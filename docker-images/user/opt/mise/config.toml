@@ -1,0 +1,21 @@
+# mise - user 専用ツール設定
+# イメージ内では /opt/mise/config.toml に root 所有で配置し、
+# MISE_GLOBAL_CONFIG_FILE で global スコープとして読み込ませる。
+# （dev-base の /etc/mise/config.toml と合成される）
+#
+# 【重要】ツールを追加・更新したら同じディレクトリの mise.lock も更新すること。
+#   bash scripts/update-mise-locks.sh
+# （mise lock 単体ではチェックサムが欠ける成果物があるため、スクリプト経由で実行する）
+
+[settings]
+# ワークスペースは ai コンテナと共有しているため、ai 側がワークスペースの mise.toml に
+# 任意のツール（http backend の任意 URL 等）を書き込めてしまう。user は sudo と
+# docker.sock を持つため、未確認の設定を黙って読み込まないよう trust を必須にする。
+# ワークスペースに mise.toml を置いた場合は、内容を確認してから `mise trust` すること。
+paranoid = true
+
+[tools]
+# docker.sock 経由で ai コンテナを操作するための Docker CLI。
+"aqua:docker/cli" = "27.3.1"
+# docker compose をスタンドアロンで使う場合は docker/compose を追加する
+# （plugin配置が別途必要な点に注意）。

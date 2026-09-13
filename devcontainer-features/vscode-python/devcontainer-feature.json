@@ -1,0 +1,26 @@
+{
+    "id": "vscode-python",
+    "version": "1.0.1",
+    "name": "VS Code Python extensions",
+    "description": "Python開発用のVS Code拡張機能を追加します。許可リスト(extensions.allowed)は vscode-common Feature が提供するため、必ず併用してください。",
+    "documentationURL": "https://github.com/Diiva-Szk/devcontainer-env-core/tree/main/devcontainer-features/vscode-python",
+    "installsAfter": [
+        "ghcr.io/diiva-szk/devcontainer-env-core/vscode-common"
+    ],
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                // renovate: datasource=github-releases depName=Microsoft/vscode-python
+                "ms-python.python@2026.4.0",
+                // renovate: datasource=github-releases depName=microsoft/vscode-python-debugger
+                "ms-python.debugpy@2025.18.0",
+                // Renovate対象外: ghリリースなし
+                "wholroyd.jinja@0.0.8",
+                // renovate: datasource=github-releases depName=kbrose/vsc-python-indent
+                "kevinrose.vsc-python-indent@1.21.0",
+                // renovate: datasource=github-releases depName=NilsJPWerner/autoDocstring
+                "njpwerner.autodocstring@0.6.1"
+            ]
+        }
+    }
+}

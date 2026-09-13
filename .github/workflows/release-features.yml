@@ -1,0 +1,99 @@
+name: Release features
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'devcontainer-features/**'
+      - '.github/tools/devcontainer-cli/**'
+      - '.github/workflows/release-features.yml'
+  pull_request:
+    paths:
+      - 'devcontainer-features/**'
+      - '.github/tools/devcontainer-cli/**'
+      - '.github/workflows/release-features.yml'
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  # devcontainer-feature.json は jsonc として解釈されるが、publish 前に
+  # パースとパッケージングが通ることを確認しておく。
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+
+      # Dev Containers CLI は package-lock.json の integrity で固定したものを使う
+      # （npx や npm install -g はバージョン・内容を固定できないため使わない）。
+      - name: Install Dev Containers CLI
+        working-directory: .github/tools/devcontainer-cli
+        run: |
+          npm ci --ignore-scripts
+          echo "$PWD/node_modules/.bin" >> "$GITHUB_PATH"
+
+      - name: Package features (parse check)
+        run: |
+          devcontainer --version
+          devcontainer features package \
+            --force-clean-output-folder \
+            -o /tmp/features-out \
+            ./devcontainer-features
+
+  publish:
+    # publish は main からのみ行う。PR ではパースの検証だけ行う。
+    # workflow_dispatch は実行対象のブランチ・タグを選べるため、ref も main に限定する
+    # （未レビューのブランチから packages: write で公開させない）。
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # リポジトリ設定で Environment「release」に、main ブランチ限定と必須レビュアーの
+    # 保護ルールを設定すること（未設定の場合は保護なしの Environment として自動作成される）。
+    environment: release
+    # 同時に複数の publish が走り、同じバージョンの公開が競合しないようにする
+    concurrency:
+      group: release-features
+      cancel-in-progress: false
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+
+      # devcontainers/action は PATH 上に devcontainer コマンドがあればそれを使い、
+      # 無ければ npm install -g で取得する（既定は最新版）。
+      # packages: write のトークンがある状態で未固定の CLI を取得させないよう、
+      # lockfile で固定した CLI を事前に導入しておく。
+      - name: Install Dev Containers CLI
+        id: cli
+        working-directory: .github/tools/devcontainer-cli
+        run: |
+          npm ci --ignore-scripts
+          echo "$PWD/node_modules/.bin" >> "$GITHUB_PATH"
+          echo "version=$(jq -r '.dependencies["@devcontainers/cli"]' package.json)" >> "$GITHUB_OUTPUT"
+
+      # 各 Feature は devcontainer-feature.json の "version" を元に
+      # ghcr.io/<owner>/<repo>/<feature-id> へ publish される。
+      # version を上げないと既存タグは再発行されない（何も起きない）点に注意。
+      - name: Publish features to GHCR
+        uses: devcontainers/action@1082abd5d2bf3a11abccba70eef98df068277772 # v1.4.3
+        with:
+          publish-features: 'true'
+          base-path-to-features: './devcontainer-features'
+          # 事前導入した CLI が検出されなかった場合の取得バージョンも固定する
+          devcontainer-cli-version: ${{ steps.cli.outputs.version }}
+          # リポジトリタグは作らない（contents: read のため作成できず、運用上も不要）
+          disable-repo-tagging: 'true'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

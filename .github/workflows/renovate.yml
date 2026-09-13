@@ -1,0 +1,101 @@
+name: Renovate
+
+# Renovate CLI（セルフホスト）で実行する。
+# CLI は常駐せず webhook も受けないため、PR が作られるのはこのワークフローが
+# 走ったときだけ。cron の間隔がそのまま更新PRの頻度になる。
+on:
+  schedule:
+    # 毎週月曜 21:00 UTC = 火曜 06:00 JST
+    - cron: '0 21 * * 1'
+  workflow_dispatch:
+    inputs:
+      dryRun:
+        description: 'PRを作らず実行内容だけ確認する'
+        type: boolean
+        default: false
+      logLevel:
+        description: 'ログレベル'
+        type: choice
+        options:
+          - info
+          - debug
+        default: info
+
+concurrency:
+  group: renovate
+  cancel-in-progress: false
+
+# Renovate は GitHub App のトークンで動くため、GITHUB_TOKEN の権限は不要
+permissions: {}
+
+jobs:
+  renovate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      # Renovate 本体のコンテナイメージ（バージョン + digest で固定する）。
+      # Action 自体を SHA 固定しても、既定では可変タグ（ghcr.io/renovatebot/renovate:43 等）の
+      # コンテナが実行される。このコンテナには強い App トークンが渡るため、タグの差し替えや
+      # リリース侵害の影響を受けないよう digest で固定する。
+      #
+      # Action は `<renovate-image>:<renovate-version>` を連結して使うため、digest はバージョン側に付ける。
+      # Renovate の組み込み追跡はこの形式を扱えないため、renovate.json5 の customManagers で追跡する。
+      # イメージは GHCR ではなく Docker Hub を使う（同じ発行元）。GHCR はリリース日時を取得できず、
+      # minimumReleaseAge が永久に pending になるため。
+      # 名前を RENOVATE_ で始めないこと（Renovate コンテナへ設定として渡されてしまう）。
+      # renovate: datasource=docker depName=renovate/renovate
+      CLI_IMAGE_TAG: '44.65.5@sha256:4e10f76a79f1c597f427f83c788a9f5b14a6295784c4cb68307b89b0a954abce'
+    steps:
+      # GitHub App のインストールトークンを発行する。
+      # GITHUB_TOKEN による push は他のワークフローを起動しないため、
+      # そのままでは Renovate のPRをマージしても release-features.yml が走らない。
+      # App のトークンは GITHUB_TOKEN ではないためこの制約を受けない。
+      #
+      # permission-* を指定しないと、トークンは App installation の全権限を継承する。
+      # Renovate に必要な権限だけに絞る（いずれも App 側に付与されている必要がある）:
+      #   Contents / Issues / Pull requests / Checks / Commit statuses : read+write
+      #   Workflows : read+write （アクションのSHA固定を更新するために必須）
+      #   Dependabot alerts : read （renovate.json5 の vulnerabilityAlerts で脆弱性アラートを読むため）
+      # Metadata:read は常に付与される。
+      # vulnerabilityAlerts には、リポジトリ側で Dependency graph と Dependabot alerts の有効化も必要。
+      - name: Generate GitHub App token
+        id: app-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          client-id: ${{ secrets.RENOVATE_APP_CLIENT_ID }}
+          private-key: ${{ secrets.RENOVATE_APP_PRIVATE_KEY }}
+          permission-contents: write
+          permission-issues: write
+          permission-pull-requests: write
+          permission-checks: write
+          permission-statuses: write
+          permission-workflows: write
+          permission-vulnerability-alerts: read
+
+      # Renovate は自身でリポジトリを clone するため actions/checkout は不要。
+      # postUpgradeTasks が参照する scripts/ も、その clone 側のものが使われる。
+      - name: Run Renovate
+        uses: renovatebot/github-action@3064367f740a1a91cca218698a63902689cce200 # v46.1.20
+        with:
+          token: ${{ steps.app-token.outputs.token }}
+          renovate-image: renovate/renovate
+          renovate-version: ${{ env.CLI_IMAGE_TAG }}
+        env:
+          RENOVATE_REPOSITORIES: ${{ github.repository }}
+          RENOVATE_AUTODISCOVER: 'false'
+          RENOVATE_DRY_RUN: ${{ inputs.dryRun == true && 'full' || null }}
+          LOG_LEVEL: ${{ inputs.logLevel || 'info' }}
+
+          # postUpgradeTasks の commands はここで許可したものだけが実行される。
+          # allowedCommands はセルフホスト専用設定のため renovate.json5 には書けない。
+          # 未設定だとエラーにならず黙ってスキップされるので、変更時は要注意。
+          # 正規表現は解決後のコマンド文字列と完全一致させる。
+          RENOVATE_ALLOWED_COMMANDS: '["^bash scripts/bump-feature-version[.]sh$"]'
+
+          # Docker Hub のタグ一覧APIは匿名だと10ページ(1000件)までしか返さず、
+          # それを超えると 403 になる。library/debian は約3000タグあるため 403 となり、
+          # Renovate がリリース日時の取れないAPIへフォールバックする。すると
+          # minimumReleaseAge（timestamp-required）を永久に満たせず、PRが pending のまま
+          # 更新されなくなる。403 になる前にページングを止めてリリース日時を取得させる。
+          # （一覧は更新日時の新しい順のため、更新候補となる新しいタグは先頭側に含まれる）
+          RENOVATE_DOCKER_MAX_PAGES: '10'

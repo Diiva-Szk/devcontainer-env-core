@@ -1,0 +1,16 @@
+# Codex CLI 設定
+# https://learn.chatgpt.com/docs/config-reference
+#
+# ai コンテナは sudo なし / AWS認証情報なし / docker.sock なし で隔離してあるため、
+# コンテナ内部での確認プロンプトとサンドボックスを省き、エージェントを止めずに動かす。
+# ※ この前提が崩れる場所（user ステージやホスト）へ持ち出さないこと。
+
+# 最新かつ最も高性能なモデルに固定する。
+# 未指定だと CLI 既定（推奨モデル）に追従するため、再現性が要るならここを明示する。
+model = "gpt-5.6-sol"
+
+# コマンド実行前の承認を求めない（外部で隔離済みの環境を前提とする設定）
+approval_policy = "never"
+
+# ファイルシステム・ネットワークの制限を解除する
+sandbox_mode = "danger-full-access"

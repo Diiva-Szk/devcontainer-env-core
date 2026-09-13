@@ -1,0 +1,8 @@
+{
+  "name": "renovate-cli",
+  "private": true,
+  "description": "user イメージに入れる Renovate CLI（ローカル確認用）。package-lock.json の integrity で固定し npm ci で導入する。",
+  "dependencies": {
+    "renovate": "44.65.5"
+  }
+}

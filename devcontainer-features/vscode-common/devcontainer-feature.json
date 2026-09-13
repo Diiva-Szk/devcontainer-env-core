@@ -1,0 +1,161 @@
+{
+    "id": "vscode-common",
+    "version": "1.0.1",
+    "name": "VS Code Common (shared settings, extensions & allowlist)",
+    "description": "共通のVS Code設定・拡張機能と、当リポジトリが管理する全拡張機能の許可リスト(extensions.allowed)を提供します。他のvscode-*Featureを使う場合も、必ず本Featureを併せて導入してください。",
+    "documentationURL": "https://github.com/Diiva-Szk/devcontainer-env-core/tree/main/devcontainer-features/vscode-common",
+    "customizations": {
+        "vscode": {
+            "settings": {
+                "extensions.autoUpdate": false,
+                "extensions.autoCheckUpdates": false,
+                "extensions.ignoreRecommendations": true,
+                // yzhang.markdown-all-in-one の設定
+                "markdown.extension.math.enabled": false,
+                "markdown.extension.list.indentationSize": "inherit",
+                "markdown.extension.print.absoluteImgPath": false,
+                "markdown.extension.tableFormatter.enabled": false,
+                // extensions.allowed は「値がオブジェクトである単一の設定キー」であり、
+                // 複数Featureが定義した場合のマージ挙動は仕様上ツール依存（VS Code側は未文書）。
+                // 後勝ちで丸ごと置換される可能性があるため、キーが排他でも分割は危険。
+                // よって vscode-python / vscode-terraform 分も含め、許可リストは本Featureに集約する。
+                "extensions.allowed": {
+                    // renovate: datasource=github-releases depName=microsoft/vscode-loc
+                    "ms-ceintl.vscode-language-pack-ja": ["1.92.2024080709"],
+                    // renovate: datasource=github-releases depName=vscode-icons/vscode-icons
+                    "vscode-icons-team.vscode-icons": ["12.8.0"],
+                    // renovate: datasource=github-releases depName=ritwickdey/vscode-live-server
+                    "ritwickdey.liveserver": ["5.7.10"],
+                    // renovate: datasource=github-releases depName=Huachao/vscode-restclient
+                    "humao.rest-client": ["0.25.0"],
+                    // renovate: datasource=github-releases depName=streetsidesoftware/vscode-spell-checker
+                    "streetsidesoftware.code-spell-checker": ["4.6.0"],
+                    // Renovate対象外: ghリリースなし
+                    "zhengxiaoyao0716.intelligence-change-case": ["1.2.0"],
+                    // Renovate対象外: ghタグはv1.9.260717021形式でMarketplace版と体系が異なる
+                    "hediet.vscode-drawio": ["1.9.0"],
+                    // renovate: datasource=github-releases depName=ExiaSR/vscode-hadolint
+                    "exiasr.hadolint": ["1.1.2"],
+                    // Renovate対象外: ghリリース/タグは0.0.11止まりでMarketplace版(0.1.2)と乖離
+                    "ibm.output-colorizer": ["0.1.2"],
+                    // renovate: datasource=github-releases depName=foxundermoon/vs-shell-format
+                    "foxundermoon.shell-format": ["7.2.8"],
+                    // renovate: datasource=github-tags depName=mikestead/vscode-dotenv
+                    "mikestead.dotenv": ["1.0.1"],
+
+                    // ### Python (vscode-python Feature が導入)
+                    // renovate: datasource=github-releases depName=Microsoft/vscode-python
+                    "ms-python.python": ["2026.4.0"],
+                    // renovate: datasource=github-releases depName=microsoft/vscode-python-debugger
+                    "ms-python.debugpy": ["2025.18.0"],
+                    // Renovate対象外: ghリリースなし
+                    "wholroyd.jinja": ["0.0.8"],
+                    // renovate: datasource=github-releases depName=kbrose/vsc-python-indent
+                    "kevinrose.vsc-python-indent": ["1.21.0"],
+                    // renovate: datasource=github-releases depName=NilsJPWerner/autoDocstring
+                    "njpwerner.autodocstring": ["0.6.1"],
+
+                    // ### Terraform (vscode-terraform Feature が導入)
+                    // renovate: datasource=github-releases depName=hashicorp/vscode-terraform
+                    "hashicorp.terraform": ["2.39.2"],
+
+                    // ### Git
+                    // renovate: datasource=github-releases depName=DonJayamanne/gitHistoryVSCode
+                    "donjayamanne.githistory": ["0.6.20"],
+                    // renovate: datasource=github-releases depName=gitkraken/vscode-gitlens
+                    "eamodio.gitlens": ["17.11.1"],
+                    // Renovate対象外: ghリリースなし
+                    "codezombiech.gitignore": ["0.10.0"],
+                    // renovate: datasource=github-releases depName=mhutchie/vscode-git-graph
+                    "mhutchie.git-graph": ["1.30.0"],
+
+                    // ### Markdown
+                    // Renovate対象外: ghタグはv3.4.0止まりでMarketplace版(3.6.3)と乖離
+                    "yzhang.markdown-all-in-one": ["3.6.3"],
+                    // renovate: datasource=github-releases depName=shd101wyy/vscode-markdown-preview-enhanced
+                    "shd101wyy.markdown-preview-enhanced": ["0.8.22"],
+                    // renovate: datasource=github-tags depName=DavidAnson/vscode-markdownlint
+                    "davidanson.vscode-markdownlint": ["0.61.2"],
+                    // Renovate対象外: ghリリースなし
+                    "csholmq.excel-to-markdown-table": ["1.4.0"],
+
+                    // ### CSV
+                    // renovate: datasource=github-releases depName=mechatroner/vscode_rainbow_csv
+                    "mechatroner.rainbow-csv": ["3.24.1"],
+                    // renovate: datasource=github-releases depName=janisdd/vscode-edit-csv
+                    "janisdd.vscode-edit-csv": ["0.11.9"],
+
+                    // ### AI tools
+                    // renovate: datasource=github-releases depName=microsoft/vscode-copilot-chat
+                    "github.copilot-chat": ["0.43.0"],
+
+                    // ### data tools
+                    // renovate: datasource=github-releases depName=microsoft/vscode-jupyter
+                    "ms-toolsai.jupyter": ["2025.9.1"],
+                    // Renovate対象外: ghリリース・タグとも無し（クローズド開発）
+                    "ms-toolsai.datawrangler": ["1.24.0"]
+                }
+            },
+            "extensions": [
+                // renovate: datasource=github-releases depName=microsoft/vscode-loc
+                "MS-CEINTL.vscode-language-pack-ja@1.92.2024080709",
+                // renovate: datasource=github-releases depName=vscode-icons/vscode-icons
+                "vscode-icons-team.vscode-icons@12.8.0",
+                // renovate: datasource=github-releases depName=ritwickdey/vscode-live-server
+                "ritwickdey.LiveServer@5.7.10",
+                // renovate: datasource=github-releases depName=Huachao/vscode-restclient
+                "humao.rest-client@0.25.0",
+                // renovate: datasource=github-releases depName=streetsidesoftware/vscode-spell-checker
+                "streetsidesoftware.code-spell-checker@4.6.0",
+                // Renovate対象外: ghリリースなし
+                "zhengxiaoyao0716.intelligence-change-case@1.2.0",
+                // Renovate対象外: ghタグはv1.9.260717021形式でMarketplace版と体系が異なる
+                "hediet.vscode-drawio@1.9.0",
+                // renovate: datasource=github-releases depName=ExiaSR/vscode-hadolint
+                "exiasr.hadolint@1.1.2",
+                // Renovate対象外: ghリリース/タグは0.0.11止まりでMarketplace版(0.1.2)と乖離
+                "IBM.output-colorizer@0.1.2",
+                // renovate: datasource=github-releases depName=foxundermoon/vs-shell-format
+                "foxundermoon.shell-format@7.2.8",
+                // renovate: datasource=github-tags depName=mikestead/vscode-dotenv
+                "mikestead.dotenv@1.0.1",
+
+                // ### Git
+                // renovate: datasource=github-releases depName=DonJayamanne/gitHistoryVSCode
+                "donjayamanne.githistory@0.6.20",
+                // renovate: datasource=github-releases depName=gitkraken/vscode-gitlens
+                "eamodio.gitlens@17.11.1",
+                // Renovate対象外: ghリリースなし
+                "codezombiech.gitignore@0.10.0",
+                // renovate: datasource=github-releases depName=mhutchie/vscode-git-graph
+                "mhutchie.git-graph@1.30.0",
+
+                // ### Markdown
+                // Renovate対象外: ghタグはv3.4.0止まりでMarketplace版(3.6.3)と乖離
+                "yzhang.markdown-all-in-one@3.6.3",
+                // renovate: datasource=github-releases depName=shd101wyy/vscode-markdown-preview-enhanced
+                "shd101wyy.markdown-preview-enhanced@0.8.22",
+                // renovate: datasource=github-tags depName=DavidAnson/vscode-markdownlint
+                "DavidAnson.vscode-markdownlint@0.61.2",
+                // Renovate対象外: ghリリースなし
+                "csholmq.excel-to-markdown-table@1.4.0",
+
+                // ### CSV
+                // renovate: datasource=github-releases depName=mechatroner/vscode_rainbow_csv
+                "mechatroner.rainbow-csv@3.24.1",
+                // renovate: datasource=github-releases depName=janisdd/vscode-edit-csv
+                "janisdd.vscode-edit-csv@0.11.9",
+
+                // ### AI tools
+                // renovate: datasource=github-releases depName=microsoft/vscode-copilot-chat
+                "github.copilot-chat@0.43.0",
+
+                // ### data tools
+                // renovate: datasource=github-releases depName=microsoft/vscode-jupyter
+                "ms-toolsai.jupyter@2025.9.1",
+                // Renovate対象外: ghリリース・タグとも無し（クローズド開発）
+                "ms-toolsai.datawrangler@1.24.0"
+            ]
+        }
+    }
+}
