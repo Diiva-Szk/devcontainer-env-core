@@ -14,7 +14,11 @@ services:
         GID: ${GID:-1000}
         USER_NAME: ${USER_NAME:-dev}
         USER_PASS: ${USER_PASS:-dev}
-        DOCKER_GID: ${DOCKER_GID:-988}
+    # docker.sock へのアクセス用に、ホストの Docker ソケットのグループを起動時に付与する
+    # （イメージに焼き込まないため、ホストごとにビルドし直す必要が無い）。
+    # DOCKER_GID は setup-docker-env.sh が .env に書き出す。
+    group_add:
+      - "${DOCKER_GID:-988}"
     environment:
       NODE_OPTIONS: "--max-old-space-size=4096"
       AWS_REGION: ${AWS_REGION:-ap-northeast-1}

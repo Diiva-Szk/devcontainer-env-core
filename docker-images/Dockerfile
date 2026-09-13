@@ -189,9 +189,12 @@ CMD ["sleep", "infinity"]
 FROM dev-base AS user
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
+# 【ビルドキャッシュのための順序】
+#   利用者ごとに値が変わり得るビルド引数（USER_PASS）は、ステージの最後で宣言・使用する。
+#   ARG は宣言以降のすべての RUN のキャッシュキーに含まれるため、途中で宣言すると
+#   値を変えた利用者は以降の層（mise install / npm ci など）を CI のキャッシュから取得できない。
+#   Docker ソケットのグループはビルドせず、compose.yml の group_add で起動時に付与する。
 ARG USER_NAME=dev
-ARG USER_PASS=dev
-ARG DOCKER_GID=988
 
 # sudo はこの user ステージにのみ導入（攻撃面を ai から排除）
 USER root
@@ -201,23 +204,13 @@ RUN apt-get update && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
-# sudo（パスワードつき）
-RUN echo "${USER_NAME}:${USER_PASS}" | /usr/sbin/chpasswd && \
-    echo "${USER_NAME} ALL=(ALL:ALL) ALL" > "/etc/sudoers.d/${USER_NAME}" && \
+# sudo はパスワード必須（パスワード自体はステージの最後で設定する）
+RUN echo "${USER_NAME} ALL=(ALL:ALL) ALL" > "/etc/sudoers.d/${USER_NAME}" && \
     chmod 0440 "/etc/sudoers.d/${USER_NAME}" && \
     visudo -c -f "/etc/sudoers.d/${USER_NAME}"
 
-# docker.sock アクセス用グループ（ホストの docker GID に合わせる）
-RUN if getent group docker > /dev/null 2>&1; then \
-        groupmod -g "${DOCKER_GID}" docker; \
-    else \
-        groupadd -g "${DOCKER_GID}" docker; \
-    fi && \
-    usermod -aG docker "${USER_NAME}"
-
 # user 専用のツール定義（global スコープ）。dev-base の system 設定と合成される。
 # root 所有・読み取り専用で配置する（パーミッションを明示する理由は dev-base と同じ）。
-# （このステージはここまで USER root のまま）
 COPY --chown=root:root user/opt/mise /opt/mise
 ENV MISE_GLOBAL_CONFIG_FILE="/opt/mise/config.toml"
 
@@ -245,8 +238,14 @@ RUN chown -R root:root /opt/renovate && \
     chmod -R u=rwX,go=rX /opt/renovate && \
     ln -s /opt/renovate/node_modules/.bin/renovate /usr/local/bin/renovate
 
-USER "${USER_NAME}"
-RUN renovate --version
-
 # user 用の home 初期ファイル
 COPY --chown=${USER_NAME}:${USER_NAME} user/home-config/ "/home/${USER_NAME}"
+
+# -------------------------------------------------------------------
+# sudo のパスワード（利用者ごとに変わるため最後の層で設定する）
+# -------------------------------------------------------------------
+ARG USER_PASS=dev
+RUN echo "${USER_NAME}:${USER_PASS}" | /usr/sbin/chpasswd
+
+USER "${USER_NAME}"
+RUN renovate --version
