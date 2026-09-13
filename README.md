@@ -15,6 +15,7 @@
 - [VS Code の Feature](#vs-code-の-feature)
 - [ツールの追加・バージョンの上書き](#ツールの追加バージョンの上書き)
 - [設定項目](#設定項目)
+- [ビルドキャッシュ](#ビルドキャッシュ)
 - [注意事項](#注意事項)
 - [ライセンス](#ライセンス)
 
@@ -127,7 +128,9 @@ my-project/
 
 ### 4. コンテナを開く
 
-VS Code でプロジェクトを開き、コマンドパレットから **Dev Containers: Reopen in Container** を実行します。初回はイメージのビルドに時間がかかります。
+VS Code でプロジェクトを開き、コマンドパレットから **Dev Containers: Reopen in Container** を実行します。
+
+初回はイメージをビルドします。このリポジトリの CI が `main` のビルドキャッシュを公開しているため、内容が同じ層はダウンロードで済み、変更のあった層だけがローカルでビルドされます（[ビルドキャッシュ](#ビルドキャッシュ)）。
 
 ### 5. AI エージェントを使う
 
@@ -222,14 +225,41 @@ mise trust mise.toml  # 確認してから trust する
 
 | 変数 | 既定値 | 内容 |
 | --- | --- | --- |
-| `USER_PASS` | `dev` | `user` コンテナの `sudo` のパスワード。**変更を推奨します** |
-| `UID` / `GID` | `1000` | コンテナ内ユーザーの UID / GID。Linux でホストのユーザーと合わせる場合に指定する |
-| `USER_NAME` | `dev` | コンテナ内のユーザー名 |
-| `DOCKER_GID` | `988` | Docker ソケットのグループ ID（`setup-docker-env.sh` が設定） |
+| `USER_PASS` | `dev` | `user` コンテナの `sudo` のパスワード。**変更を推奨します**（イメージの最後の層で設定するため、変更してもビルドキャッシュは使われます） |
+| `DOCKER_GID` | `988` | Docker ソケットのグループ ID。コンテナの起動時に付与する（`setup-docker-env.sh` が設定） |
 | `DOCKER_SOCK_PATH` | `/var/run/docker.sock` | ホストの Docker ソケットのパス（`setup-docker-env.sh` が設定） |
 | `AWS_REGION` | `ap-northeast-1` | `user` コンテナの AWS リージョン |
+| `UID` / `GID` | `1000` | コンテナ内ユーザーの UID / GID。**通常は変更しないでください**（下記） |
+| `USER_NAME` | `dev` | コンテナ内のユーザー名。**通常は変更しないでください**（下記） |
 
-`USER_NAME` を変更した場合は、`devcontainer.json` の `workspaceFolder`（`/home/<USER_NAME>/work`）と `remoteUser` も合わせて変更してください。
+- **`UID` / `GID` / `USER_NAME` を変更すると、ビルドキャッシュがほぼ使われず、すべてをローカルでビルドします。** Linux ホストでは、Dev Containers がコンテナの作成時にユーザーの UID / GID をホストのユーザーに合わせるため（`updateRemoteUserUID`、既定で有効）、ファイルの所有者を合わせる目的で変更する必要はありません。
+- `USER_NAME` を変更した場合は、`devcontainer.json` の `workspaceFolder`（`/home/<USER_NAME>/work`）と `remoteUser` も合わせて変更してください。
+
+## ビルドキャッシュ
+
+このリポジトリの CI は、`main` のイメージ定義からビルドした各層のキャッシュを GHCR（`ghcr.io/diiva-szk/devcontainer-env-core/build-cache`）に公開しています（amd64 / arm64）。`compose.yml` がこれを参照するため、ビルド時にキャッシュがある層はダウンロードされ、無い層だけがローカルでビルドされます。
+
+- 使うテンプレートのコミットが `main` の最新でなくても動作します。`main` と内容が同じ層はダウンロードされ、異なる層以降だけがビルドされます。
+- **キャッシュが使われるのは、Docker の containerd image store が有効な場合です。** 無効な場合はキャッシュが無視され、すべてをローカルでビルドします（動作に問題はありません）。Docker Desktop 4.34 以降と、Docker Engine 29 以降の新規インストールでは既定で有効です。次のコマンドで確認できます。
+
+  ```sh
+  docker info -f '{{ .DriverStatus }}'
+  # [[driver-type io.containerd.snapshotter.v1]] と表示されれば有効
+  ```
+
+  無効な場合に有効にする方法:
+  - **Docker Desktop:** Settings → General → **Use containerd for pulling and storing images** を有効にする
+  - **Docker Engine（WSL2 など）:** `/etc/docker/daemon.json` に次を追加し、Docker を再起動する（`sudo systemctl restart docker`）
+
+    ```json
+    {
+      "features": {
+        "containerd-snapshotter": true
+      }
+    }
+    ```
+
+  > 切り替えると、それまでの保存方式で作ったイメージとコンテナは表示されなくなります（ディスク上には残り、元に戻すと再び表示されます）。
 
 ## 注意事項
 
