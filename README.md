@@ -1,4 +1,4 @@
-# devcontainer-template
+# devcontainer-env-core
 
 開発用DevContainerベースイメージと、セキュアな開発用Feature、およびAIエージェント用コンテキストの一元管理リポジトリ  
 **DevContainerのベースイメージ**と**共通Feature**を一元管理します。
@@ -54,7 +54,7 @@ CLI ツールは [mise](https://mise.jdx.dev/) で管理します。Python / Nod
 
 ### プロジェクトでツールのバージョンを上書きする
 
-本テンプレートを `.devcontainer/devcontainer-template` に配置して使う場合、プロジェクトルートは `/home/dev/work` にマウントされ、作業ディレクトリになります。mise はカレントディレクトリから親へ向かって設定を探すため、**プロジェクトルートに `mise.toml` を置くと、イメージ側（system / global）の設定より優先**されます。
+本テンプレートを `.devcontainer/devcontainer-env-core` に配置して使う場合、プロジェクトルートは `/home/dev/work` にマウントされ、作業ディレクトリになります。mise はカレントディレクトリから親へ向かって設定を探すため、**プロジェクトルートに `mise.toml` を置くと、イメージ側（system / global）の設定より優先**されます。
 
 例: イメージの Node は 24.14.1 だが、プロジェクトでは Node 18 を使う場合
 

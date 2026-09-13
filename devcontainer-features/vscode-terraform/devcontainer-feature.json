@@ -3,9 +3,9 @@
     "version": "1.0.1",
     "name": "VS Code Terraform extensions",
     "description": "Terraform開発用のVS Code拡張機能を追加します。許可リスト(extensions.allowed)は vscode-common Feature が提供するため、必ず併用してください。",
-    "documentationURL": "https://github.com/Diiva-Szk/devcontainer-template/tree/main/devcontainer-features/vscode-terraform",
+    "documentationURL": "https://github.com/Diiva-Szk/devcontainer-env-core/tree/main/devcontainer-features/vscode-terraform",
     "installsAfter": [
-        "ghcr.io/diiva-szk/devcontainer-template/vscode-common"
+        "ghcr.io/diiva-szk/devcontainer-env-core/vscode-common"
     ],
     "customizations": {
         "vscode": {
