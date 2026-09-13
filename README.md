@@ -160,7 +160,7 @@ Action の SHA 固定だけでは、Action が実行時に取得するものま�
 ### セキュリティ上の設計 (Security)
 
 - **App トークンの権限は最小化する:** `create-github-app-token` は `permission-*` を指定しないと App installation の全権限を継承するため、ワークフローごとに必要な権限だけを指定しています。
-  - renovate: Contents / Issues / Pull requests / Checks / Commit statuses / Workflows（いずれも write）
+  - renovate: Contents / Issues / Pull requests / Checks / Commit statuses / Workflows（いずれも write）、Dependabot alerts（read。`vulnerabilityAlerts` 用で、リポジトリ側で Dependency graph と Dependabot alerts の有効化も必要）
   - update-mise-lock: Contents（write）のみ
   - 秘密鍵が漏えいした場合の影響も抑えたい場合は、lock 更新用に Contents 権限だけを持つ別の App を用意し、`update-mise-lock.yml` のシークレットを差し替えてください。
 - **PR のコードを実行するジョブと、書き込みトークンを扱うジョブを分離する:** `update-mise-lock.yml` は lock を生成する `generate` ジョブと、push する `push` ジョブを別 runner で実行します。同じ runner で PR のコードを実行した後にトークンを扱うと、`.git/hooks` 等を仕込まれてトークンを盗まれるおそれがあるためです。`push` ジョブは PR のコードを実行せず、受け取った lock のファイル構成・形式・書き込み先（シンボリックリンクでないこと）を検証してから取り込みます。

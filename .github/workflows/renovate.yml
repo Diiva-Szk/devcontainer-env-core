@@ -55,8 +55,9 @@ jobs:
       # Renovate に必要な権限だけに絞る（いずれも App 側に付与されている必要がある）:
       #   Contents / Issues / Pull requests / Checks / Commit statuses : read+write
       #   Workflows : read+write （アクションのSHA固定を更新するために必須）
-      # Metadata:read は常に付与される。脆弱性アラート（vulnerabilityAlerts）を使う場合は
-      # App に Dependabot alerts:read を付与し、permission-vulnerability-alerts: read を追加する。
+      #   Dependabot alerts : read （renovate.json5 の vulnerabilityAlerts で脆弱性アラートを読むため）
+      # Metadata:read は常に付与される。
+      # vulnerabilityAlerts には、リポジトリ側で Dependency graph と Dependabot alerts の有効化も必要。
       - name: Generate GitHub App token
         id: app-token
         uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
@@ -69,6 +70,7 @@ jobs:
           permission-checks: write
           permission-statuses: write
           permission-workflows: write
+          permission-vulnerability-alerts: read
 
       # Renovate は自身でリポジトリを clone するため actions/checkout は不要。
       # postUpgradeTasks が参照する scripts/ も、その clone 側のものが使われる。
