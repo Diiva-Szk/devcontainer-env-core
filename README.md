@@ -39,7 +39,7 @@ CLI ツールは [mise](https://mise.jdx.dev/) で管理します。Python / Nod
 
 - イメージ内の設定と `mise.lock` は root 所有で配置し、コンテナ内のユーザ（特に ai）からは書き換えられません。
 - `locked = true` により、`mise.lock` に記録されていないツールのインストールを拒否し、記録済みのチェックサムで検証します。mise 自体はチェックサムの欠落を拒否しないため、欠落は `build-images.yml` で検出します（合わせて aqua の `require_checksum` 相当）。ワークスペースの `mise.toml` は実行中にツールを足す用途のため、lock を必須にしていません（`locked_scopes`）。
-- **user コンテナは `paranoid = true`** です。ワークスペースは ai コンテナと共有しており、ai 側がワークスペースの `mise.toml` に任意のツールを書き込めるためです。ワークスペースに `mise.toml` を置いた場合は、内容を確認してから user コンテナで `mise trust` してください（trust するまで、その配下では mise のツールが使えません）。
+- **user コンテナは `paranoid = true`** です。ワークスペースは ai コンテナと共有しており、ai 側がワークスペースの `mise.toml` に任意のツールを書き込めるためです。ワークスペースに `mise.toml` を置いた場合は、内容を確認してから user コンテナで `mise trust` してください（trust するまで、その配下では mise のツールが使えません。詳細は[プロジェクトでツールのバージョンを上書きする](#プロジェクトでツールのバージョンを上書きする)）。
 
 ### ツールを追加・更新する
 
@@ -51,6 +51,48 @@ CLI ツールは [mise](https://mise.jdx.dev/) で管理します。Python / Nod
    ```
 
 `mise lock` は、配布元がチェックサムを提供しない成果物（aws-cli, docker/cli, google-cloud-sdk, claude-code など）のチェックサムを記録しません。`scripts/fill-mise-lock-checksums.sh` が成果物をダウンロードして sha256 を補完し、`build-images.yml` が欠落を検出します。
+
+### プロジェクトでツールのバージョンを上書きする
+
+本テンプレートを `.devcontainer/devcontainer-template` に配置して使う場合、プロジェクトルートは `/home/dev/work` にマウントされ、作業ディレクトリになります。mise はカレントディレクトリから親へ向かって設定を探すため、**プロジェクトルートに `mise.toml` を置くと、イメージ側（system / global）の設定より優先**されます。
+
+例: イメージの Node は 24.14.1 だが、プロジェクトでは Node 18 を使う場合
+
+```toml
+# <プロジェクトルート>/mise.toml
+[tools]
+node = "18"
+```
+
+| カレントディレクトリ | 使われる Node |
+| --- | --- |
+| プロジェクトルート（`~/work`）とその配下 | 18（プロジェクトの `mise.toml`） |
+| プロジェクト外（`~` など） | 24.14.1（イメージの設定） |
+
+- **ファイル名は `mise.toml`** にする。`.mise.toml`、`.config/mise.toml`、`mise/config.toml` も使えるが、プロジェクト直下の `config.toml` は mise の設定ファイルとして認識されない。
+- イメージに入っていないバージョンは、初めてコマンドを実行したときに自動でインストールされる（明示的に入れる場合は `mise install`）。
+- イメージの `locked = true` は system / global の設定にのみ適用されるため、プロジェクトの `mise.toml` は lock が無くても使える。チェックサムを固定したい場合は、プロジェクトで `mise lock` を実行して `mise.lock` もコミットする。
+
+**注意点:**
+
+- **user コンテナでは `mise trust` が必要。** user コンテナは `paranoid = true` のため、プロジェクトの `mise.toml` は trust するまで読み込まれず、その配下では mise のツール全体が使えない。
+  - 内容を確認してから trust する（`mise trust --show` で内容を表示できる）。
+
+    ```sh
+    mise trust mise.toml
+    ```
+
+  - trust はファイル内容のハッシュに紐づくため、`mise.toml` を編集すると再度 trust が必要になる（ai 側が書き換えても黙って読み込まれない）。
+  - trust の記録はコンテナ内（`~/.local/state/mise`）にあるため、コンテナを作り直すと再度 trust が必要になる。
+  - ai コンテナは通常モードのため trust は不要。
+- **イメージの Node に入れたグローバルコマンドが使えなくなる。** user コンテナの `renovate` など、イメージの Node（24.14.1）に `npm install -g` したコマンドは、別の Node を指定したディレクトリでは `No version is set for shim` エラーになる。両方を有効にしたい場合は複数のバージョンを指定する（先頭のバージョンが優先される）。
+
+  ```toml
+  [tools]
+  node = ["18", "24.14.1"]
+  ```
+
+- テンプレートの Node の LTS 検査（`scripts/check-node-lts.sh`）はテンプレート自身の設定だけが対象で、プロジェクトの `mise.toml` は検査しない。サポートが終了したバージョン（Node 18 は 2025 年 4 月に終了）を使う場合はプロジェクト側で判断すること。
 
 ## ⚙️ CI/CD パイプライン
 
