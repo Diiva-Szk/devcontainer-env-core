@@ -1,0 +1,79 @@
+name: Publish build cache
+
+# main のイメージ定義からビルドし、各層のビルドキャッシュを GHCR に push する。
+# 利用者のビルド（compose.yml の cache_from）は、このキャッシュがある層をダウンロードし、
+# 無い層だけをローカルでビルドする。イメージ自体は push しない。
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'docker-images/**'
+      - 'compose.yml'
+      - '.github/ci/compose.cache.yml'
+      - '.github/workflows/publish-build-cache.yml'
+  workflow_dispatch:
+
+permissions: {}
+
+# 新しいコミットが来たら古いビルドは止め、最新の main のキャッシュだけを作る
+concurrency:
+  group: publish-build-cache
+  cancel-in-progress: true
+
+jobs:
+  publish:
+    # キャッシュは利用者のビルドに取り込まれるため、main 以外（手動実行で選んだブランチ等）からは書き出さない
+    if: github.ref == 'refs/heads/main'
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: amd64
+            runner: ubuntu-24.04
+          - arch: arm64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 90
+    permissions:
+      contents: read
+      packages: write
+    env:
+      # キャッシュの書き出しに使う BuildKit（docker-container ドライバー）。バージョン + digest で固定する。
+      # renovate: datasource=docker depName=moby/buildkit
+      BUILDKIT_IMAGE_TAG: 'v0.33.0@sha256:6c2fa84a6b61ccd72899dde4239f8d5717f05f9a8ca6f3cad185fb1a95a94de3'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+
+      - name: Log in to GHCR
+        env:
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GHCR_USER: ${{ github.actor }}
+        run: echo "$GHCR_TOKEN" | docker login ghcr.io --username "$GHCR_USER" --password-stdin
+
+      # 既定の docker ドライバーはレジストリへのキャッシュの書き出しに対応しないため、
+      # docker-container ドライバーの builder を使う。
+      - name: Set up builder
+        run: |
+          docker buildx create \
+            --name cache-builder \
+            --driver docker-container \
+            --driver-opt "image=moby/buildkit:${BUILDKIT_IMAGE_TAG}" \
+            --bootstrap
+
+      # 利用者と同じ compose.yml（同じビルド引数の既定値）でビルドし、キャッシュキーを一致させる。
+      - name: Build and export cache
+        env:
+          CACHE_ARCH: ${{ matrix.arch }}
+        run: |
+          docker compose \
+            -f compose.yml \
+            -f .github/ci/compose.cache.yml \
+            build --builder cache-builder user ai
+
+      - name: Log out of GHCR
+        if: always()
+        run: docker logout ghcr.io

@@ -7,6 +7,7 @@
 - [ディレクトリ構成](#ディレクトリ構成)
 - [ツール管理 (mise)](#ツール管理-mise)
 - [イメージ内のその他の依存](#イメージ内のその他の依存)
+- [ビルドキャッシュ](#ビルドキャッシュ)
 - [CI/CD パイプライン](#cicd-パイプライン)
 - [Renovate](#renovate)
 - [サードパーティ Action と実行時の依存](#サードパーティ-action-と実行時の依存)
@@ -44,6 +45,7 @@ Feature（`devcontainer-features/` 配下）には `Dockerfile` を含めず、�
 ├── renovate.json5
 └── .github/
     ├── workflows/
+    ├── ci/compose.cache.yml      # CI でビルドキャッシュを書き出すための compose の上書き
     └── tools/devcontainer-cli/   # CI で使う Dev Containers CLI（package-lock.json）
 ```
 
@@ -106,9 +108,32 @@ CLI ツールと言語ランタイム（Python / Node.js）は [mise](https://mi
 - Renovate CLI はインストールスクリプトを実行しないため、re2 のネイティブ拡張は入らず、標準の RegExp にフォールバックします。
 - Python のマイナーバージョンを上げた場合は、`--python-version` を合わせて `requirements.txt` を再生成してください。
 
+## ビルドキャッシュ
+
+利用者のビルドを速くするため、`main` のイメージ定義からビルドした各層のキャッシュを GHCR に公開しています。イメージ自体は配布しません。
+
+| 項目 | 内容 |
+| --- | --- |
+| 公開先 | `ghcr.io/diiva-szk/devcontainer-env-core/build-cache:{user,ai}-{amd64,arm64}` |
+| 書き出し | `publish-build-cache.yml`（`main` への push 時）。amd64 は `ubuntu-24.04`、arm64 は `ubuntu-24.04-arm` のランナーでネイティブにビルドし、`mode=max` で中間ステージの層も書き出す |
+| 読み込み | `compose.yml` の `cache_from`（利用者のビルドと `build-images.yml`） |
+
+- 利用者のビルドは、`main` と内容が同じ層をダウンロードし、異なる層以降だけをローカルでビルドします。テンプレートのコミットが古くても壊れず、自然にローカルビルドへフォールバックします。
+- 既定の `docker` ドライバーは containerd image store が有効な場合にのみレジストリキャッシュを使います。CI では `docker-container` ドライバーの builder（`moby/buildkit`、バージョン + digest 固定）を使います。
+- キャッシュから取得した層では、mise のチェックサム検証などのビルド処理は再実行されません。「`main` から CI が書き出したキャッシュを信頼する」前提のため、書き出しは `main` からのみ行います。
+
+### Dockerfile を変更するときのルール
+
+キャッシュが利用者に効くかどうかは、Dockerfile の書き方で決まります。
+
+- **利用者ごとに値が変わるビルド引数は、ステージの最後で宣言・使用する。** `ARG` は宣言以降のすべての `RUN` のキャッシュキーに含まれるため、途中で宣言すると、値を変えた利用者はそれ以降の層をキャッシュから取得できません（`USER_PASS` を user ステージの最後に置いているのはこのため）。
+- **ホストごとに変わる値は、できるだけビルドせず起動時に渡す。** Docker ソケットのグループは `compose.yml` の `group_add`、ユーザーの UID / GID は Dev Containers の `updateRemoteUserUID` で起動時に合わせています。
+- `base` ステージの `UID` / `GID` / `USER_NAME` / `TZ` は全層に影響します。既定値を変えると、利用者のキャッシュがすべて外れます。
+- `compose.yml` と `publish-build-cache.yml` は同じ compose ファイル（同じビルド引数の既定値）でビルドし、キャッシュキーを一致させています。ビルド引数を追加・変更したときは両方で一致していることを確認してください。
+
 ## CI/CD パイプライン
 
-`.github/workflows/` の4ワークフローは、以下のように連鎖して動作します。
+`.github/workflows/` の5ワークフローは、以下のように連鎖して動作します。
 
 ```mermaid
 flowchart TD
@@ -129,6 +154,7 @@ flowchart TD
     lock -->|"App token の push が再トリガー"| build
 
     merge(["main へマージ"]) --> publish["release-features.yml : publish<br/>GHCR へ Feature を publish（main のみ・Environment release）"]
+    merge --> cache["publish-build-cache.yml<br/>amd64 / arm64 のビルドキャッシュを GHCR へ push（main のみ）"]
     validate -. "needs" .-> publish
 ```
 
@@ -178,7 +204,7 @@ flowchart TD
 | --- | --- |
 | mise の aqua / github / core backend のツール | Renovate の mise マネージャ（lock は `skipArtifactsUpdate` で更新させない） |
 | Kiro CLI（http backend） | `customManagers` の正規表現 + `customDatasources`（latest マニフェスト） |
-| Renovate 本体のコンテナ | `customManagers` の正規表現（`CLI_IMAGE_TAG` のバージョン + digest） |
+| Renovate 本体のコンテナ / BuildKit | `customManagers` の正規表現（`CLI_IMAGE_TAG` / `BUILDKIT_IMAGE_TAG` のバージョン + digest） |
 | Python パッケージ | pip-compile マネージャ（`requirements.txt` のヘッダーのコマンドで再生成） |
 | VS Code 拡張機能 | `customManagers` の正規表現（`// renovate:` コメント） |
 
@@ -200,6 +226,7 @@ Action の SHA 固定だけでは、Action が実行時に取得するものま�
 | 対象 | 固定方法 | 利用ワークフロー |
 | --- | --- | --- |
 | Renovate 本体のコンテナ | `renovate.yml` の `CLI_IMAGE_TAG` でバージョン + digest を指定 | renovate |
+| BuildKit（docker-container ドライバー） | `BUILDKIT_IMAGE_TAG` でバージョン + digest を指定 | build-images / publish-build-cache |
 | Dev Containers CLI | `.github/tools/devcontainer-cli/package-lock.json` の integrity で固定し `npm ci` で事前導入 | release-features |
 | mise | Dockerfile と同じ `jdxcode/mise` イメージ（タグ + digest 固定）の中で `mise lock` を実行 | update-mise-lock |
 
@@ -211,4 +238,5 @@ Action の SHA 固定だけでは、Action が実行時に取得するものま�
   - update-mise-lock: Contents（write）のみ
 - **PR のコードを実行するジョブと、書き込みトークンを扱うジョブの分離:** `update-mise-lock.yml` は lock を生成する `generate` ジョブと push する `push` ジョブを別 runner で実行します。同じ runner で PR のコードを実行した後にトークンを扱うと、`.git/hooks` 等を仕込まれてトークンを盗まれるおそれがあるためです。`push` ジョブは PR のコードを実行せず、受け取った lock のファイル構成・形式・書き込み先（シンボリックリンクでないこと）を検証してから取り込みます。
 - **publish は main からのみ:** `release-features.yml` の publish は `main` ブランチでのみ実行し、Environment `release` を使います。
+- **ビルドキャッシュの書き出しは main からのみ:** 利用者のビルドに取り込まれるため、`publish-build-cache.yml` は `main` でのみ `packages: write` を使います。PR のビルド（`build-images.yml`）はキャッシュを読むだけです。
 - **イメージ内の依存の固定:** mise のツールは `mise.lock`、Python パッケージはハッシュ付き `requirements.txt`、Renovate CLI は `package-lock.json` で固定しています。

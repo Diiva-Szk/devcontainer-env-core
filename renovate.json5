@@ -103,13 +103,15 @@
     },
     {
       customType: 'regex',
-      description: 'renovate.yml の Renovate 本体コンテナ（バージョン + digest）',
+      description: 'ワークフローの env で固定したコンテナイメージ（Renovate 本体 / BuildKit。バージョン + digest）',
       managerFilePatterns: [
-        '/^\\.github/workflows/renovate\\.yml$/',
+        '/^\\.github/workflows/(renovate|build-images|publish-build-cache)\\.yml$/',
       ],
       // 以下の形式を対象にする（digest ごと更新される）:
       //   # renovate: datasource=docker depName=renovate/renovate
       //   CLI_IMAGE_TAG: '44.65.5@sha256:...'
+      //   # renovate: datasource=docker depName=moby/buildkit
+      //   BUILDKIT_IMAGE_TAG: 'v0.33.0@sha256:...'
       matchStrings: [
         '#\\s*renovate:\\s*datasource=(?<datasource>\\S+)\\s+depName=(?<depName>\\S+)\\s*\\n\\s*[A-Z_]+:\\s*\'(?<currentValue>[^\'@]+)@(?<currentDigest>sha256:[0-9a-f]+)\'',
       ],

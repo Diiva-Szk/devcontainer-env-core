@@ -25,6 +25,10 @@ jobs:
     timeout-minutes: 60
     permissions:
       contents: read
+    env:
+      # publish-build-cache.yml と同じ BuildKit を使う（Renovate が両方を更新する）。
+      # renovate: datasource=docker depName=moby/buildkit
+      BUILDKIT_IMAGE_TAG: 'v0.33.0@sha256:6c2fa84a6b61ccd72899dde4239f8d5717f05f9a8ca6f3cad185fb1a95a94de3'
     steps:
       - name: Checkout
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
@@ -42,8 +46,19 @@ jobs:
       - name: Check Node is LTS
         run: bash scripts/check-node-lts.sh
 
+      # compose.yml の cache_from（main のビルドキャッシュ）を確実に読み込めるよう、
+      # docker-container ドライバーの builder を使う（既定の docker ドライバーは
+      # containerd image store が無効だとレジストリキャッシュを無視するため）。
+      - name: Set up builder
+        run: |
+          docker buildx create \
+            --name cache-builder \
+            --driver docker-container \
+            --driver-opt "image=moby/buildkit:${BUILDKIT_IMAGE_TAG}" \
+            --bootstrap
+
       # ビルド定義を二重管理しないため、開発時と同じ compose.yml をそのまま使う。
       # user / ai はいずれも dev-base → base を経由するため、この2つで全ステージを網羅する。
-      # push はせず、ビルドが通ることの確認のみを目的とする。
+      # キャッシュの書き出し・イメージの push はせず、ビルドが通ることの確認のみを目的とする。
       - name: Build user / ai images
-        run: docker compose -f compose.yml build user ai
+        run: docker compose -f compose.yml build --builder cache-builder user ai

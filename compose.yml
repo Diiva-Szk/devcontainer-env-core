@@ -1,3 +1,10 @@
+# ビルドキャッシュ:
+#   main ブランチの CI（publish-build-cache.yml）が、各層のビルドキャッシュを GHCR に push している。
+#   cache_from でそれを参照し、キャッシュがある層はダウンロード、無い層だけをローカルでビルドする。
+#   アーキテクチャごとにキャッシュを分けているため両方を並べる（合わないものは使われない）。
+#   既定の docker ドライバーでは、containerd image store が有効な場合にのみ使われる
+#   （無効な場合は無視され、通常どおりビルドされる）。
+#   キャッシュが当たるのはビルド引数が既定値（UID / GID / USER_NAME / TZ）の場合。
 services:
   ###########################################################################
   # user: ユーザ環境。VS Code がアタッチする側。
@@ -14,7 +21,14 @@ services:
         GID: ${GID:-1000}
         USER_NAME: ${USER_NAME:-dev}
         USER_PASS: ${USER_PASS:-dev}
-        DOCKER_GID: ${DOCKER_GID:-988}
+      cache_from:
+        - type=registry,ref=ghcr.io/diiva-szk/devcontainer-env-core/build-cache:user-amd64
+        - type=registry,ref=ghcr.io/diiva-szk/devcontainer-env-core/build-cache:user-arm64
+    # docker.sock へのアクセス用に、ホストの Docker ソケットのグループを起動時に付与する
+    # （イメージに焼き込まないため、ホストごとにビルドし直す必要が無い）。
+    # DOCKER_GID は setup-docker-env.sh が .env に書き出す。
+    group_add:
+      - "${DOCKER_GID:-988}"
     environment:
       NODE_OPTIONS: "--max-old-space-size=4096"
       AWS_REGION: ${AWS_REGION:-ap-northeast-1}
@@ -44,6 +58,9 @@ services:
         UID: ${UID:-1000}
         GID: ${GID:-1000}
         USER_NAME: ${USER_NAME:-dev}
+      cache_from:
+        - type=registry,ref=ghcr.io/diiva-szk/devcontainer-env-core/build-cache:ai-amd64
+        - type=registry,ref=ghcr.io/diiva-szk/devcontainer-env-core/build-cache:ai-arm64
     environment:
       NODE_OPTIONS: "--max-old-space-size=4096"
       POWERLEVEL9K_DISABLE_GITSTATUS: "true"
