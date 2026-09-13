@@ -67,16 +67,12 @@ WORKDIR "/home/${USER_NAME}"
 ###########################################################################
 # dev-base:
 #   開発共通の土台。base に開発ツール一式と mise、mise 経由の
-#   uv/fnm と、それらによる Python/Node を追加する。ai / user 双方の親。
+#   Python / Node / uv 等を追加する。ai / user 双方の親。
+#   Python / Node のバージョンは dev-base/etc/mise/config.toml で管理する。
 ###########################################################################
 FROM base AS dev-base
 
 ARG USER_NAME=dev
-ARG PYTHON_VERSION=3.14
-ARG NODE_VERSION=24.14.1
-
-ENV PYTHON_VERSION="${PYTHON_VERSION}" \
-    NODE_VERSION="${NODE_VERSION}"
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
@@ -122,22 +118,19 @@ ENV PATH="/home/${USER_NAME}/.local/share/mise/shims:${PATH}"
 
 USER "${USER_NAME}"
 
-# ベース共通ツールをインストール（uv/fnm を含む）
+# ベース共通ツールをインストール（Python / Node / uv を含む）
 RUN mise install && \
-    mise --version
+    mise --version && \
+    python --version && \
+    node --version
 
 # -------------------------------------------------------------------
-# Python (uv) / Node (fnm) をビルド時にインストール
+# Python パッケージ
+#   --system は PATH 上の python（mise の Python）へ入れる。
+#   mise の Python（python-build-standalone）は EXTERNALLY-MANAGED ではないため
+#   --break-system-packages は不要。
 # -------------------------------------------------------------------
-RUN uv python install "${PYTHON_VERSION}" --default --preview && \
-    uv pip install ipykernel pandas pyarrow --system --break-system-packages
-
-RUN if ! grep -q "fnm env" "${HOME}/.bashrc"; then \
-        echo "eval \"$(fnm env --shell bash)\"" >> "${HOME}/.bashrc"; \
-    fi && \
-    eval "$(fnm env --shell bash)" && \
-    fnm install "v${NODE_VERSION}" && \
-    fnm default "v${NODE_VERSION}"
+RUN uv pip install --system ipykernel pandas pyarrow
 
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 
@@ -231,8 +224,11 @@ RUN mise install
 # -------------------------------------------------------------------
 # renovate (ローカル確認用。本番運用は GitHub Actions 側)
 # -------------------------------------------------------------------
-RUN eval "$(fnm env --shell bash)" && \
-    npm install -g renovate
+# グローバルパッケージは mise の Node の中に入る。コマンドを shims に載せるため reshim する
+# （mise の Node は npm install -g 後に自動で reshim するが、明示しておく）。
+RUN npm install -g renovate && \
+    mise reshim && \
+    renovate --version
 
 # user 用の home 初期ファイル
 COPY --chown=${USER_NAME}:${USER_NAME} user/home-config/ "/home/${USER_NAME}"

@@ -15,8 +15,6 @@ services:
         USER_NAME: ${USER_NAME:-dev}
         USER_PASS: ${USER_PASS:-dev}
         DOCKER_GID: ${DOCKER_GID:-988}
-        PYTHON_VERSION: ${PYTHON_VERSION:-3.14}
-        NODE_VERSION: ${NODE_VERSION:-24.14.1}
     environment:
       NODE_OPTIONS: "--max-old-space-size=4096"
       AWS_REGION: ${AWS_REGION:-ap-northeast-1}
@@ -46,8 +44,6 @@ services:
         UID: ${UID:-1000}
         GID: ${GID:-1000}
         USER_NAME: ${USER_NAME:-dev}
-        PYTHON_VERSION: ${PYTHON_VERSION:-3.14}
-        NODE_VERSION: ${NODE_VERSION:-24.14.1}
     environment:
       NODE_OPTIONS: "--max-old-space-size=4096"
       POWERLEVEL9K_DISABLE_GITSTATUS: "true"

@@ -2,21 +2,6 @@
 
 lockfile_version = 1
 
-[[tools."aqua:Schniz/fnm"]]
-version = "1.39.0"
-backend = "aqua:Schniz/fnm"
-specifiers = ["1.39.0"]
-
-[tools."aqua:Schniz/fnm"."platforms.linux-arm64"]
-checksum = "sha256:4eaff58b2c5bf30d0934027572dd0b5bbb60d2a1af309230b53662d4b1d45599"
-url = "https://github.com/Schniz/fnm/releases/download/v1.39.0/fnm-arm64.zip"
-url_api = "https://api.github.com/repos/Schniz/fnm/releases/assets/368341206"
-
-[tools."aqua:Schniz/fnm"."platforms.linux-x64"]
-checksum = "sha256:7807664f39d39fc518da1c35ba0181e4b3267603c4b1dedeb4b5fc6ae440a224"
-url = "https://github.com/Schniz/fnm/releases/download/v1.39.0/fnm-linux.zip"
-url_api = "https://api.github.com/repos/Schniz/fnm/releases/assets/368341191"
-
 [[tools."aqua:astral-sh/uv"]]
 version = "0.10.4"
 backend = "aqua:astral-sh/uv"
@@ -200,3 +185,31 @@ url = "https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-c
 [tools."aqua:twistedpair/google-cloud-sdk"."platforms.linux-x64"]
 checksum = "sha256:016a4b1702f8c97b585f9ae12c6182762758c17ef5302cb8561c7f6be5cc9af3"
 url = "https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-cli-562.0.0-linux-x86_64.tar.gz"
+
+[[tools.node]]
+version = "24.14.1"
+backend = "core:node"
+specifiers = ["24.14.1"]
+
+[tools.node."platforms.linux-arm64"]
+checksum = "sha256:734ff04fa7f8ed2e8a78d40cacf5ac3fc4515dac2858757cbab313eb483ba8a2"
+url = "https://nodejs.org/dist/v24.14.1/node-v24.14.1-linux-arm64.tar.gz"
+
+[tools.node."platforms.linux-x64"]
+checksum = "sha256:ace9fa104992ed0829642629c46ca7bd7fd6e76278cb96c958c4b387d29658ea"
+url = "https://nodejs.org/dist/v24.14.1/node-v24.14.1-linux-x64.tar.gz"
+
+[[tools.python]]
+version = "3.14.7"
+backend = "core:python"
+specifiers = ["3.14.7"]
+
+[tools.python."platforms.linux-arm64"]
+checksum = "sha256:8a0798baa8a2c27b5751d590aced543eaa85e20b3f73d93c1af049688acdc9c5"
+url = "https://github.com/astral-sh/python-build-standalone/releases/download/20260901/cpython-3.14.7+20260901-aarch64-unknown-linux-gnu-install_only_stripped.tar.gz"
+provenance = "github-attestations"
+
+[tools.python."platforms.linux-x64"]
+checksum = "sha256:3959f92825141e04adf44982d3a83ee57af0877e893b0796e04c1468749d9b04"
+url = "https://github.com/astral-sh/python-build-standalone/releases/download/20260901/cpython-3.14.7+20260901-x86_64-unknown-linux-gnu-install_only_stripped.tar.gz"
+provenance = "github-attestations"

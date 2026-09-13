@@ -8,15 +8,12 @@
 #   将来、起動時にしか決まらない初期化(マウント後の処理、環境変数に応じた
 #   挙動切り替え等)が必要になったら、exec の前に追記する。
 #
+#   Python / Node を含むツールは mise の shims が PATH（Dockerfile の ENV）に
+#   載っているため、シェルの種類やログインの有無に関係なく使える。
 #   ワークスペース側の mise.toml（実行中に足したツール）は mise 自身が
 #   カレントディレクトリから探索して読み込むため、ここでの設定は不要。
 ###########################################################################
 set -euo pipefail
-
-# fnm をログインシェル以外でも有効化(実行時セッション向け)
-if command -v fnm >/dev/null 2>&1; then
-  eval "$(fnm env --shell bash)" || true
-fi
 
 # command が渡らなかった場合の安全弁。
 #   compose.yml の command 省略や devcontainer.json の overrideCommand 設定次第で

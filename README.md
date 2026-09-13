@@ -22,7 +22,10 @@
 
 ## 🧰 ツール管理 (mise)
 
-CLI ツールは [mise](https://mise.jdx.dev/) で管理します。uv / fnm / Kiro CLI / Antigravity CLI も mise でインストールし、Python / Node はそれぞれ uv / fnm で導入します。
+CLI ツールは [mise](https://mise.jdx.dev/) で管理します。Python / Node / uv / Kiro CLI / Antigravity CLI も mise でインストールします。
+
+- Python は python-build-standalone、Node は nodejs.org の公式バイナリで、どちらも `mise.lock` のチェックサムで検証されます。
+- Python パッケージは uv（`uv pip install --system`）、Node のグローバルパッケージは `npm install -g` で mise の Python / Node の中へ入ります。
 
 ### 設定の配置
 
