@@ -33,7 +33,7 @@ locked_scopes = ["system", "global"]
 #   Python は python-build-standalone のビルド済みバイナリ、Node は nodejs.org の公式バイナリが入る。
 #   どちらも mise.lock に URL とチェックサムが記録される（Python は GitHub Artifact Attestations 付き）。
 "core:python" = "3.14.7"
-"core:node" = "24.14.1"
+"core:node" = "24.14.1"             # LTS のみ（Renovate も LTS 以外へは更新しない）
 # lang managers tools
 "aqua:astral-sh/uv" = "0.10.4"       # Python パッケージ管理（Python 本体は mise が入れる）
 "aqua:tfutils/tfenv" = "3.0.0"       # Terraform

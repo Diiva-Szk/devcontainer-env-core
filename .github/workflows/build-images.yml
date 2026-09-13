@@ -9,6 +9,7 @@ on:
       - 'docker-images/**'
       - 'compose.yml'
       - 'scripts/fill-mise-lock-checksums.sh'
+      - 'scripts/check-node-lts.sh'
       - '.github/workflows/build-images.yml'
   workflow_dispatch:
 
@@ -34,6 +35,11 @@ jobs:
       # （update-mise-lock ワークフローの push 待ちの間はここで失敗し、push 後に再実行される）
       - name: Check mise.lock checksums
         run: bash scripts/fill-mise-lock-checksums.sh --check docker-images/*/*/mise/mise.lock
+
+      # Node は LTS のみを使う方針。Renovate は LTS 以外へ更新しないが、
+      # 手作業で LTS 以外の版を指定した場合はここで検出する。
+      - name: Check Node is LTS
+        run: bash scripts/check-node-lts.sh
 
       # ビルド定義を二重管理しないため、開発時と同じ compose.yml をそのまま使う。
       # user / ai はいずれも dev-base → base を経由するため、この2つで全ステージを網羅する。

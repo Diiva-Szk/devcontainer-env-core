@@ -26,6 +26,7 @@ CLI ツールは [mise](https://mise.jdx.dev/) で管理します。Python / Nod
 
 - Python は python-build-standalone、Node は nodejs.org の公式バイナリで、どちらも `mise.lock` のチェックサムで検証されます。
 - Python パッケージは uv（`uv pip install --system`）、Node のグローバルパッケージは `npm install -g` で mise の Python / Node の中へ入ります。
+- **Node は LTS のみ**を使います。Renovate は LTS 以外（奇数メジャーや、LTS 入り前の偶数メジャー）へは更新せず、`build-images.yml` が `scripts/check-node-lts.sh` で指定中の版が LTS であることを検査します。
 
 ### 設定の配置
 

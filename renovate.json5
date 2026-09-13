@@ -211,6 +211,19 @@
       extractVersion: '^jq-(?<version>.+)$',
     },
     {
+      // Node は LTS のみを追跡する。
+      // node-version データソースは nodejs.org の index.json で lts: false のリリース
+      // （奇数メジャーや、LTS 入り前の偶数メジャーの Current 期間）を unstable として返し、
+      // ignoreUnstable により現在の版が LTS なら LTS 以外への更新は提案されない。
+      // ignoreUnstable は既定で true だが、LTS 限定の前提を崩さないよう明示する。
+      // なお現在の版が LTS でない場合は新しいメジャーの unstable 版も提案され得るため、
+      // config.toml の Node は必ず LTS の版を指定すること。
+      matchDatasources: [
+        'node-version',
+      ],
+      ignoreUnstable: true,
+    },
+    {
       // mise の core:python は python/cpython の GitHub タグ（v3.14.7 / v3.15.0rc1 等）で追跡される。
       // 既定の semver-coerced だと rc 等のプレリリースを正しく判別できないため pep440 で比較する。
       // なお mise が実際に入れるのは python-build-standalone のビルドのため、CPython のタグ直後は
