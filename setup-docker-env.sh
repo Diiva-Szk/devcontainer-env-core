@@ -2,7 +2,9 @@
 # setup-docker-env.sh
 
 DOCKER_SOCK_PATH="/var/run/docker.sock"
-DOT_ENV_FILE_PATH=".devcontainer/dev-env/.env"
+# docker compose は compose.yml と同じディレクトリの .env を読むため、スクリプト自身の場所を基準にする
+# （配置先のディレクトリ名や実行時のカレントディレクトリに依存させない）
+DOT_ENV_FILE_PATH="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/.env"
 
 echo "==> Configuring universal Docker environments (Mac / WSL2)..."
 
