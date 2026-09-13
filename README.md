@@ -1,171 +1,245 @@
 # devcontainer-env-core
 
-開発用DevContainerベースイメージと、セキュアな開発用Feature、およびAIエージェント用コンテキストの一元管理リポジトリ  
-**DevContainerのベースイメージ**と**共通Feature**を一元管理します。
+プロジェクトに組み込んで使う、Dev Container の開発環境一式です。
 
-開発者体験（DX）の向上と、サプライチェーン攻撃対策（DevSecOps）の両立を目的としています。
+- **2つのコンテナで権限を分離:** 作業者用の `user` コンテナと、AI エージェント用の `ai` コンテナを分け、AI エージェントには sudo・Docker ソケット・クラウドの認証情報を渡しません。
+- **検証済みのツールだけを導入:** CLI ツールや言語ランタイムは [mise](https://mise.jdx.dev/) の lockfile でバージョンとチェックサムを固定してインストールします。
+- **VS Code の拡張機能を許可リストで管理:** Dev Container Feature として、共通設定と拡張機能の許可リスト（`extensions.allowed`）を提供します。
 
-## 🎯 目的 (Goals)
+## 目次
 
-* **環境構築のゼロ化:** 誰がどこでクローンしても、コマンド一発でセキュアな標準環境が立ち上がる状態を作る。
-* **サプライチェーン保護:** `extensions.allowed`、mise の lockfile（チェックサム検証）と Renovate を活用し、検証済みの拡張機能・ツールのみを安全に配信する。
-* **AIコンテキストの共通化:** コーディング規約や共通のMCP設定など、AIエージェントに必要な標準ルールを全プロジェクトへ提供する。
+- [構成](#構成)
+- [同梱ツール](#同梱ツール)
+- [必要なもの](#必要なもの)
+- [使い方](#使い方)
+- [VS Code の Feature](#vs-code-の-feature)
+- [ツールの追加・バージョンの上書き](#ツールの追加バージョンの上書き)
+- [設定項目](#設定項目)
+- [注意事項](#注意事項)
+- [ライセンス](#ライセンス)
 
-## 📁 ディレクトリ構造 (Architecture)
+## 構成
 
-当リポジトリは、大きく2つの独立した成果物（アーティファクト）を生成・配信します。
+プロジェクトの `.devcontainer/devcontainer-env-core` に配置すると、プロジェクトルートが両方のコンテナの `/home/dev/work` にマウントされます。
 
-- `docker-images` : プロジェクトの土台となる **Dockerベースイメージ**（OS・ランタイム）のビルド定義群。
-- `devcontainer-features` : ベースイメージに依存せず、後から動的に注入できる **DevContainer Features**（拡張機能・ツール・AI設定）のソースコード群。
+```mermaid
+flowchart LR
+    vscode["VS Code"] -->|アタッチ| user
+    subgraph host["ホスト（Docker）"]
+        user["user コンテナ<br/>作業者用"]
+        ai["ai コンテナ<br/>AI エージェント用"]
+        ws[("プロジェクトルート<br/>/home/dev/work")]
+    end
+    user -->|"docker exec"| ai
+    user --- ws
+    ai --- ws
+```
 
-※ 注意: Feature（`devcontainer-features` 配下）のモジュール内には `Dockerfile` を含めず、関心の分離を徹底してください。
+| | `user` コンテナ | `ai` コンテナ |
+| --- | --- | --- |
+| 用途 | 作業者が使う。VS Code がアタッチする | AI エージェント（Claude Code / Codex など）を動かす |
+| ワークスペース（プロジェクトルート） | 読み書き可 | 読み書き可 |
+| sudo | あり（パスワード必須） | なし |
+| Docker ソケット | あり（`ai` コンテナを操作するため） | なし |
+| ワークスペースの `mise.toml` | `mise trust` するまで読み込まない | そのまま読み込む |
 
-## 🧰 ツール管理 (mise)
+## 同梱ツール
 
-CLI ツールは [mise](https://mise.jdx.dev/) で管理します。Python / Node / uv / Kiro CLI / Antigravity CLI も mise でインストールします。
+バージョンは各設定ファイルで固定され、定期的に更新されます。
 
-- Python は python-build-standalone、Node は nodejs.org の公式バイナリで、どちらも `mise.lock` のチェックサムで検証されます。
-- イメージに入れる Python パッケージは `docker-images/dev-base/opt/python/requirements.txt`（ハッシュ付き）から uv で mise の Python へ入ります。コンテナ内で `npm install -g` したパッケージは mise の Node の中へ入ります。
-- **Node は LTS のみ**を使います。Renovate は LTS 以外（奇数メジャーや、LTS 入り前の偶数メジャー）へは更新せず、`build-images.yml` が `scripts/check-node-lts.sh` で指定中の版が LTS であることを検査します。
+**共通（`user` / `ai`）** — [docker-images/dev-base/etc/mise/config.toml](docker-images/dev-base/etc/mise/config.toml)
 
-### 設定の配置
+| 分類 | ツール |
+| --- | --- |
+| 言語 | Python、Node.js（LTS のバージョンのみ） |
+| Python パッケージ | uv、ipykernel、pandas、pyarrow |
+| 汎用 | git、curl、wget、jq、yq、GitHub CLI（gh）、tmux、build-essential |
+| Lint | hadolint、secretlint |
+| Terraform | tfenv、tflint、terraform-docs |
+| クラウド | AWS CLI、Google Cloud CLI |
 
-| ステージ | リポジトリ内のパス | イメージ内のパス | mise のスコープ |
-| --- | --- | --- | --- |
-| dev-base（ai / user 共通） | `docker-images/dev-base/etc/mise/` | `/etc/mise/` | system |
-| ai | `docker-images/ai/opt/mise/` | `/opt/mise/`（`MISE_GLOBAL_CONFIG_FILE`） | global |
-| user | `docker-images/user/opt/mise/` | `/opt/mise/`（`MISE_GLOBAL_CONFIG_FILE`） | global |
-| ワークスペース | プロジェクトの `mise.toml` | `~/work/mise.toml` 等 | project |
+**`ai` コンテナ** — [docker-images/ai/opt/mise/config.toml](docker-images/ai/opt/mise/config.toml)
 
-- イメージ内の設定と `mise.lock` は root 所有で配置し、コンテナ内のユーザ（特に ai）からは書き換えられません。
-- `locked = true` により、`mise.lock` に記録されていないツールのインストールを拒否し、記録済みのチェックサムで検証します。mise 自体はチェックサムの欠落を拒否しないため、欠落は `build-images.yml` で検出します（合わせて aqua の `require_checksum` 相当）。ワークスペースの `mise.toml` は実行中にツールを足す用途のため、lock を必須にしていません（`locked_scopes`）。
-- **user コンテナは `paranoid = true`** です。ワークスペースは ai コンテナと共有しており、ai 側がワークスペースの `mise.toml` に任意のツールを書き込めるためです。ワークスペースに `mise.toml` を置いた場合は、内容を確認してから user コンテナで `mise trust` してください（trust するまで、その配下では mise のツールが使えません。詳細は[プロジェクトでツールのバージョンを上書きする](#プロジェクトでツールのバージョンを上書きする)）。
+Claude Code、OpenAI Codex CLI、GitHub Copilot CLI、GitHub Copilot Language Server、Amazon Kiro CLI、Google Antigravity CLI
 
-### ツールを追加・更新する
+**`user` コンテナ** — [docker-images/user/opt/mise/config.toml](docker-images/user/opt/mise/config.toml)
 
-1. 対象ステージの `config.toml` を編集する（backend は `aqua:owner/repo` のように明示する）。
-2. `mise.lock` を作り直す。PR 上では `update-mise-lock.yml` が自動で行うため、手元での実行は任意です。
+Docker CLI、Renovate CLI、sudo
 
-   ```sh
-   bash scripts/update-mise-locks.sh
-   ```
+## 必要なもの
 
-`mise lock` は、配布元がチェックサムを提供しない成果物（aws-cli, docker/cli, google-cloud-sdk, claude-code など）のチェックサムを記録しません。`scripts/fill-mise-lock-checksums.sh` が成果物をダウンロードして sha256 を補完し、`build-images.yml` が欠落を検出します。
+- Docker（Docker Desktop for Mac、または WSL2 上の Docker）
+- [VS Code](https://code.visualstudio.com/) と [Dev Containers 拡張機能](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers)
 
-### プロジェクトでツールのバージョンを上書きする
+## 使い方
 
-本テンプレートを `.devcontainer/devcontainer-env-core` に配置して使う場合、プロジェクトルートは `/home/dev/work` にマウントされ、作業ディレクトリになります。mise はカレントディレクトリから親へ向かって設定を探すため、**プロジェクトルートに `mise.toml` を置くと、イメージ側（system / global）の設定より優先**されます。
+### 1. プロジェクトに配置する
 
-例: イメージの Node は 24.14.1 だが、プロジェクトでは Node 18 を使う場合
+プロジェクトの `.devcontainer/devcontainer-env-core` に配置します。Git のサブモジュールとして追加すると、使うバージョン（コミット）を固定できます。
+
+```sh
+git submodule add https://github.com/Diiva-Szk/devcontainer-env-core.git .devcontainer/devcontainer-env-core
+```
+
+### 2. `.env` を生成する
+
+ホスト側で次のスクリプトを実行します。Docker ソケットのグループ ID などを検出し、`compose.yml` と同じディレクトリに `.env` を書き出します。
+
+```sh
+bash .devcontainer/devcontainer-env-core/setup-docker-env.sh
+```
+
+`sudo` のパスワードなども `.env` で変更できます（[設定項目](#設定項目)）。
+
+### 3. `devcontainer.json` を作成する
+
+`.devcontainer/devcontainer.json` を作成します。
+
+```jsonc
+{
+  "name": "my-project",
+  "dockerComposeFile": "devcontainer-env-core/compose.yml",
+  "service": "user",
+  "runServices": ["user", "ai"],
+  "workspaceFolder": "/home/dev/work",
+  "remoteUser": "dev",
+  "features": {
+    // 共通設定と拡張機能の許可リスト（他の vscode-* Feature を使う場合も必須）
+    "ghcr.io/diiva-szk/devcontainer-env-core/vscode-common:1": {},
+    // 必要に応じて追加
+    "ghcr.io/diiva-szk/devcontainer-env-core/vscode-python:1": {},
+    "ghcr.io/diiva-szk/devcontainer-env-core/vscode-terraform:1": {}
+  }
+}
+```
+
+プロジェクトのディレクトリ構成は次のようになります。
+
+```text
+my-project/
+├── .devcontainer/
+│   ├── devcontainer.json
+│   └── devcontainer-env-core/   # このリポジトリ
+│       ├── compose.yml
+│       └── .env                 # 手順 2 で生成
+└── ...
+```
+
+### 4. コンテナを開く
+
+VS Code でプロジェクトを開き、コマンドパレットから **Dev Containers: Reopen in Container** を実行します。初回はイメージのビルドに時間がかかります。
+
+### 5. AI エージェントを使う
+
+`user` コンテナのターミナルから `ai` コンテナに入り、AI エージェントを起動します。
+
+```sh
+# このプロジェクトの ai コンテナに入る
+project="$(docker inspect -f '{{ index .Config.Labels "com.docker.compose.project" }}' "$HOSTNAME")"
+docker exec -it -w /home/dev/work \
+  "$(docker ps -q --filter "label=com.docker.compose.project=${project}" --filter label=com.docker.compose.service=ai)" \
+  bash
+
+# ai コンテナ内で
+claude     # Claude Code
+codex      # OpenAI Codex CLI
+copilot    # GitHub Copilot CLI
+kiro-cli   # Amazon Kiro CLI
+agy        # Google Antigravity CLI
+```
+
+各ツールのログイン（認証）は、初回に `ai` コンテナ内で行ってください。
+
+## VS Code の Feature
+
+| Feature | 内容 |
+| --- | --- |
+| `ghcr.io/diiva-szk/devcontainer-env-core/vscode-common` | 共通の VS Code 設定と拡張機能（日本語化、Git、Markdown、CSV、Jupyter など）、および全 Feature の拡張機能の許可リスト（`extensions.allowed`） |
+| `ghcr.io/diiva-szk/devcontainer-env-core/vscode-python` | Python 開発用の拡張機能 |
+| `ghcr.io/diiva-szk/devcontainer-env-core/vscode-terraform` | Terraform 開発用の拡張機能 |
+
+- 許可リストにない拡張機能は VS Code にインストールできません。`vscode-python` / `vscode-terraform` を使う場合も、許可リストを提供する `vscode-common` を必ず併用してください。
+- `:1` と指定すると、メジャーバージョン 1 の最新版が使われます。
+
+## ツールの追加・バージョンの上書き
+
+プロジェクトルートに `mise.toml` を置くと、イメージに入っているツールより優先されます。イメージに無いツールの追加もできます。
+
+例: プロジェクトでは Node.js 22 を使う場合
 
 ```toml
 # <プロジェクトルート>/mise.toml
 [tools]
-node = "18"
+node = "22"
 ```
 
-| カレントディレクトリ | 使われる Node |
+| カレントディレクトリ | 使われる Node.js |
 | --- | --- |
-| プロジェクトルート（`~/work`）とその配下 | 18（プロジェクトの `mise.toml`） |
-| プロジェクト外（`~` など） | 24.14.1（イメージの設定） |
+| プロジェクトルート（`~/work`）とその配下 | 22（プロジェクトの `mise.toml`） |
+| プロジェクト外（`~` など） | イメージのバージョン |
 
-- **ファイル名は `mise.toml`** にする。`.mise.toml`、`.config/mise.toml`、`mise/config.toml` も使えるが、プロジェクト直下の `config.toml` は mise の設定ファイルとして認識されない。
-- イメージに入っていないバージョンは、初めてコマンドを実行したときに自動でインストールされる（明示的に入れる場合は `mise install`）。
-- イメージの `locked = true` は system / global の設定にのみ適用されるため、プロジェクトの `mise.toml` は lock が無くても使える。チェックサムを固定したい場合は、プロジェクトで `mise lock` を実行して `mise.lock` もコミットする。
+- **ファイル名は `mise.toml`** にしてください。`.mise.toml`、`.config/mise.toml`、`mise/config.toml` も使えますが、プロジェクト直下の `config.toml` は認識されません。
+- イメージに入っていないバージョンは、初めてコマンドを実行したときに自動でインストールされます（明示的に入れる場合は `mise install`）。
+- チェックサムを固定したい場合は、プロジェクトで `mise lock` を実行し、`mise.lock` もコミットしてください。
 
-**注意点:**
+### `user` コンテナでは `mise trust` が必要
 
-- **user コンテナでは `mise trust` が必要。** user コンテナは `paranoid = true` のため、プロジェクトの `mise.toml` は trust するまで読み込まれず、その配下では mise のツール全体が使えない。
-  - 内容を確認してから trust する（`mise trust --show` で内容を表示できる）。
+`user` コンテナは、ワークスペースの `mise.toml` を **`mise trust` するまで読み込みません**。trust するまでは、その配下で mise のツール（`node`、`python` など）が使えません。
 
-    ```sh
-    mise trust mise.toml
-    ```
+ワークスペースは `ai` コンテナと共有しているため、AI エージェントが `mise.toml` を書き換える可能性があります。sudo と Docker ソケットを持つ `user` コンテナで、確認していない設定が黙って読み込まれないようにしています。
 
-  - trust はファイル内容のハッシュに紐づくため、`mise.toml` を編集すると再度 trust が必要になる（ai 側が書き換えても黙って読み込まれない）。
-  - trust の記録はコンテナ内（`~/.local/state/mise`）にあるため、コンテナを作り直すと再度 trust が必要になる。
-  - ai コンテナは通常モードのため trust は不要。
-- **イメージの Node を前提にしたコマンドが使えなくなる。** コンテナ内でイメージの Node（24.14.1）に `npm install -g` したコマンドは、別の Node を指定したディレクトリでは `No version is set for shim` エラーになる。user コンテナの `renovate`（`/opt/renovate`）はその場で有効な Node で動くため、古い Node を指定したディレクトリでは Node のバージョン要件を満たせず失敗する。両方を有効にしたい場合は複数のバージョンを指定する（先頭のバージョンが優先される）。
+```sh
+mise trust --show     # 内容を確認する
+mise trust mise.toml  # 確認してから trust する
+```
+
+- trust はファイルの内容に紐づくため、`mise.toml` を編集すると再度 trust が必要です。
+- trust の記録はコンテナ内にあるため、コンテナを作り直すと再度 trust が必要です。
+- `ai` コンテナでは trust は不要です。
+
+### 別の Node.js を指定したときの注意
+
+プロジェクトで別の Node.js を指定したディレクトリでは、次のコマンドがそのままでは使えなくなります。
+
+イメージの Node.js のバージョンは [docker-images/dev-base/etc/mise/config.toml](docker-images/dev-base/etc/mise/config.toml) の `core:node` で確認できます（以下では `<イメージの版>` と表記します）。
+
+- **イメージの Node.js に `npm install -g` したコマンド:** `No version is set for shim` エラーになります。イメージと同じバージョンも併せて指定すると使えます（先頭のバージョンが優先されます）。
 
   ```toml
   [tools]
-  node = ["18", "24.14.1"]
+  node = ["22", "<イメージの版>"]
   ```
 
-- テンプレートの Node の LTS 検査（`scripts/check-node-lts.sh`）はテンプレート自身の設定だけが対象で、プロジェクトの `mise.toml` は検査しない。サポートが終了したバージョン（Node 18 は 2025 年 4 月に終了）を使う場合はプロジェクト側で判断すること。
+- **`user` コンテナの `renovate`:** Renovate CLI はイメージの Node.js を前提にしています。そのディレクトリで有効な Node.js（上の例では先頭の 22）で起動すると失敗するため、イメージの Node.js を明示して実行してください。
 
-## ⚙️ CI/CD パイプライン
+  ```sh
+  mise exec node@<イメージの版> -- renovate --version
+  ```
 
-### パイプラインの依存関係 (Pipeline Dependencies)
+## 設定項目
 
-`.github/workflows/` の4ワークフローは、以下のように連鎖して動作します。
+`.devcontainer/devcontainer-env-core/.env` に書くと、イメージのビルドとコンテナの起動に反映されます。変更後はコンテナをリビルドしてください（**Dev Containers: Rebuild Container**）。
 
-```mermaid
-flowchart TD
-    cron["⏰ schedule (毎週火 06:00 JST)"] --> renovate
-
-    subgraph renovate_wf["renovate.yml"]
-        renovate["Renovate 実行<br/>(GitHub App token で PR 作成)"]
-        bump["postUpgradeTasks:<br/>scripts/bump-feature-version.sh"]
-        renovate --> bump
-    end
-
-    renovate -->|依存更新 PR を作成| PR{"PR の変更パス"}
-
-    PR -->|"docker-images/**"| build["build-images.yml<br/>lock のチェックサム検査 + user / ai をビルド検証"]
-    PR -->|"docker-images/**/mise/config.toml"| lock["update-mise-lock.yml<br/>generate: mise.lock を作り直す<br/>push: 検証して PR ブランチへ push（別 runner）"]
-    PR -->|"devcontainer-features/**"| validate["release-features.yml : validate<br/>features package のパース検証"]
-
-    lock -->|"App token の push が再トリガー"| build
-
-    merge(["main へマージ"]) --> publish["release-features.yml : publish<br/>GHCR へ Feature を publish（main のみ・Environment release）"]
-    validate -. "needs" .-> publish
-```
-
-**依存関係のポイント:**
-
-- **Renovate が起点:** `GITHUB_TOKEN` 発の push は他ワークフローを起動しないため、あえて GitHub App のトークンで PR を作る。これにより生成された PR が下流の CI を起動できる。
-- **lock → build の連鎖:** mise は `locked = true` のため、`config.toml` だけ更新すると `mise.lock` と不一致になりビルドが失敗する。Renovate には lock を更新させず（`skipArtifactsUpdate`）、`update-mise-lock` が PR ブランチへ lock を push する。push は **GitHub App のトークン**で行うため、その push が改めて `build-images` を起こしてビルドが通ることを保証する。push したコミットは `gitIgnoredAuthors` により Renovate から「人の編集」とみなされない。
-- **validate → publish:** `publish` は `needs: validate` かつ `if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'`。PR ではパース検証のみ、`main` からのみ GHCR へ publish する（手動実行で別ブランチを選んでも publish しない）。
-- **version bump との連動:** Feature の `version` を上げないと `publish` は何も配信しない。そのため Renovate の `postUpgradeTasks` が `bump-feature-version.sh` で patch を上げる。
-
-### Renovate の待機期間 (minimumReleaseAge)
-
-公開直後の版は取り込まず、Docker イメージ・GitHub のリリース/タグ・Node・npm・PyPI は7日、VS Code 拡張機能は14日待ってから PR を作ります（`internalChecksFilter: strict` のため、待機中は PR を作らず Dependency Dashboard に表示されます）。
-
-- **Docker Hub のページング上限:** Docker Hub のタグ一覧 API は匿名だと 1000 件（10ページ）を超えると 403 を返します。`library/debian` のようにタグが多いイメージでは、Renovate がリリース日時を取得できなくなり、PR が `renovate/stability-days` の pending のまま永久に更新されませんでした。`renovate.yml` で `RENOVATE_DOCKER_MAX_PAGES=10` を設定して回避しています。
-- **Kiro CLI:** 配布元のマニフェストにリリース日時が無いため、待機期間を設定していません（設定すると同じく永久に pending になります）。
-
-### サードパーティ Action 一覧 (Third-party Actions)
-
-上記ワークフローで利用しているサードパーティ Action の一覧です。サプライチェーン保護のため、すべてコミット SHA で固定しています（Renovate が自動更新）。
-
-| Action | バージョン | 利用ワークフロー |
+| 変数 | 既定値 | 内容 |
 | --- | --- | --- |
-| [`actions/checkout`](https://github.com/actions/checkout) | v7.0.0 | build-images / release-features / update-mise-lock |
-| [`actions/upload-artifact`](https://github.com/actions/upload-artifact) | v7.0.1 | update-mise-lock |
-| [`actions/download-artifact`](https://github.com/actions/download-artifact) | v8.0.1 | update-mise-lock |
-| [`devcontainers/action`](https://github.com/devcontainers/action) | v1.4.3 | release-features |
-| [`actions/create-github-app-token`](https://github.com/actions/create-github-app-token) | v3.2.0 | renovate / update-mise-lock |
-| [`renovatebot/github-action`](https://github.com/renovatebot/github-action) | v46.1.20 | renovate |
+| `USER_PASS` | `dev` | `user` コンテナの `sudo` のパスワード。**変更を推奨します** |
+| `UID` / `GID` | `1000` | コンテナ内ユーザーの UID / GID。Linux でホストのユーザーと合わせる場合に指定する |
+| `USER_NAME` | `dev` | コンテナ内のユーザー名 |
+| `DOCKER_GID` | `988` | Docker ソケットのグループ ID（`setup-docker-env.sh` が設定） |
+| `DOCKER_SOCK_PATH` | `/var/run/docker.sock` | ホストの Docker ソケットのパス（`setup-docker-env.sh` が設定） |
+| `AWS_REGION` | `ap-northeast-1` | `user` コンテナの AWS リージョン |
 
-Action の SHA 固定だけでは、Action が実行時に取得するものまでは固定されません。以下は個別に固定しています。
+`USER_NAME` を変更した場合は、`devcontainer.json` の `workspaceFolder`（`/home/<USER_NAME>/work`）と `remoteUser` も合わせて変更してください。
 
-| 対象 | 固定方法 | 利用ワークフロー |
-| --- | --- | --- |
-| Renovate 本体のコンテナ | `renovate.yml` の `CLI_IMAGE_TAG` でバージョン + digest を指定（Docker Hub の `renovate/renovate`） | renovate |
-| Dev Containers CLI | `.github/tools/devcontainer-cli/package-lock.json` の integrity で固定し `npm ci` で事前導入 | release-features |
-| mise | Dockerfile と同じ `jdxcode/mise` イメージ（タグ + digest 固定）の中で `mise lock` を実行 | update-mise-lock |
+## 注意事項
 
-### セキュリティ上の設計 (Security)
+- **AI エージェントは確認なしで動作します。** `ai` コンテナの Claude Code・Codex などは、コマンド実行やファイル編集の確認プロンプトを出さない設定です。sudo・Docker ソケット・クラウドの認証情報を持たないことを前提にしているため、この設定を `user` コンテナやホストへ持ち出さないでください。
+- **ワークスペースの内容は AI エージェントから読み書きできます。** API キーなどの秘密情報を、プロジェクトルート配下に置かないでください。
+- **`ai` コンテナのログイン情報は、コンテナを作り直すと消えます。** 再度ログインしてください。
+- `ai` コンテナはネットワークに接続できます（外部 API の利用やパッケージの取得のため）。
 
-- **App トークンの権限は最小化する:** `create-github-app-token` は `permission-*` を指定しないと App installation の全権限を継承するため、ワークフローごとに必要な権限だけを指定しています。
-  - renovate: Contents / Issues / Pull requests / Checks / Commit statuses / Workflows（いずれも write）、Dependabot alerts（read。`vulnerabilityAlerts` 用で、リポジトリ側で Dependency graph と Dependabot alerts の有効化も必要）
-  - update-mise-lock: Contents（write）のみ
-  - 秘密鍵が漏えいした場合の影響も抑えたい場合は、lock 更新用に Contents 権限だけを持つ別の App を用意し、`update-mise-lock.yml` のシークレットを差し替えてください。
-- **PR のコードを実行するジョブと、書き込みトークンを扱うジョブを分離する:** `update-mise-lock.yml` は lock を生成する `generate` ジョブと、push する `push` ジョブを別 runner で実行します。同じ runner で PR のコードを実行した後にトークンを扱うと、`.git/hooks` 等を仕込まれてトークンを盗まれるおそれがあるためです。`push` ジョブは PR のコードを実行せず、受け取った lock のファイル構成・形式・書き込み先（シンボリックリンクでないこと）を検証してから取り込みます。
-- **publish は main からのみ:** `release-features.yml` の publish は `main` ブランチでのみ実行されます（`workflow_dispatch` で別ブランチを選んでも publish されません）。publish ジョブは Environment `release` を使います。**リポジトリ設定で `release` に「main ブランチのみ」のデプロイ制限と必須レビュアーを設定してください**（未設定の場合は保護ルールのない Environment として自動作成されます）。
-- **イメージ内の依存も lock する:** Python パッケージは `docker-images/dev-base/opt/python/requirements.txt`（ハッシュ付き、`--require-hashes`）、ローカル確認用の Renovate CLI は `docker-images/user/opt/renovate/package-lock.json`（`npm ci --ignore-scripts`）で固定しています。いずれも Renovate が更新します。
-  - Python パッケージの更新時、Renovate は `uv pip compile` で requirements.txt を再生成します。このとき推移的依存はその時点の最新版に解決され、minimumReleaseAge の待機は直接依存（`requirements.in`）にのみ適用されます。
+## ライセンス
 
-リポジトリ側の設定（ブランチ保護、Actions の許可リスト、Environment の保護ルール）はワークフローからは確認できないため、別途確認してください。
+[MIT License](LICENSE)
+
+このリポジトリの保守・開発に関する情報は [docs/MAINTAINING.md](docs/MAINTAINING.md) を参照してください。
