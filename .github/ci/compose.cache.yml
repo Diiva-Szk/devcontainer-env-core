@@ -1,0 +1,14 @@
+# CI 専用: compose.yml に重ねて、ビルドキャッシュを GHCR へ書き出す。
+#   docker compose -f compose.yml -f .github/ci/compose.cache.yml build --builder <docker-container ドライバーの builder>
+#
+# CACHE_ARCH（amd64 / arm64）はワークフローから渡す。compose.yml の cache_from と参照先を揃えること。
+# mode=max で中間ステージ（base / dev-base）の層も書き出す。
+services:
+  user:
+    build:
+      cache_to:
+        - type=registry,ref=ghcr.io/diiva-szk/devcontainer-env-core/build-cache:user-${CACHE_ARCH:?CACHE_ARCH is required},mode=max,image-manifest=true,oci-mediatypes=true
+  ai:
+    build:
+      cache_to:
+        - type=registry,ref=ghcr.io/diiva-szk/devcontainer-env-core/build-cache:ai-${CACHE_ARCH:?CACHE_ARCH is required},mode=max,image-manifest=true,oci-mediatypes=true
