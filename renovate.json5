@@ -1,0 +1,249 @@
+{
+  $schema: 'https://docs.renovatebot.com/renovate-schema.json',
+  timezone: 'Asia/Tokyo',
+  extends: [
+    'config:recommended',
+    // イメージ・アクションをダイジェストで固定し、タグの差し替えによる
+    // すり替えを防ぐ（サプライチェーン対策）
+    'docker:pinDigests',
+    'helpers:pinGitHubActionDigests',
+    // メンテナンスが止まった依存を検知する
+    'abandonments:recommended',
+  ],
+  dependencyDashboard: true,
+  dependencyDashboardOSVVulnerabilitySummary: 'all',
+  osvVulnerabilityAlerts: true,
+  vulnerabilityAlerts: {
+    // 脆弱性修正だけは minimumReleaseAge の待機を免除し、即座にPRを出す
+    minimumReleaseAge: null,
+    labels: [
+      'security',
+    ],
+  },
+  // minimumReleaseAge を満たしていない更新はブランチ/PRを作らない（既定値だが明示する）。
+  // 待機中の更新は Dependency Dashboard の「Pending Status Checks」に表示される。
+  //
+  // 【過去の不具合】debian イメージの更新PRが renovate/stability-days の pending のまま
+  // 1か月以上放置された。原因は Docker Hub のタグ一覧APIが匿名だと10ページ目
+  // (1000件)までしか返さず、library/debian（約3000タグ）の11ページ目で 403 になること。
+  // Renovate はタグ一覧の取得全体を諦めてレジストリAPIへフォールバックし、
+  // リリース日時(releaseTimestamp)の無い版として扱う。Renovate 42 以降の既定
+  // minimumReleaseAgeBehaviour=timestamp-required では日時の無い版は永久に pending となり、
+  // 既存ブランチも「internalChecksFilter 未達」として更新されなくなる。
+  // 対策として .github/workflows/renovate.yml で RENOVATE_DOCKER_MAX_PAGES=10 を設定し、
+  // 403 になる前にページングを止めている（dockerMaxPages はセルフホスト専用設定のため
+  // ここには書けない）。
+  internalChecksFilter: 'strict',
+  // update-mise-lock ワークフローが Renovate のPRブランチへ mise.lock を push する。
+  // そのコミットを「人による編集」とみなされると Renovate がPRの更新を止めるため無視させる。
+  gitIgnoredAuthors: [
+    '41898282+github-actions[bot]@users.noreply.github.com',
+  ],
+  // Amazon Kiro CLI のバージョン取得元。
+  // GitHub リリースもパッケージレジストリも無く、配布元の latest マニフェストだけが公開されている。
+  customDatasources: {
+    'kiro-cli': {
+      defaultRegistryUrlTemplate: 'https://desktop-release.q.us-east-1.amazonaws.com/latest/manifest.json',
+      transformTemplates: [
+        '{"releases": [{"version": version}], "homepage": "https://kiro.dev/"}',
+      ],
+    },
+  },
+  // Feature の customizations に書かれた VS Code 拡張機能のバージョンを追跡する。
+  //
+  // 拡張機能のバージョンは Marketplace が正だが、Renovate に Marketplace データソースは
+  // 存在しないため、対応する GitHub リポジトリのリリースを代理指標として使う。
+  // 各バージョンの直前行に以下の形式のコメントを置くことで対象になる。
+  //
+  //   // renovate: datasource=github-releases depName=<owner>/<repo>
+  //
+  // GitHub にリリース/タグが無い拡張機能は「// ghリリースなし」と明記し、手動更新とする。
+  // （devcontainer-feature.json は JSON だが devcontainers CLI は jsonc として解釈するため、
+  //   コメントを書いても features package / install は正常に動作することを検証済み）
+  customManagers: [
+    {
+      customType: 'regex',
+      description: 'devcontainer-feature.json 内の VS Code 拡張機能のバージョン',
+      managerFilePatterns: [
+        '/^devcontainer-features/[^/]+/devcontainer-feature\\.json$/',
+      ],
+      matchStrings: [
+        // customizations.vscode.extensions 形式:
+        //   "publisher.extension@1.2.3"
+        '//\\s*renovate:\\s*datasource=(?<datasource>\\S+)\\s+depName=(?<depName>\\S+?)(?:\\s+versioning=(?<versioning>\\S+))?\\s*\\n[^"]*"[^"@]+@(?<currentValue>[^"]+)"',
+        // settings["extensions.allowed"] 形式:
+        //   "publisher.extension": ["1.2.3"]
+        '//\\s*renovate:\\s*datasource=(?<datasource>\\S+)\\s+depName=(?<depName>\\S+?)(?:\\s+versioning=(?<versioning>\\S+))?\\s*\\n[^"]*"[^"]+":\\s*\\[\\s*"(?<currentValue>[^"]+)"',
+      ],
+      // タグの v 接頭辞を除去して拡張機能のバージョン表記に合わせる
+      extractVersionTemplate: '^v?(?<version>.+)$',
+      versioningTemplate: '{{#if versioning}}{{{versioning}}}{{else}}semver-coerced{{/if}}',
+    },
+    {
+      customType: 'regex',
+      description: 'mise 設定内の http backend ツール（Renovate の mise マネージャは http backend を更新できない）',
+      managerFilePatterns: [
+        '/^docker-images/[^/]+/(etc|opt)/mise/config\\.toml$/',
+      ],
+      // 以下の形式（テーブル形式のツール定義）を対象にする:
+      //   # renovate: datasource=custom.kiro-cli depName=kiro-cli
+      //   version = "2.21.4"
+      matchStrings: [
+        '#\\s*renovate:\\s*datasource=(?<datasource>\\S+)\\s+depName=(?<depName>\\S+)\\s*\\nversion\\s*=\\s*"(?<currentValue>[^"]+)"',
+      ],
+      versioningTemplate: 'semver',
+    },
+  ],
+  // 拡張機能のバージョンが更新されたら、その Feature 自身の version も patch 上げする。
+  // version が据え置きだと release ワークフローが何も publish しないため。
+  //
+  // 【重要】このタスクの実行にはボット側での明示的な許可が必要。
+  // 許可設定 allowedCommands はセルフホスト専用でリポジトリ設定には書けず、
+  // 未設定の場合はエラーにならず黙ってスキップされる。
+  // 本リポジトリでは .github/workflows/renovate.yml の RENOVATE_ALLOWED_COMMANDS で許可している。
+  postUpgradeTasks: {
+    commands: [
+      'bash scripts/bump-feature-version.sh',
+    ],
+    // 既定の 'update' は依存1件ごとに実行されるため、まとめ更新のPRで
+    // 同じ Feature の version が何度も上がる。ブランチ単位で1回に抑える。
+    executionMode: 'branch',
+    fileFilters: [
+      'devcontainer-features/*/devcontainer-feature.json',
+    ],
+  },
+  packageRules: [
+    // リリース直後の版を即座に取り込まない。公開直後に取り下げられる版や、
+    // 侵害されたリリースが差し替えられるまでの猶予を確保する。
+    // mise の aqua backend のツールは github-tags データソースで追跡される。
+    {
+      matchDatasources: [
+        'docker',
+        'github-releases',
+        'github-tags',
+      ],
+      minimumReleaseAge: '7 days',
+    },
+    {
+      // 拡張機能は全プロジェクトのエディタへ配信されるため、より長く寝かせる。
+      // 上のルールより後に置くことで7日を上書きする。
+      matchDatasources: [
+        'github-releases',
+        'github-tags',
+      ],
+      matchFileNames: [
+        'devcontainer-features/**',
+      ],
+      minimumReleaseAge: '14 days',
+    },
+    {
+      // Kiro CLI のマニフェストにはリリース日時が無いため、minimumReleaseAge を設定すると
+      // timestamp-required により永久に pending となり、PRが作られない（debian と同じ症状）。
+      // 待機期間を設けられない代わりに、バージョンは固定し lock でチェックサムを検証する。
+      matchDatasources: [
+        'custom.kiro-cli',
+      ],
+      minimumReleaseAge: null,
+    },
+    {
+      // このリポジトリのリリースタグは `code-spell-checker-v4.5.6` 形式のため、
+      // 既定の extractVersionTemplate（v接頭辞の除去のみ）ではバージョンを取り出せない。
+      matchDepNames: [
+        'streetsidesoftware/vscode-spell-checker',
+      ],
+      extractVersion: '^code-spell-checker-v(?<version>.+)$',
+    },
+    {
+      // 拡張機能は extensions と extensions.allowed の2箇所に同じバージョンが書かれる。
+      // depName が同一なら Renovate が1つのPRで両方を更新する。
+      matchManagers: [
+        'custom.regex',
+      ],
+      // 許可リストの変更はサプライチェーン上の判断を伴うため自動マージしない
+      automerge: false,
+    },
+    // 拡張機能は全体で1グループにする。
+    //
+    // 許可リスト(extensions.allowed)を vscode-common に集約しているため、
+    // Python/Terraform の拡張は「本体＝各Feature」「許可リスト＝vscode-common」と
+    // 別ファイルに分かれて存在する。Feature単位でグループ化すると両者が別PRになり、
+    // 片方だけマージした時点で許可リストにないバージョンが指定される。
+    // その拡張はVS Codeにブロックされ、インストールできなくなる。
+    // （dry-runで vscode-terraform と vscode-python-debugger が分断されるのを確認）
+    //
+    // 「1PR = 1 Feature = 1 publish」の原則は崩れるが、bumpスクリプトは変更された
+    // Featureをすべて処理するため、publish自体は正しく複数走る。
+    //
+    // なお config:recommended に含まれる group:monorepos / group:recommended は
+    // 既知のパッケージ群向けの厳選リストであり、custom.regex で拾う拡張機能は対象外。
+    // よってグループ化は明示的に指定する必要がある。
+    {
+      matchFileNames: [
+        'devcontainer-features/**',
+      ],
+      groupName: 'VS Code拡張機能',
+      // groupName が日本語だとスラグ化で非ASCII文字が落ち、ブランチ名が
+      // renovate/vs-code のように意図しない形になるため明示する。
+      groupSlug: 'vscode-extensions',
+    },
+    // ----------------------------------------------------------------------
+    // mise（docker-images/<stage>/(etc|opt)/mise/config.toml）
+    // ----------------------------------------------------------------------
+    {
+      // mise.lock は update-mise-lock ワークフローが作り直す（チェックサムの補完を含む）。
+      // Renovate 自身が `mise lock` を実行すると、チェックサムを持たない成果物の lock が
+      // 不完全なままコミットされるため、Renovate による lock 更新は行わない。
+      matchFileNames: [
+        'docker-images/**/mise/config.toml',
+      ],
+      skipArtifactsUpdate: true,
+    },
+    {
+      // jq のタグは `jq-1.8.1` 形式（mise 側は aqua レジストリの version_prefix で解釈済み）。
+      matchManagers: [
+        'mise',
+      ],
+      matchPackageNames: [
+        'jqlang/jq',
+      ],
+      extractVersion: '^jq-(?<version>.+)$',
+    },
+    {
+      // tmux のタグは v3.7a / v3.7b とパッチがアルファベットで semver ではないため、
+      // 既定の semver-coerced では解釈できず更新されない。loose で比較する。
+      // なお a は安定版・b は不安定版という関係ではなく、b が後発のバグフィックス
+      // （v3.6a: 2025-12-22 → v3.6b: 2026-05-20）。よってバージョンの絞り込みはしない。
+      // 不安定版の preview タグはバージョンとして解釈できないため loose でも対象外になる。
+      matchManagers: [
+        'mise',
+      ],
+      matchPackageNames: [
+        'tmux/tmux-builds',
+      ],
+      versioning: 'loose',
+    },
+    // mise のツールはイメージのステージ単位でグループ化する。
+    // ステージごとにビルドと lock 更新の単位が分かれるため。
+    {
+      matchFileNames: [
+        'docker-images/dev-base/**',
+      ],
+      groupName: 'dev-base の mise ツール',
+      groupSlug: 'mise-dev-base',
+    },
+    {
+      matchFileNames: [
+        'docker-images/ai/**',
+      ],
+      groupName: 'ai の mise ツール',
+      groupSlug: 'mise-ai',
+    },
+    {
+      matchFileNames: [
+        'docker-images/user/**',
+      ],
+      groupName: 'user の mise ツール',
+      groupSlug: 'mise-user',
+    },
+  ],
+}

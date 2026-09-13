@@ -1,0 +1,74 @@
+name: Renovate
+
+# Renovate CLI（セルフホスト）で実行する。
+# CLI は常駐せず webhook も受けないため、PR が作られるのはこのワークフローが
+# 走ったときだけ。cron の間隔がそのまま更新PRの頻度になる。
+on:
+  schedule:
+    # 毎週月曜 21:00 UTC = 火曜 06:00 JST
+    - cron: '0 21 * * 1'
+  workflow_dispatch:
+    inputs:
+      dryRun:
+        description: 'PRを作らず実行内容だけ確認する'
+        type: boolean
+        default: false
+      logLevel:
+        description: 'ログレベル'
+        type: choice
+        options:
+          - info
+          - debug
+        default: info
+
+concurrency:
+  group: renovate
+  cancel-in-progress: false
+
+# Renovate は GitHub App のトークンで動くため、GITHUB_TOKEN の権限は不要
+permissions: {}
+
+jobs:
+  renovate:
+    runs-on: ubuntu-latest
+    steps:
+      # GitHub App のインストールトークンを発行する。
+      # GITHUB_TOKEN による push は他のワークフローを起動しないため、
+      # そのままでは Renovate のPRをマージしても release-features.yml が走らない。
+      # App のトークンは GITHUB_TOKEN ではないためこの制約を受けない。
+      #
+      # App には以下のリポジトリ権限が必要:
+      #   Contents / Issues / Pull requests / Checks / Commit statuses : read+write
+      #   Workflows : read+write （アクションのSHA固定を更新するために必須）
+      - name: Generate GitHub App token
+        id: app-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          app-id: ${{ secrets.RENOVATE_APP_ID }}
+          private-key: ${{ secrets.RENOVATE_APP_PRIVATE_KEY }}
+
+      # Renovate は自身でリポジトリを clone するため actions/checkout は不要。
+      # postUpgradeTasks が参照する scripts/ も、その clone 側のものが使われる。
+      - name: Run Renovate
+        uses: renovatebot/github-action@3064367f740a1a91cca218698a63902689cce200 # v46.1.20
+        with:
+          token: ${{ steps.app-token.outputs.token }}
+        env:
+          RENOVATE_REPOSITORIES: ${{ github.repository }}
+          RENOVATE_AUTODISCOVER: 'false'
+          RENOVATE_DRY_RUN: ${{ inputs.dryRun == true && 'full' || null }}
+          LOG_LEVEL: ${{ inputs.logLevel || 'info' }}
+
+          # postUpgradeTasks の commands はここで許可したものだけが実行される。
+          # allowedCommands はセルフホスト専用設定のため renovate.json5 には書けない。
+          # 未設定だとエラーにならず黙ってスキップされるので、変更時は要注意。
+          # 正規表現は解決後のコマンド文字列と完全一致させる。
+          RENOVATE_ALLOWED_COMMANDS: '["^bash scripts/bump-feature-version[.]sh$"]'
+
+          # Docker Hub のタグ一覧APIは匿名だと10ページ(1000件)までしか返さず、
+          # それを超えると 403 になる。library/debian は約3000タグあるため 403 となり、
+          # Renovate がリリース日時の取れないAPIへフォールバックする。すると
+          # minimumReleaseAge（timestamp-required）を永久に満たせず、PRが pending のまま
+          # 更新されなくなる。403 になる前にページングを止めてリリース日時を取得させる。
+          # （一覧は更新日時の新しい順のため、更新候補となる新しいタグは先頭側に含まれる）
+          RENOVATE_DOCKER_MAX_PAGES: '10'

@@ -1,0 +1,42 @@
+name: Build images
+
+# ベースイメージのdigest更新や mise ツールの更新は、PRの差分を見ても
+# 実際にビルドが通るかまでは分からない。特に mise は locked = true のため、
+# lock とチェックサムが揃っていなければこのビルドで初めて失敗する。
+on:
+  pull_request:
+    paths:
+      - 'docker-images/**'
+      - 'compose.yml'
+      - 'scripts/fill-mise-lock-checksums.sh'
+      - '.github/workflows/build-images.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: build-images-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
+permissions: {}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+
+      # checksum の無いエントリがあると、mise はその成果物を検証せずにインストールする。
+      # ビルドは通ってしまうため、ここで明示的に落とす。
+      # （update-mise-lock ワークフローの push 待ちの間はここで失敗し、push 後に再実行される）
+      - name: Check mise.lock checksums
+        run: bash scripts/fill-mise-lock-checksums.sh --check docker-images/*/*/mise/mise.lock
+
+      # ビルド定義を二重管理しないため、開発時と同じ compose.yml をそのまま使う。
+      # user / ai はいずれも dev-base → base を経由するため、この2つで全ステージを網羅する。
+      # push はせず、ビルドが通ることの確認のみを目的とする。
+      - name: Build user / ai images
+        run: docker compose -f compose.yml build user ai

@@ -1,0 +1,55 @@
+name: Release features
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'devcontainer-features/**'
+      - '.github/workflows/release-features.yml'
+  pull_request:
+    paths:
+      - 'devcontainer-features/**'
+      - '.github/workflows/release-features.yml'
+  workflow_dispatch:
+
+jobs:
+  # devcontainer-feature.json は jsonc として解釈されるが、publish 前に
+  # パースとパッケージングが通ることを確認しておく。
+  validate:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - name: Package features (parse check)
+        run: |
+          npx --yes @devcontainers/cli@0.87.0 features package \
+            --force-clean-output-folder \
+            -o /tmp/features-out \
+            ./devcontainer-features
+
+  publish:
+    # publish は main へのマージ後のみ。PR ではパースの検証だけ行う。
+    if: github.event_name != 'pull_request'
+    needs: validate
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      # 各 Feature は devcontainer-feature.json の "version" を元に
+      # ghcr.io/<owner>/<repo>/<feature-id> へ publish される。
+      # version を上げないと既存タグは再発行されない（何も起きない）点に注意。
+      - name: Publish features to GHCR
+        uses: devcontainers/action@1082abd5d2bf3a11abccba70eef98df068277772 # v1.4.3
+        with:
+          publish-features: 'true'
+          base-path-to-features: './devcontainer-features'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

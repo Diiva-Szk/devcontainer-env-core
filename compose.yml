@@ -1,0 +1,60 @@
+services:
+  ###########################################################################
+  # user: ユーザ環境。VS Code がアタッチする側。
+  #   docker.sock マウント（ai コンテナ操作用）。
+  ###########################################################################
+  user:
+    build:
+      context: docker-images
+      dockerfile: Dockerfile
+      target: user
+      args:
+        TZ: Asia/Tokyo
+        UID: ${UID:-1000}
+        GID: ${GID:-1000}
+        USER_NAME: ${USER_NAME:-dev}
+        USER_PASS: ${USER_PASS:-dev}
+        DOCKER_GID: ${DOCKER_GID:-988}
+        PYTHON_VERSION: ${PYTHON_VERSION:-3.14}
+        NODE_VERSION: ${NODE_VERSION:-24.14.1}
+    environment:
+      NODE_OPTIONS: "--max-old-space-size=4096"
+      AWS_REGION: ${AWS_REGION:-ap-northeast-1}
+    volumes:
+      # プロジェクトの中にdev-envを置く場合、../../ はプロジェクトルートになるので、VS Codeのワークスペースとして使える。
+      - ../../:/home/${USER_NAME:-dev}/work:delegated
+      # docker.sock: user だけにマウント（ai には絶対に渡さない）
+      # ソケットの場所は setup-docker-env.sh が .env の DOCKER_SOCK_PATH に書き出す
+      - ${DOCKER_SOCK_PATH:-/var/run/docker.sock}:/var/run/docker.sock
+    working_dir: /home/${USER_NAME:-dev}/work
+    # ENTRYPOINT(entrypoint.sh) + この command が exec される
+    command:
+      - sleep
+      - infinity
+
+  ###########################################################################
+  # ai: AIエージェント環境。
+  #   sudo なし / AWS 認証情報なし / docker.sock なし。
+  ###########################################################################
+  ai:
+    build:
+      context: docker-images
+      dockerfile: Dockerfile
+      target: ai
+      args:
+        TZ: Asia/Tokyo
+        UID: ${UID:-1000}
+        GID: ${GID:-1000}
+        USER_NAME: ${USER_NAME:-dev}
+        PYTHON_VERSION: ${PYTHON_VERSION:-3.14}
+        NODE_VERSION: ${NODE_VERSION:-24.14.1}
+    environment:
+      NODE_OPTIONS: "--max-old-space-size=4096"
+      POWERLEVEL9K_DISABLE_GITSTATUS: "true"
+    volumes:
+      - ../../:/home/${USER_NAME:-dev}/work:delegated
+      # docker.sock は渡さない
+    working_dir: /home/${USER_NAME:-dev}/work
+    command:
+      - sleep
+      - infinity

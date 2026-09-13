@@ -1,0 +1,5 @@
+{
+  "chat.defaultModel": "claude-opus-4.6",
+  "chat.enableThinking": true,
+  "chat.enableCheckpoint": true
+}

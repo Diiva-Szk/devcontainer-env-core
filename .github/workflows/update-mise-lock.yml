@@ -1,0 +1,103 @@
+name: Update mise lock
+
+# mise 設定は locked = true のため、config.toml だけを更新すると mise.lock と不一致になり、
+# イメージのビルドが失敗する。Renovate には lock を更新させず（skipArtifactsUpdate）、
+# PR上でこのワークフローが lock を作り直して push する。
+on:
+  pull_request:
+    paths:
+      - 'docker-images/**/mise/config.toml'
+      - 'docker-images/**/mise/mise.lock'
+      # mise 本体のバージョンが変わると lock の生成結果も変わり得る
+      - 'docker-images/Dockerfile'
+      - 'scripts/update-mise-locks.sh'
+      - 'scripts/fill-mise-lock-checksums.sh'
+      - '.github/workflows/update-mise-lock.yml'
+  workflow_dispatch:
+
+# 同一ブランチへ順に push するため、並行実行させない
+concurrency:
+  group: update-mise-lock-${{ github.head_ref || github.ref }}
+  cancel-in-progress: false
+
+permissions: {}
+
+jobs:
+  update-lock:
+    # フォークからのPRではシークレットを使えず、他者のブランチへ push すべきでもない
+    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      # PR のコード（スクリプト）を実行するため、この時点では書き込み可能なトークンを
+      # 作業ツリーに残さない。push 用の App トークンは最後のステップでのみ発行する。
+      - name: Checkout PR branch
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: ${{ github.head_ref || github.ref_name }}
+          persist-credentials: false
+
+      # イメージに入る mise と同じバイナリで lock を生成するため、Dockerfile の
+      # mise ステージと同じイメージ（タグ + digest）の中で実行する。
+      - name: Regenerate mise.lock
+        env:
+          # mise lock が GitHub API を多用するため、レート制限回避用に読み取りトークンを渡す
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          image="$(sed -n 's/^FROM \(jdxcode\/mise:[^[:space:]]*\) AS mise$/\1/p' docker-images/Dockerfile)"
+          if [ -z "$image" ]; then
+            echo "Dockerfile から mise イメージを特定できませんでした" >&2
+            exit 1
+          fi
+          echo "mise image: $image"
+
+          # 公式イメージは MISE_DATA_DIR 等を root 所有の /mise に向けているため、
+          # 実行ユーザが書き込める場所へ振り替える。
+          docker run --rm \
+            --user "$(id -u):$(id -g)" \
+            --volume "$PWD:/work" \
+            --workdir /work \
+            --env GITHUB_TOKEN \
+            --env HOME=/tmp/home \
+            --env MISE_DATA_DIR=/tmp/mise/data \
+            --env MISE_CACHE_DIR=/tmp/mise/cache \
+            --env MISE_CONFIG_DIR=/tmp/mise/config \
+            --env MISE_STATE_DIR=/tmp/mise/state \
+            --entrypoint bash \
+            "$image" \
+            scripts/update-mise-locks.sh
+
+      - name: Check changes
+        id: diff
+        run: |
+          if git diff --quiet -- 'docker-images/**/mise.lock'; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            git diff --stat -- 'docker-images/**/mise.lock'
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      # GITHUB_TOKEN による push は他のワークフローを起動しないため、
+      # そのままでは build-images.yml が lock 更新後のコミットで再実行されない。
+      # App のトークンで push し、ビルド検証を連鎖させる。
+      - name: Generate GitHub App token
+        if: steps.diff.outputs.changed == 'true'
+        id: app-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          app-id: ${{ secrets.RENOVATE_APP_ID }}
+          private-key: ${{ secrets.RENOVATE_APP_PRIVATE_KEY }}
+
+      - name: Commit and push
+        if: steps.diff.outputs.changed == 'true'
+        env:
+          APP_TOKEN: ${{ steps.app-token.outputs.token }}
+          BRANCH: ${{ github.head_ref || github.ref_name }}
+        run: |
+          # renovate.json5 の gitIgnoredAuthors と揃えること（Renovate がPRの更新を止めないように）
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -- 'docker-images/**/mise.lock'
+          git commit -m 'chore(deps): mise.lock を更新する'
+          git push "https://x-access-token:${APP_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "HEAD:refs/heads/${BRANCH}"
