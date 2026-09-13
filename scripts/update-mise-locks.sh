@@ -26,6 +26,16 @@ export MISE_GLOBAL_CONFIG_FILE="$empty_dir/config.toml"
 export MISE_SAFE=1
 export MISE_YES=1
 
+# lock を順序に依存しない形に正規化して出力する。
+# [[tools...]] から次の [[ までを1エントリとし、エントリ単位で並べ替える。
+canonical_lock() {
+    awk '
+        /^\[\[/ { if (entry != "") print entry; entry = "" }
+        { entry = entry $0 "\x1f" }
+        END { if (entry != "") print entry }
+    ' "$1" | LC_ALL=C sort
+}
+
 status=0
 for config in docker-images/*/etc/mise/config.toml docker-images/*/opt/mise/config.toml; do
     [ -f "$config" ] || continue
@@ -81,6 +91,12 @@ for config in docker-images/*/etc/mise/config.toml docker-images/*/opt/mise/conf
         bash scripts/fill-mise-lock-checksums.sh --reuse "$old_lock" "$lock"
     else
         bash scripts/fill-mise-lock-checksums.sh "$lock"
+    fi
+
+    # mise lock は同一ツールの複数エントリ（プラットフォーム別オプションを持つツール等）の
+    # 並び順が実行ごとに変わる。内容が同じなら旧 lock を残し、無意味な差分を出さない。
+    if [ -f "$old_lock" ] && [ "$(canonical_lock "$old_lock")" = "$(canonical_lock "$lock")" ]; then
+        cp "$old_lock" "$lock"
     fi
 
     # mise lock は 0600 で書き出すため、他の設定ファイルと同じ 0644 に揃える
