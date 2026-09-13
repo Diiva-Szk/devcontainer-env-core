@@ -107,7 +107,10 @@ COPY --chown=root:root dev-base/etc/mise /etc/mise
 # entrypoint もユーザから書き換えられないよう root 所有・実行権限付きで配置する。
 COPY --chown=root:root dev-base/usr/local/bin/entrypoint.sh /usr/local/bin/entrypoint.sh
 
-RUN chmod -R u=rwX,go=rX /etc/mise && \
+# Python パッケージの定義（ハッシュ付き requirements.txt）。root 所有・読み取り専用。
+COPY --chown=root:root dev-base/opt/python /opt/python
+
+RUN chmod -R u=rwX,go=rX /etc/mise /opt/python && \
     chmod 0755 /usr/local/bin/mise /usr/local/bin/entrypoint.sh
 
 # ツール本体はユーザの data dir（既定: ~/.local/share/mise）に入り、shims 経由で PATH に載る。
@@ -126,11 +129,14 @@ RUN mise install && \
 
 # -------------------------------------------------------------------
 # Python パッケージ
+#   requirements.txt は推移的依存まで含めてバージョンとハッシュを固定している
+#   （dev-base/opt/python/requirements.in から uv pip compile --generate-hashes で生成）。
+#   --require-hashes により、ハッシュの無いパッケージや不一致のパッケージは拒否される。
 #   --system は PATH 上の python（mise の Python）へ入れる。
 #   mise の Python（python-build-standalone）は EXTERNALLY-MANAGED ではないため
 #   --break-system-packages は不要。
 # -------------------------------------------------------------------
-RUN uv pip install --system ipykernel pandas pyarrow
+RUN uv pip install --system --require-hashes -r /opt/python/requirements.txt
 
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 
@@ -214,21 +220,33 @@ RUN if getent group docker > /dev/null 2>&1; then \
 # （このステージはここまで USER root のまま）
 COPY --chown=root:root user/opt/mise /opt/mise
 ENV MISE_GLOBAL_CONFIG_FILE="/opt/mise/config.toml"
-RUN chmod -R u=rwX,go=rX /opt/mise
+
+# Renovate CLI の定義（package.json / package-lock.json）。
+# npm ci はユーザの Node（mise）で実行するため、インストール中だけユーザに書き込ませ、
+# 完了後に root 所有・読み取り専用へ戻す。
+COPY --chown=root:root user/opt/renovate /opt/renovate
+
+RUN chmod -R u=rwX,go=rX /opt/mise /opt/renovate && \
+    chown "${USER_NAME}" /opt/renovate
 
 USER "${USER_NAME}"
 
-# user 専用ツール（docker CLI 等）
-RUN mise install
+# -------------------------------------------------------------------
+# user 専用ツール（docker CLI 等）と renovate (ローカル確認用。本番運用は GitHub Actions 側)
+#   renovate は package-lock.json の integrity で依存を含めて固定し、npm ci で導入する。
+#   インストールスクリプトは実行しない（re2 のネイティブ拡張は入らず、Renovate は
+#   標準の RegExp にフォールバックする）。
+# -------------------------------------------------------------------
+RUN mise install && \
+    npm ci --prefix /opt/renovate --ignore-scripts --no-audit --no-fund
 
-# -------------------------------------------------------------------
-# renovate (ローカル確認用。本番運用は GitHub Actions 側)
-# -------------------------------------------------------------------
-# グローバルパッケージは mise の Node の中に入る。コマンドを shims に載せるため reshim する
-# （mise の Node は npm install -g 後に自動で reshim するが、明示しておく）。
-RUN npm install -g renovate && \
-    mise reshim && \
-    renovate --version
+USER root
+RUN chown -R root:root /opt/renovate && \
+    chmod -R u=rwX,go=rX /opt/renovate && \
+    ln -s /opt/renovate/node_modules/.bin/renovate /usr/local/bin/renovate
+
+USER "${USER_NAME}"
+RUN renovate --version
 
 # user 用の home 初期ファイル
 COPY --chown=${USER_NAME}:${USER_NAME} user/home-config/ "/home/${USER_NAME}"

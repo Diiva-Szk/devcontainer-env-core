@@ -93,7 +93,29 @@
       ],
       versioningTemplate: 'semver',
     },
+    {
+      customType: 'regex',
+      description: 'renovate.yml の Renovate 本体コンテナ（バージョン + digest）',
+      managerFilePatterns: [
+        '/^\\.github/workflows/renovate\\.yml$/',
+      ],
+      // 以下の形式を対象にする（digest ごと更新される）:
+      //   # renovate: datasource=docker depName=renovate/renovate
+      //   CLI_IMAGE_TAG: '44.65.5@sha256:...'
+      matchStrings: [
+        '#\\s*renovate:\\s*datasource=(?<datasource>\\S+)\\s+depName=(?<depName>\\S+)\\s*\\n\\s*[A-Z_]+:\\s*\'(?<currentValue>[^\'@]+)@(?<currentDigest>sha256:[0-9a-f]+)\'',
+      ],
+      versioningTemplate: 'docker',
+    },
   ],
+  // Python パッケージ（dev-base/opt/python）。requirements.txt のヘッダーに記録された
+  // uv pip compile のコマンドで、ハッシュを含めて再生成される。
+  // pip-compile マネージャは既定で対象ファイルを持たないため明示する。
+  'pip-compile': {
+    managerFilePatterns: [
+      '/^docker-images/dev-base/opt/python/requirements\\.txt$/',
+    ],
+  },
   // 拡張機能のバージョンが更新されたら、その Feature 自身の version も patch 上げする。
   // version が据え置きだと release ワークフローが何も publish しないため。
   //
@@ -115,7 +137,8 @@
   packageRules: [
     // リリース直後の版を即座に取り込まない。公開直後に取り下げられる版や、
     // 侵害されたリリースが差し替えられるまでの猶予を確保する。
-    // mise の aqua backend のツールと Python は github-tags、Node は node-version で追跡される
+    // mise の aqua backend のツールと Python は github-tags、Node は node-version、
+    // Python パッケージは pypi、npm パッケージ（Dev Containers CLI / Renovate CLI）は npm で追跡される
     // （いずれもリリース日時を取得できるデータソース）。
     {
       matchDatasources: [
@@ -123,6 +146,8 @@
         'github-releases',
         'github-tags',
         'node-version',
+        'npm',
+        'pypi',
       ],
       minimumReleaseAge: '7 days',
     },
@@ -253,6 +278,10 @@
     // mise のツールはイメージのステージ単位でグループ化する。
     // ステージごとにビルドと lock 更新の単位が分かれるため。
     {
+      matchManagers: [
+        'mise',
+        'custom.regex',
+      ],
       matchFileNames: [
         'docker-images/dev-base/**',
       ],
@@ -260,6 +289,10 @@
       groupSlug: 'mise-dev-base',
     },
     {
+      matchManagers: [
+        'mise',
+        'custom.regex',
+      ],
       matchFileNames: [
         'docker-images/ai/**',
       ],
@@ -267,11 +300,58 @@
       groupSlug: 'mise-ai',
     },
     {
+      matchManagers: [
+        'mise',
+        'custom.regex',
+      ],
       matchFileNames: [
         'docker-images/user/**',
       ],
       groupName: 'user の mise ツール',
       groupSlug: 'mise-user',
+    },
+    // ----------------------------------------------------------------------
+    // Python パッケージ / Renovate 本体
+    // ----------------------------------------------------------------------
+    {
+      // requirements.txt は pip-compile マネージャが扱うため、pip_requirements マネージャの
+      // 二重検出を止める（requirements.in は pip-compile 経由で解析される）。
+      matchManagers: [
+        'pip_requirements',
+      ],
+      matchFileNames: [
+        'docker-images/dev-base/opt/python/requirements.txt',
+      ],
+      enabled: false,
+    },
+    {
+      matchManagers: [
+        'pip-compile',
+      ],
+      groupName: 'dev-base の Python パッケージ',
+      groupSlug: 'python-dev-base',
+    },
+    {
+      // github-actions マネージャは renovatebot/github-action の renovate-version を追跡するが、
+      // digest 付きの値（CLI_IMAGE_TAG 経由）を扱えないため無効化し、customManagers 側で追跡する。
+      matchManagers: [
+        'github-actions',
+      ],
+      matchPackageNames: [
+        'renovate/renovate',
+        'ghcr.io/renovatebot/renovate',
+      ],
+      enabled: false,
+    },
+    {
+      // Renovate 本体（ワークフローのコンテナ）と user イメージのローカル確認用 CLI は
+      // 同じバージョンに揃えるため、1つのPRで更新する。
+      matchPackageNames: [
+        'renovate',
+        'renovate/renovate',
+      ],
+      groupName: 'Renovate',
+      groupSlug: 'renovate',
     },
   ],
 }

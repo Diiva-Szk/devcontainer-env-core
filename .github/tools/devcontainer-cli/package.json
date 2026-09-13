@@ -1,0 +1,8 @@
+{
+  "name": "devcontainer-cli-tool",
+  "private": true,
+  "description": "CI で使う Dev Containers CLI。package-lock.json の integrity で固定し npm ci で導入する。",
+  "dependencies": {
+    "@devcontainers/cli": "0.87.0"
+  }
+}

@@ -1,0 +1,10 @@
+# dev-base の Python（mise の core:python）へ入れるパッケージ。
+# 直接依存だけをバージョン固定で記述し、推移的依存を含む完全なリストとハッシュは
+# requirements.txt に生成する（Renovate の pip-compile マネージャが両方を更新する）。
+#
+# 変更後は、このディレクトリで以下を実行して requirements.txt を再生成すること:
+#   uv pip compile --universal --generate-hashes --python-version=3.14 --output-file=requirements.txt requirements.in
+# （オプションは Renovate がヘッダーから解釈できるよう「=」でつなぐ）
+ipykernel==7.3.0
+pandas==3.0.5
+pyarrow==25.0.1
