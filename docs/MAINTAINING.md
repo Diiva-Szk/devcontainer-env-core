@@ -39,7 +39,8 @@ Feature（`devcontainer-features/` 配下）には `Dockerfile` を含めず、�
 │   │   └── home-config/          # AI エージェントの設定ファイル
 │   └── user/
 │       ├── opt/mise/             # mise の設定と lock（global スコープ）
-│       └── opt/renovate/         # ローカル確認用の Renovate CLI（package-lock.json）
+│       ├── opt/renovate/         # ローカル確認用の Renovate CLI（package-lock.json）
+│       └── usr/local/bin/        # ai（ai コンテナに入るコマンド）
 ├── devcontainer-features/        # vscode-common / vscode-python / vscode-terraform
 ├── scripts/                      # lock 更新・検査・Feature の version 更新
 ├── renovate.json5

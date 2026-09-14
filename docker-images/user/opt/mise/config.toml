@@ -19,3 +19,14 @@ paranoid = true
 "aqua:docker/cli" = "27.3.1"
 # docker compose をスタンドアロンで使う場合は docker/compose を追加する
 # （plugin配置が別途必要な点に注意）。
+
+[tasks.ai]
+# /usr/local/bin/ai を呼ぶだけ。引数はそのまま渡る（mise run ai claude）。
+#   dir: ai は実行したディレクトリに対応する ai 側のディレクトリで起動するため、
+#        タスクの既定（設定ファイルの場所）ではなく実行したディレクトリで動かす。
+#   raw: 対話シェルを使うため、標準入出力を端末に直接つなぐ。
+description = "ai コンテナに入る（実行したディレクトリで起動する）"
+dir = "{{cwd}}"
+raw = true
+quiet = true
+run = "ai"
