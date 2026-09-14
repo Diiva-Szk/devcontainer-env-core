@@ -234,8 +234,14 @@ RUN mise install && \
     npm ci --prefix /opt/renovate --ignore-scripts --no-audit --no-fund
 
 USER root
+
+# ai コンテナに入るコマンド（ai）。どのディレクトリからでも実行でき、
+# カレントディレクトリに対応する ai コンテナ側のディレクトリで起動する。
+COPY --chown=root:root user/usr/local/bin/ai /usr/local/bin/ai
+
 RUN chown -R root:root /opt/renovate && \
     chmod -R u=rwX,go=rX /opt/renovate && \
+    chmod 0755 /usr/local/bin/ai && \
     ln -s /opt/renovate/node_modules/.bin/renovate /usr/local/bin/renovate
 
 # user 用の home 初期ファイル

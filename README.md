@@ -134,14 +134,11 @@ VS Code でプロジェクトを開き、コマンドパレットから **Dev Co
 
 ### 5. AI エージェントを使う
 
-`user` コンテナのターミナルから `ai` コンテナに入り、AI エージェントを起動します。
+`user` コンテナのターミナルで `ai` コマンドを実行すると、このプロジェクトの `ai` コンテナに入れます。どのディレクトリからでも実行でき、**`ai` コンテナでも同じディレクトリで起動します**（例: `~/work/src` で実行すると、`ai` コンテナの `~/work/src` で起動します）。
 
 ```sh
-# このプロジェクトの ai コンテナに入る
-project="$(docker inspect -f '{{ index .Config.Labels "com.docker.compose.project" }}' "$HOSTNAME")"
-docker exec -it -w /home/dev/work \
-  "$(docker ps -q --filter "label=com.docker.compose.project=${project}" --filter label=com.docker.compose.service=ai)" \
-  bash
+ai               # ai コンテナで bash を起動する
+ai claude        # ai コンテナで直接 Claude Code を起動する（引数はそのまま渡る）
 
 # ai コンテナ内で
 claude     # Claude Code
@@ -151,8 +148,8 @@ kiro-cli   # Amazon Kiro CLI
 agy        # Google Antigravity CLI
 ```
 
-各ツールのログイン（認証）は、初回に `ai` コンテナ内で行ってください。
-
+- 各ツールのログイン（認証）は、初回に `ai` コンテナ内で行ってください。
+- `ai` コンテナと共有していないディレクトリ（`~` など）で実行した場合は、`ai` コンテナの `~/work` で起動します。
 ## VS Code の Feature
 
 | Feature | 内容 |

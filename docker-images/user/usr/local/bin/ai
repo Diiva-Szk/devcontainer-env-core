@@ -1,0 +1,109 @@
+#!/bin/bash
+###########################################################################
+# ai
+#   user コンテナから、同じ Compose プロジェクトの ai コンテナに入る。
+#   user コンテナのカレントディレクトリに対応する ai コンテナ側のディレクトリで起動する
+#   （両コンテナで同じホストのディレクトリをマウントしている場所を探して対応付ける）。
+#
+#   使い方:
+#     ai                  # ai コンテナで bash を起動する
+#     ai claude           # ai コンテナで claude を起動する（引数はそのまま渡す）
+#     ai codex exec ...
+###########################################################################
+set -euo pipefail
+
+usage() {
+  cat <<'EOF'
+usage: ai [command [args...]]
+
+user コンテナのカレントディレクトリに対応するディレクトリで、ai コンテナのコマンドを実行します。
+command を省略すると bash を起動します。
+
+  ai              # ai コンテナで bash を起動する
+  ai claude       # ai コンテナで claude を起動する
+EOF
+}
+
+die() {
+  echo "ai: $*" >&2
+  exit 1
+}
+
+if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
+  usage
+  exit 0
+fi
+
+# docker CLI は mise の shim。user コンテナは paranoid モードのため、カレントディレクトリに
+# trust していない mise.toml があると shim がエラーになる。docker は常に / で実行する。
+docker_() {
+  (cd / && docker "$@")
+}
+
+# コンテナのマウントを「Source<TAB>Destination」の行で出力する
+mounts_of() {
+  docker_ inspect -f '{{ range .Mounts }}{{ .Source }}{{ "\t" }}{{ .Destination }}{{ "\n" }}{{ end }}' "$1"
+}
+
+# -------------------------------------------------------------------
+# 自分（user コンテナ）と ai コンテナを特定する
+#   コンテナのホスト名は既定でコンテナ ID（先頭 12 桁）になる。
+# -------------------------------------------------------------------
+self="${HOSTNAME:-}"
+[[ -n "$self" ]] || die "HOSTNAME が空のため、自身のコンテナを特定できません。"
+
+project="$(docker_ inspect -f '{{ index .Config.Labels "com.docker.compose.project" }}' "$self" 2>/dev/null)" ||
+  die "自身のコンテナ（${self}）を docker inspect できません。user コンテナ内で実行してください。"
+[[ -n "$project" && "$project" != "<no value>" ]] ||
+  die "自身のコンテナに Compose のプロジェクト名のラベルがありません。"
+
+ai_container="$(docker_ ps -q \
+  --filter "label=com.docker.compose.project=${project}" \
+  --filter "label=com.docker.compose.service=ai" | head -n 1)"
+[[ -n "$ai_container" ]] ||
+  die "ai コンテナが起動していません（Compose プロジェクト: ${project}）。"
+
+# -------------------------------------------------------------------
+# カレントディレクトリを ai コンテナ側のパスに変換する
+#   1. user コンテナのマウントのうち、カレントディレクトリを含む最も深いものを探す
+#   2. ai コンテナで同じ Source をマウントしている Destination に付け替える
+#   対応するマウントが無ければ、ai コンテナの作業ディレクトリ（compose.yml の working_dir）を使う。
+# -------------------------------------------------------------------
+cwd="$(pwd -P)"
+user_src="" user_dst=""
+while IFS=$'\t' read -r src dst; do
+  [[ -n "$dst" ]] || continue
+  if [[ "$cwd" == "$dst" || "$cwd" == "$dst"/* ]] && ((${#dst} > ${#user_dst})); then
+    user_src="$src"
+    user_dst="$dst"
+  fi
+done < <(mounts_of "$self")
+
+workdir=""
+if [[ -n "$user_dst" ]]; then
+  while IFS=$'\t' read -r src dst; do
+    if [[ -n "$dst" && "$src" == "$user_src" ]]; then
+      workdir="${dst}${cwd#"$user_dst"}"
+      break
+    fi
+  done < <(mounts_of "$ai_container")
+fi
+
+if [[ -z "$workdir" ]]; then
+  workdir="$(docker_ inspect -f '{{ .Config.WorkingDir }}' "$ai_container")"
+  echo "ai: ${cwd} は ai コンテナと共有していないため、${workdir:-/} で起動します。" >&2
+fi
+
+# -------------------------------------------------------------------
+# ai コンテナでコマンドを実行する
+# -------------------------------------------------------------------
+exec_opts=(-i)
+[[ -t 0 && -t 1 ]] && exec_opts+=(-t)
+[[ -n "$workdir" ]] && exec_opts+=(-w "$workdir")
+[[ -n "${TERM:-}" ]] && exec_opts+=(-e "TERM=${TERM}")
+[[ -n "${COLORTERM:-}" ]] && exec_opts+=(-e "COLORTERM=${COLORTERM}")
+
+(($#)) || set -- bash
+
+cd /
+exec docker exec "${exec_opts[@]}" "$ai_container" "$@"
