@@ -9,10 +9,10 @@
 
 [tools]
 # ai tools
-"aqua:anthropics/claude-code" = "2.1.50"
-"aqua:github/copilot-cli" = "1.0.25"
-"aqua:github/copilot-language-server-release" = "1.469.0"
-"aqua:google-antigravity/antigravity-cli" = "1.1.27"
+"aqua:anthropics/claude-code" = "2.1.270"
+"aqua:github/copilot-cli" = "1.0.83"
+"aqua:github/copilot-language-server-release" = "1.545.0"
+"aqua:google-antigravity/antigravity-cli" = "1.2.2"
 
 # OpenAI Codex CLI
 #   aqua backend では linux 向け成果物を解決できず lock が生成されなかったため、github backend で取得する。
@@ -20,7 +20,7 @@
 #   asset_pattern に {{ arch() }} を使うと mise lock を実行したマシンのアーキテクチャで展開され、
 #   全プラットフォームに同じ成果物が記録されてしまうため、プラットフォームごとに指定する。
 [tools."github:openai/codex"]
-version = "0.120.0"
+version = "0.154.0"
 version_prefix = "rust-v"
 rename_exe = "codex"
 
