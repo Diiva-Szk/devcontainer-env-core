@@ -150,6 +150,7 @@ agy        # Google Antigravity CLI
 
 - 各ツールのログイン（認証）は、初回に `ai` コンテナ内で行ってください。
 - `ai` コンテナと共有していないディレクトリ（`~` など）で実行した場合は、`ai` コンテナの `~/work` で起動します。
+- mise のタスクとしても実行できます（`mise run ai`、`mise run ai claude`）。ただし、trust していない `mise.toml` があるディレクトリでは mise がエラーになるため、`ai` コマンドを直接実行してください（[`mise trust` が必要](#user-コンテナでは-mise-trust-が必要)）。
 ## VS Code の Feature
 
 | Feature | 内容 |
