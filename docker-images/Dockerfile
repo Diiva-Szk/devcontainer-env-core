@@ -13,7 +13,7 @@ ARG ARG_BASE_IMAGE_DIGEST="sha256:28de0877c2189802884ccd20f15ee41c203573bd87bb6b
 #   公式イメージは debian trixie ベースでビルドされているため、
 #   base（debian 13）とは glibc が一致する。
 ###########################################################################
-FROM jdxcode/mise:2026.9.1@sha256:df5adf538c92d86f9807e738c7c7a9b32a1ae06edf441ede141333e3fe6a2cd9 AS mise
+FROM jdxcode/mise:2026.9.2@sha256:812f7860a2fb911e1d5dd3375834abb2a08f8c783a23f783fcbccaf7fc7357aa AS mise
 
 ###########################################################################
 # base:
