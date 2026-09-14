@@ -119,7 +119,7 @@ RUN chmod -R u=rwX,go=rX /etc/mise /opt/python && \
 #     恒久化したくなったらイメージ側の config.toml へ昇格する。
 ENV PATH="/home/${USER_NAME}/.local/share/mise/shims:${PATH}"
 
-USER "${USER_NAME}"
+USER ${USER_NAME}
 
 # ベース共通ツールをインストール（Python / Node / uv を含む）
 RUN mise install && \
@@ -159,7 +159,7 @@ ENV MISE_GLOBAL_CONFIG_FILE="/opt/mise/config.toml"
 USER root
 RUN chmod -R u=rwX,go=rX /opt/mise
 
-USER "${USER_NAME}"
+USER ${USER_NAME}
 
 # ai 専用ツールをインストール（Kiro CLI / Antigravity CLI を含む）
 RUN mise install
@@ -222,7 +222,7 @@ COPY --chown=root:root user/opt/renovate /opt/renovate
 RUN chmod -R u=rwX,go=rX /opt/mise /opt/renovate && \
     chown "${USER_NAME}" /opt/renovate
 
-USER "${USER_NAME}"
+USER ${USER_NAME}
 
 # -------------------------------------------------------------------
 # user 専用ツール（docker CLI 等）と renovate (ローカル確認用。本番運用は GitHub Actions 側)
@@ -247,5 +247,8 @@ COPY --chown=${USER_NAME}:${USER_NAME} user/home-config/ "/home/${USER_NAME}"
 ARG USER_PASS=dev
 RUN echo "${USER_NAME}:${USER_PASS}" | /usr/sbin/chpasswd
 
-USER "${USER_NAME}"
+# USER の値は引用符で囲まない。Dev Containers CLI は Feature を適用する際、
+# 最後の USER からユーザー名を引用符ごと取り出すため、"dev" という存在しない
+# ユーザーで起動しようとして失敗する（unable to find user "dev"）。
+USER ${USER_NAME}
 RUN renovate --version
