@@ -3,8 +3,8 @@
 # Build args (共通)
 ###########################################################################
 ARG ARG_BASE_IMAGE_REPOSITORY="debian"
-ARG ARG_BASE_IMAGE_TAG="13.5-slim"
-ARG ARG_BASE_IMAGE_DIGEST="sha256:28de0877c2189802884ccd20f15ee41c203573bd87bb6b883f5f46362d24c5c2"
+ARG ARG_BASE_IMAGE_TAG="13.6-slim"
+ARG ARG_BASE_IMAGE_DIGEST="sha256:d7e12182ce18b85b93007c1dedf31f2d29e01ccf3182cc4017c709b6259bc132"
 
 ###########################################################################
 # mise:
