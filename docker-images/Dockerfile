@@ -162,19 +162,19 @@ RUN chmod -R u=rwX,go=rX /opt/mise
 USER ${USER_NAME}
 
 # ai 専用ツールをインストール（Kiro CLI / Antigravity CLI を含む）
-RUN mise install
-
-# -------------------------------------------------------------------
-# 各 CLI の初期セットアップ
-#   バイナリの取得・検証は mise が行う。ここではインストール後の初期化のみ実行する。
-# -------------------------------------------------------------------
-# Kiro CLI: シェル統合（~/.bashrc 等への追記）とローカルデータの初期化。
-RUN kiro-cli setup --no-confirm && \
-    kiro-cli --version
-
+#   バイナリの取得・検証は mise が行う。各 CLI の付属のセットアップコマンドは実行しない。
+#
+# Kiro CLI: `kiro-cli setup` は実行しない（シェル統合を入れない）。
+#   シェル統合は ~/.bashrc から kiro-cli-term を `exec -a "bash (kiro-cli-term)"` で起動する。
+#   PATH 上の kiro-cli-term は mise の shim で、shim は argv[0] で起動するツールを判別するため、
+#   "bash (kiro-cli-term)" is not a valid shim で対話シェル自体が起動できなくなる。
+#   kiro-cli chat などはシェル統合なしで使える。
+#
 # Antigravity CLI: `agy install` はシェルのプロファイルへ ~/.local/bin の PATH を追記するだけで、
-# PATH は base で設定済みのため実行しない（~/.local/bin に mise 管理外の agy を置かせないため）。
-RUN agy --version
+#   PATH は base で設定済みのため実行しない（~/.local/bin に mise 管理外の agy を置かせないため）。
+RUN mise install && \
+    kiro-cli --version && \
+    agy --version
 
 # ai 用の home 初期ファイル
 COPY --chown=${USER_NAME}:${USER_NAME} ai/home-config "/home/${USER_NAME}"
