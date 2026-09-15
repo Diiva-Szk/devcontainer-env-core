@@ -79,7 +79,7 @@ jobs:
       # Renovate は自身でリポジトリを clone するため actions/checkout は不要。
       # postUpgradeTasks が参照する scripts/ も、その clone 側のものが使われる。
       - name: Run Renovate
-        uses: renovatebot/github-action@3064367f740a1a91cca218698a63902689cce200 # v46.1.20
+        uses: renovatebot/github-action@37beffda261423addd537c33f2d126df7f6ffbab # v46.2.6
         with:
           token: ${{ steps.app-token.outputs.token }}
           renovate-image: renovate/renovate
