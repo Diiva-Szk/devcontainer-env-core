@@ -1,6 +1,6 @@
 {
     "id": "vscode-terraform",
-    "version": "1.0.1",
+    "version": "1.0.2",
     "name": "VS Code Terraform extensions",
     "description": "Terraform開発用のVS Code拡張機能を追加します。許可リスト(extensions.allowed)は vscode-common Feature が提供するため、必ず併用してください。",
     "documentationURL": "https://github.com/Diiva-Szk/devcontainer-env-core/tree/main/devcontainer-features/vscode-terraform",
@@ -11,7 +11,7 @@
         "vscode": {
             "extensions": [
                 // renovate: datasource=github-releases depName=hashicorp/vscode-terraform
-                "hashicorp.terraform@2.39.2"
+                "hashicorp.terraform@2.40.0"
             ]
         }
     }
