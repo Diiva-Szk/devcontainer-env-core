@@ -1,6 +1,6 @@
 {
     "id": "vscode-python",
-    "version": "1.0.2",
+    "version": "1.1.0",
     "name": "VS Code Python extensions",
     "description": "Python開発用のVS Code拡張機能を追加します。許可リスト(extensions.allowed)は vscode-common Feature が提供するため、必ず併用してください。",
     "documentationURL": "https://github.com/Diiva-Szk/devcontainer-env-core/tree/main/devcontainer-features/vscode-python",
@@ -19,7 +19,24 @@
                 // renovate: datasource=github-releases depName=kbrose/vsc-python-indent
                 "kevinrose.vsc-python-indent@1.21.0",
                 // renovate: datasource=github-releases depName=NilsJPWerner/autoDocstring
-                "njpwerner.autodocstring@0.6.1"
+                "njpwerner.autodocstring@0.6.1",
+                // ### data tools
+                // Jupyter は Python のインタープリターを ms-python.python 経由で検出するため、
+                // Python 拡張と同じ Feature で導入する（vscode-common に置くと Python を見つけられない）。
+                // renovate: datasource=github-releases depName=microsoft/vscode-jupyter
+                "ms-toolsai.jupyter@2025.9.1",
+                // Jupyter の extensionPack。明示しないと Marketplace の最新版を取りに行き、
+                // 許可リスト(extensions.allowed)のバージョンと合わずにブロックされるため固定する。
+                // renovate: datasource=github-tags depName=microsoft/vscode-jupyter-keymap
+                "ms-toolsai.jupyter-keymap@1.1.2",
+                // renovate: datasource=github-releases depName=microsoft/vscode-notebook-renderers
+                "ms-toolsai.jupyter-renderers@1.3.0",
+                // renovate: datasource=github-tags depName=microsoft/vscode-jupyter-slideshow
+                "ms-toolsai.vscode-jupyter-slideshow@0.1.6",
+                // renovate: datasource=github-tags depName=microsoft/vscode-jupyter-cell-tags
+                "ms-toolsai.vscode-jupyter-cell-tags@0.1.9",
+                // Renovate対象外: ghリリース・タグとも無し（クローズド開発）
+                "ms-toolsai.datawrangler@1.24.0"
             ]
         }
     }

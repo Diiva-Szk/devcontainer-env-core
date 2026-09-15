@@ -1,6 +1,6 @@
 {
     "id": "vscode-common",
-    "version": "1.0.3",
+    "version": "1.1.0",
     "name": "VS Code Common (shared settings, extensions & allowlist)",
     "description": "共通のVS Code設定・拡張機能と、当リポジトリが管理する全拡張機能の許可リスト(extensions.allowed)を提供します。他のvscode-*Featureを使う場合も、必ず本Featureを併せて導入してください。",
     "documentationURL": "https://github.com/Diiva-Szk/devcontainer-env-core/tree/main/devcontainer-features/vscode-common",
@@ -54,6 +54,18 @@
                     "kevinrose.vsc-python-indent": ["1.21.0"],
                     // renovate: datasource=github-releases depName=NilsJPWerner/autoDocstring
                     "njpwerner.autodocstring": ["0.6.1"],
+                    // renovate: datasource=github-releases depName=microsoft/vscode-jupyter
+                    "ms-toolsai.jupyter": ["2025.9.1"],
+                    // renovate: datasource=github-tags depName=microsoft/vscode-jupyter-keymap
+                    "ms-toolsai.jupyter-keymap": ["1.1.2"],
+                    // renovate: datasource=github-releases depName=microsoft/vscode-notebook-renderers
+                    "ms-toolsai.jupyter-renderers": ["1.3.0"],
+                    // renovate: datasource=github-tags depName=microsoft/vscode-jupyter-slideshow
+                    "ms-toolsai.vscode-jupyter-slideshow": ["0.1.6"],
+                    // renovate: datasource=github-tags depName=microsoft/vscode-jupyter-cell-tags
+                    "ms-toolsai.vscode-jupyter-cell-tags": ["0.1.9"],
+                    // Renovate対象外: ghリリース・タグとも無し（クローズド開発）
+                    "ms-toolsai.datawrangler": ["1.24.0"],
 
                     // ### Terraform (vscode-terraform Feature が導入)
                     // renovate: datasource=github-releases depName=hashicorp/vscode-terraform
@@ -87,13 +99,7 @@
 
                     // ### AI tools
                     // renovate: datasource=github-releases depName=microsoft/vscode-copilot-chat
-                    "github.copilot-chat": ["0.43.0"],
-
-                    // ### data tools
-                    // renovate: datasource=github-releases depName=microsoft/vscode-jupyter
-                    "ms-toolsai.jupyter": ["2025.9.1"],
-                    // Renovate対象外: ghリリース・タグとも無し（クローズド開発）
-                    "ms-toolsai.datawrangler": ["1.24.0"]
+                    "github.copilot-chat": ["0.43.0"]
                 }
             },
             "extensions": [
@@ -148,13 +154,7 @@
 
                 // ### AI tools
                 // renovate: datasource=github-releases depName=microsoft/vscode-copilot-chat
-                "github.copilot-chat@0.43.0",
-
-                // ### data tools
-                // renovate: datasource=github-releases depName=microsoft/vscode-jupyter
-                "ms-toolsai.jupyter@2025.9.1",
-                // Renovate対象外: ghリリース・タグとも無し（クローズド開発）
-                "ms-toolsai.datawrangler@1.24.0"
+                "github.copilot-chat@0.43.0"
             ]
         }
     }
