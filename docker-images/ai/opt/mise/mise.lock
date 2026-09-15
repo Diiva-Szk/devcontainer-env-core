@@ -3,19 +3,19 @@
 lockfile_version = 1
 
 [[tools."aqua:anthropics/claude-code"]]
-version = "2.1.270"
+version = "2.1.271"
 backend = "aqua:anthropics/claude-code"
-specifiers = ["2.1.270"]
+specifiers = ["2.1.271"]
 
 [tools."aqua:anthropics/claude-code"."platforms.linux-arm64"]
-checksum = "sha256:005d990a52bc16a5dd9ac51f2cc959f686a2c502b343b2eab92351ababf50f7f"
-url = "https://github.com/anthropics/claude-code/releases/download/v2.1.270/claude-linux-arm64.tar.gz"
-url_api = "https://api.github.com/repos/anthropics/claude-code/releases/assets/559771865"
+checksum = "sha256:2604a725c66d586584d46971f4feeef3a9a907bbd850912c2353ef2929d556d5"
+url = "https://github.com/anthropics/claude-code/releases/download/v2.1.271/claude-linux-arm64.tar.gz"
+url_api = "https://api.github.com/repos/anthropics/claude-code/releases/assets/564090608"
 
 [tools."aqua:anthropics/claude-code"."platforms.linux-x64"]
-checksum = "sha256:b069b327de3ad6c8cda70886675da46fb213797ac99a367df384e2202b37e0b7"
-url = "https://github.com/anthropics/claude-code/releases/download/v2.1.270/claude-linux-x64.tar.gz"
-url_api = "https://api.github.com/repos/anthropics/claude-code/releases/assets/559771973"
+checksum = "sha256:3248fdde90215a0ba3b363515e2bccca2bc912eb01af0c617b6052b7e33ffd73"
+url = "https://github.com/anthropics/claude-code/releases/download/v2.1.271/claude-linux-x64.tar.gz"
+url_api = "https://api.github.com/repos/anthropics/claude-code/releases/assets/564090767"
 
 [[tools."aqua:github/copilot-cli"]]
 version = "1.0.83"
@@ -68,20 +68,6 @@ backend = "github:openai/codex"
 specifiers = ["0.154.0"]
 
 [tools."github:openai/codex".options]
-asset_pattern = "codex-x86_64-unknown-linux-musl.tar.gz"
-version_prefix = "rust-v"
-
-[tools."github:openai/codex"."platforms.linux-x64"]
-checksum = "sha256:d7e18b2597ae8f242f5f31ee9e90deef48dbc9edd634d9868fb6435d08c07f02"
-url = "https://github.com/openai/codex/releases/download/rust-v0.154.0/codex-x86_64-unknown-linux-musl.tar.gz"
-url_api = "https://api.github.com/repos/openai/codex/releases/assets/553706458"
-
-[[tools."github:openai/codex"]]
-version = "0.154.0"
-backend = "github:openai/codex"
-specifiers = ["0.154.0"]
-
-[tools."github:openai/codex".options]
 asset_pattern = "codex-aarch64-unknown-linux-musl.tar.gz"
 version_prefix = "rust-v"
 
@@ -89,6 +75,20 @@ version_prefix = "rust-v"
 checksum = "sha256:583b48df32804213bdcd338c2e5adb06b34340821fa757a726cc0a524fa33c27"
 url = "https://github.com/openai/codex/releases/download/rust-v0.154.0/codex-aarch64-unknown-linux-musl.tar.gz"
 url_api = "https://api.github.com/repos/openai/codex/releases/assets/553706505"
+
+[[tools."github:openai/codex"]]
+version = "0.154.0"
+backend = "github:openai/codex"
+specifiers = ["0.154.0"]
+
+[tools."github:openai/codex".options]
+asset_pattern = "codex-x86_64-unknown-linux-musl.tar.gz"
+version_prefix = "rust-v"
+
+[tools."github:openai/codex"."platforms.linux-x64"]
+checksum = "sha256:d7e18b2597ae8f242f5f31ee9e90deef48dbc9edd634d9868fb6435d08c07f02"
+url = "https://github.com/openai/codex/releases/download/rust-v0.154.0/codex-x86_64-unknown-linux-musl.tar.gz"
+url_api = "https://api.github.com/repos/openai/codex/releases/assets/553706458"
 
 [[tools."http:kiro-cli"]]
 version = "2.21.4"
