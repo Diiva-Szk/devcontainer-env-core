@@ -1,6 +1,6 @@
 {
     "id": "vscode-common",
-    "version": "1.0.2",
+    "version": "1.0.3",
     "name": "VS Code Common (shared settings, extensions & allowlist)",
     "description": "共通のVS Code設定・拡張機能と、当リポジトリが管理する全拡張機能の許可リスト(extensions.allowed)を提供します。他のvscode-*Featureを使う場合も、必ず本Featureを併せて導入してください。",
     "documentationURL": "https://github.com/Diiva-Szk/devcontainer-env-core/tree/main/devcontainer-features/vscode-common",
@@ -47,7 +47,7 @@
                     // renovate: datasource=github-releases depName=Microsoft/vscode-python
                     "ms-python.python": ["2026.4.0"],
                     // renovate: datasource=github-releases depName=microsoft/vscode-python-debugger
-                    "ms-python.debugpy": ["2025.18.0"],
+                    "ms-python.debugpy": ["2026.6.0"],
                     // Renovate対象外: ghリリースなし
                     "wholroyd.jinja": ["0.0.8"],
                     // renovate: datasource=github-releases depName=kbrose/vsc-python-indent
@@ -63,7 +63,7 @@
                     // renovate: datasource=github-releases depName=DonJayamanne/gitHistoryVSCode
                     "donjayamanne.githistory": ["0.6.20"],
                     // renovate: datasource=github-releases depName=gitkraken/vscode-gitlens
-                    "eamodio.gitlens": ["17.12.2"],
+                    "eamodio.gitlens": ["19.0.1"],
                     // Renovate対象外: ghリリースなし
                     "codezombiech.gitignore": ["0.10.0"],
                     // renovate: datasource=github-releases depName=mhutchie/vscode-git-graph
@@ -124,7 +124,7 @@
                 // renovate: datasource=github-releases depName=DonJayamanne/gitHistoryVSCode
                 "donjayamanne.githistory@0.6.20",
                 // renovate: datasource=github-releases depName=gitkraken/vscode-gitlens
-                "eamodio.gitlens@17.12.2",
+                "eamodio.gitlens@19.0.1",
                 // Renovate対象外: ghリリースなし
                 "codezombiech.gitignore@0.10.0",
                 // renovate: datasource=github-releases depName=mhutchie/vscode-git-graph
