@@ -16,7 +16,7 @@ paranoid = true
 
 [tools]
 # docker.sock 経由で ai コンテナを操作するための Docker CLI。
-"aqua:docker/cli" = "27.5.1"
+"aqua:docker/cli" = "29.8.0"
 # docker compose をスタンドアロンで使う場合は docker/compose を追加する
 # （plugin配置が別途必要な点に注意）。
 
