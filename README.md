@@ -155,8 +155,8 @@ agy        # Google Antigravity CLI
 
 | Feature | 内容 |
 | --- | --- |
-| `ghcr.io/diiva-szk/devcontainer-env-core/vscode-common` | 共通の VS Code 設定と拡張機能（日本語化、Git、Markdown、CSV、Jupyter など）、および全 Feature の拡張機能の許可リスト（`extensions.allowed`） |
-| `ghcr.io/diiva-szk/devcontainer-env-core/vscode-python` | Python 開発用の拡張機能 |
+| `ghcr.io/diiva-szk/devcontainer-env-core/vscode-common` | 共通の VS Code 設定と拡張機能（日本語化、Git、Markdown、CSV など）、および全 Feature の拡張機能の許可リスト（`extensions.allowed`） |
+| `ghcr.io/diiva-szk/devcontainer-env-core/vscode-python` | Python 開発用の拡張機能（Python、Jupyter、Data Wrangler など） |
 | `ghcr.io/diiva-szk/devcontainer-env-core/vscode-terraform` | Terraform 開発用の拡張機能 |
 
 - 許可リストにない拡張機能は VS Code にインストールできません。`vscode-python` / `vscode-terraform` を使う場合も、許可リストを提供する `vscode-common` を必ず併用してください。
