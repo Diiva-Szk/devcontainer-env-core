@@ -85,6 +85,7 @@ RUN apt-get update && \
         wget \
         unzip \
         less \
+        vim \
         procps \
         openssh-client && \
     apt-get clean && \
