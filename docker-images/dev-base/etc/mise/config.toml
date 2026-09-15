@@ -28,7 +28,7 @@ locked_scopes = ["system", "global"]
 "aqua:cli/cli" = "2.100.0"
 "aqua:tmux/tmux-builds" = "3.7c"
 "aqua:hadolint/hadolint" = "2.15.1"
-"aqua:secretlint/secretlint" = "11.7.1"
+"aqua:secretlint/secretlint" = "13.0.5"
 # languages
 #   Python は python-build-standalone のビルド済みバイナリ、Node は nodejs.org の公式バイナリが入る。
 #   どちらも mise.lock に URL とチェックサムが記録される（Python は GitHub Artifact Attestations 付き）。

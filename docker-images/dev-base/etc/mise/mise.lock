@@ -101,19 +101,19 @@ url_api = "https://api.github.com/repos/mikefarah/yq/releases/assets/522028022"
 provenance = "cosign"
 
 [[tools."aqua:secretlint/secretlint"]]
-version = "11.7.1"
+version = "13.0.5"
 backend = "aqua:secretlint/secretlint"
-specifiers = ["11.7.1"]
+specifiers = ["13.0.5"]
 
 [tools."aqua:secretlint/secretlint"."platforms.linux-arm64"]
-checksum = "sha256:5c9f897ee6bfab86813de38f76b417c5da63af297abfbbc2dbb2f4afc7dcc3fc"
-url = "https://github.com/secretlint/secretlint/releases/download/v11.7.1/secretlint-11.7.1-linux-arm64"
-url_api = "https://api.github.com/repos/secretlint/secretlint/releases/assets/395014807"
+checksum = "sha256:021fc06555b5e36f11cd8bc1ef65e8c8a19ee1d6a78a257ce9190dbb166234bd"
+url = "https://github.com/secretlint/secretlint/releases/download/v13.0.5/secretlint-13.0.5-linux-arm64"
+url_api = "https://api.github.com/repos/secretlint/secretlint/releases/assets/531516750"
 
 [tools."aqua:secretlint/secretlint"."platforms.linux-x64"]
-checksum = "sha256:ad9de5b975893be4084ef3a7ea958f9c0e6419e1323e841994ee54c62b49b929"
-url = "https://github.com/secretlint/secretlint/releases/download/v11.7.1/secretlint-11.7.1-linux-x64"
-url_api = "https://api.github.com/repos/secretlint/secretlint/releases/assets/395014811"
+checksum = "sha256:eec03d17b46b95e424eec8b5524ce6f21bd7ed3ec8f2f3916894e5e786ab788a"
+url = "https://github.com/secretlint/secretlint/releases/download/v13.0.5/secretlint-13.0.5-linux-x64"
+url_api = "https://api.github.com/repos/secretlint/secretlint/releases/assets/531516753"
 
 [[tools."aqua:terraform-docs/terraform-docs"]]
 version = "0.24.0"
