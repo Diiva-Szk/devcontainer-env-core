@@ -9,7 +9,7 @@
 
 [tools]
 # ai tools
-"aqua:anthropics/claude-code" = "2.1.270"
+"aqua:anthropics/claude-code" = "2.1.271"
 "aqua:github/copilot-cli" = "1.0.83"
 "aqua:github/copilot-language-server-release" = "1.545.0"
 "aqua:google-antigravity/antigravity-cli" = "1.2.2"
