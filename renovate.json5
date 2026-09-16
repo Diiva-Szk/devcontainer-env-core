@@ -34,7 +34,7 @@
   // 403 になる前にページングを止めている（dockerMaxPages はセルフホスト専用設定のため
   // ここには書けない）。
   internalChecksFilter: 'strict',
-  // 更新PRを作る曜日を火曜に限定する（renovate.yml は毎日 06:00 JST に実行される）。
+  // 更新PRを作る曜日を火曜に限定する（renovate.yml は毎日 04:07 JST に実行される）。
   // 更新の早い AI ツールは packageRules で毎日に上書きしている。
   // 脆弱性修正（vulnerabilityAlerts）は Renovate の既定で schedule の制限を受けない。
   // 既存のPRのリベース等は schedule の時間外でも行われる（updateNotScheduled の既定）。

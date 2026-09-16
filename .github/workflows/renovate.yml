@@ -9,8 +9,8 @@ name: Renovate
 # 火曜以外は AI ツールと脆弱性修正以外の新しいPRは作られない）。
 on:
   schedule:
-    # 毎日 21:00 UTC = 06:00 JST
-    - cron: '0 21 * * *'
+    # 毎日 19:07 UTC = 04:07 JST
+    - cron: '7 19 * * *'
   workflow_dispatch:
     inputs:
       dryRun:
