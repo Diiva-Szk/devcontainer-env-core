@@ -251,6 +251,15 @@
       skipArtifactsUpdate: true,
     },
     {
+      // npm backend のツールの依存グラフ（mise.lock が digest で参照するサイドカー）。
+      // 中の package.json を npm マネージャが拾うと、mise.lock と不一致の更新PRが別に作られるため対象外にする。
+      // ツール本体は config.toml 側で mise マネージャが追跡し、サイドカーは update-mise-lock ワークフローが作り直す。
+      matchFileNames: [
+        'docker-images/**/mise/.mise/locks/**',
+      ],
+      enabled: false,
+    },
+    {
       // jq のタグは `jq-1.8.1` 形式（mise 側は aqua レジストリの version_prefix で解釈済み）。
       matchManagers: [
         'mise',

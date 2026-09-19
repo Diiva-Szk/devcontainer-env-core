@@ -6,6 +6,10 @@
 # チェックサムを提供しない配布元の成果物は fill-mise-lock-checksums.sh で補完する
 # （変わっていない URL は旧 lock の値を再利用するため、再ダウンロードは発生しない）。
 #
+# npm backend のツールは、依存グラフが mise.lock と同じディレクトリの .mise/locks/ に
+# サイドカー（package.json / aube-lock.yaml）として書き出され、mise.lock にはその digest が記録される。
+# サイドカーも mise.lock と一緒にコミットすること（mise 2026.9.7 以上が必要）。
+#
 # 使い方（リポジトリ内のどこからでも可。mise はイメージと同じバージョンを使うこと）:
 #   bash scripts/update-mise-locks.sh
 #
@@ -43,20 +47,32 @@ for config in docker-images/*/etc/mise/config.toml docker-images/*/opt/mise/conf
     mise_dir="$(dirname "$config")"   # .../mise
     root_dir="$(dirname "$mise_dir")" # mise/config.toml を持つ config root
     lock="$mise_dir/mise.lock"
+    sidecars="$mise_dir/.mise/locks"
 
     echo "==> $config"
 
     old_lock="$empty_dir/old.lock"
-    rm -f "$old_lock"
+    old_sidecars="$empty_dir/old-sidecars"
+    rm -rf "$old_lock" "$old_sidecars"
     if [ -f "$lock" ]; then
         cp "$lock" "$old_lock"
         rm -f "$lock"
+    fi
+    # サイドカーは消さずに残す（mise lock は既存の依存グラフを再利用し、参照されなくなったものを消す）。
+    # 失敗時に戻せるよう退避だけしておく。
+    if [ -d "$sidecars" ]; then
+        cp -a "$sidecars" "$old_sidecars"
     fi
 
     # config root より上位のディレクトリにある mise.toml を拾わないようにする。
     # 失敗時は旧 lock に戻し、中途半端な lock を残さない。
     restore() {
         if [ -f "$old_lock" ]; then cp "$old_lock" "$lock"; else rm -f "$lock"; fi
+        rm -rf "$sidecars"
+        if [ -d "$old_sidecars" ]; then
+            mkdir -p "$(dirname "$sidecars")"
+            cp -a "$old_sidecars" "$sidecars"
+        fi
         status=1
     }
 
@@ -70,8 +86,21 @@ for config in docker-images/*/etc/mise/config.toml docker-images/*/opt/mise/conf
 
     # 解決できなかったツールがあると "(N skipped)" になる。lock が不完全なまま
     # イメージをビルドすると locked モードで失敗するため、ここで検出して止める。
-    if ! echo "$output" | grep -q '(0 skipped)'; then
+    # ただし npm backend のツールはプラットフォーム別の成果物を持たず（依存グラフはサイドカーに記録される）、
+    # 常にプラットフォーム数ぶん skipped になるため、その数は許容する。
+    npm_tools="$(grep -c '^\[\[tools\."npm:' "$lock" || true)"
+    platform_count="$(echo "$PLATFORMS" | tr ',' '\n' | wc -l)"
+    expected_skipped=$((npm_tools * platform_count))
+    if ! echo "$output" | grep -q "(${expected_skipped} skipped)"; then
         echo "[lock] $lock: 解決できなかったプラットフォームエントリがあります（上のログを確認）" >&2
+        restore
+        continue
+    fi
+
+    # npm backend のツールは依存グラフ（サイドカー）への参照が必ず記録されていること。
+    # 無いと mise install が依存を固定せずに解決してしまう。
+    if [ "$(grep -c '^aube[[:space:]]*=' "$lock" || true)" -ne "$npm_tools" ]; then
+        echo "[lock] $lock: 依存グラフ（aube）の記録が無い npm backend のツールがあります" >&2
         restore
         continue
     fi
@@ -102,6 +131,10 @@ for config in docker-images/*/etc/mise/config.toml docker-images/*/opt/mise/conf
     # mise lock は 0600 で書き出すため、他の設定ファイルと同じ 0644 に揃える
     # （Dockerfile 側でも明示しているが、作業ツリーの状態を不自然にしないため）。
     chmod 0644 "$lock"
+    if [ -d "$sidecars" ]; then
+        find "$sidecars" -type d -exec chmod 0755 {} +
+        find "$sidecars" -type f -exec chmod 0644 {} +
+    fi
 done
 
 exit "$status"

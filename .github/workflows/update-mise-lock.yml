@@ -14,6 +14,8 @@ on:
     paths:
       - 'docker-images/**/mise/config.toml'
       - 'docker-images/**/mise/mise.lock'
+      # npm backend の依存グラフ（mise.lock が digest で参照するサイドカー）
+      - 'docker-images/**/mise/.mise/locks/**'
       # mise 本体のバージョンが変わると lock の生成結果も変わり得る
       - 'docker-images/Dockerfile'
       - 'scripts/update-mise-locks.sh'
@@ -81,15 +83,31 @@ jobs:
             "$image" \
             scripts/update-mise-locks.sh
 
-      # 受け渡すのは lock ファイルの中身だけ。パスはここで固定の名前に変換し、
-      # 作業ツリーのパス構造やシンボリックリンクを持ち出さない。
+      # 受け渡すのは lock ファイルとサイドカー（npm backend の依存グラフ）の中身だけ。
+      # lock はここで固定の名前に変換し、サイドカーは .mise/locks 配下の通常ファイルだけを
+      # <stage>-locks/ にコピーする。作業ツリーのパス構造やシンボリックリンクを持ち出さない。
       - name: Collect lock files
+        shell: bash
         run: |
+          set -euo pipefail
           out="$RUNNER_TEMP/mise-locks"
           mkdir -p "$out"
-          cat docker-images/dev-base/etc/mise/mise.lock > "$out/dev-base.lock"
-          cat docker-images/ai/opt/mise/mise.lock > "$out/ai.lock"
-          cat docker-images/user/opt/mise/mise.lock > "$out/user.lock"
+          declare -A dirs=(
+            [dev-base]="docker-images/dev-base/etc/mise"
+            [ai]="docker-images/ai/opt/mise"
+            [user]="docker-images/user/opt/mise"
+          )
+          for stage in "${!dirs[@]}"; do
+            dir="${dirs[$stage]}"
+            cat "$dir/mise.lock" > "$out/$stage.lock"
+            if [ -d "$dir/.mise/locks" ]; then
+              # find はシンボリックリンクをたどらないため、得られるのは実ディレクトリ内の通常ファイルだけ
+              (cd "$dir/.mise/locks" && find . -type f -printf '%P\n') | while IFS= read -r rel; do
+                mkdir -p "$out/$stage-locks/$(dirname "$rel")"
+                cat "$dir/.mise/locks/$rel" > "$out/$stage-locks/$rel"
+              done
+            fi
+          done
 
       - name: Upload lock files
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -121,7 +139,7 @@ jobs:
           name: mise-locks
           path: ${{ runner.temp }}/mise-locks
 
-      # 受け取った lock を検証し、決まったパスにだけ書き込む。
+      # 受け取った lock とサイドカーを検証し、決まったパスにだけ書き込む。
       # （このステップのスクリプトはワークフロー定義内のもので、PR 側のファイルは使わない）
       - name: Validate and apply lock files
         id: apply
@@ -130,60 +148,137 @@ jobs:
           set -euo pipefail
           src="$RUNNER_TEMP/mise-locks"
 
-          declare -A dest=(
-            [dev-base.lock]="docker-images/dev-base/etc/mise/mise.lock"
-            [ai.lock]="docker-images/ai/opt/mise/mise.lock"
-            [user.lock]="docker-images/user/opt/mise/mise.lock"
+          declare -A dirs=(
+            [dev-base]="docker-images/dev-base/etc/mise"
+            [ai]="docker-images/ai/opt/mise"
+            [user]="docker-images/user/opt/mise"
           )
 
-          # 期待する3ファイル以外が含まれていないこと
-          actual="$(cd "$src" && find . -mindepth 1 -printf '%P\n' | LC_ALL=C sort)"
-          expected="$(printf '%s\n' "${!dest[@]}" | LC_ALL=C sort)"
-          if [ "$actual" != "$expected" ]; then
-            echo "artifact の内容が想定と異なります:" >&2
-            echo "$actual" >&2
-            exit 1
-          fi
-
-          for name in "${!dest[@]}"; do
-            file="$src/$name"
-            target="${dest[$name]}"
-
-            # シンボリックリンクではない通常ファイルで、サイズが妥当であること
-            if [ -L "$file" ] || [ ! -f "$file" ]; then
-              echo "$name が通常ファイルではありません" >&2
+          # artifact に含まれてよいのは、3つの lock と、npm backend のサイドカー
+          # （<stage>-locks/npm-<name>/<version>/{package.json,aube-lock.yaml}）とそのディレクトリだけ。
+          # 各パス要素は英数字で始まるため、.. や隠しファイルは含まれない。
+          sidecar_re='^(dev-base|ai|user)-locks/npm-[a-z0-9][a-z0-9._-]*/[0-9A-Za-z][0-9A-Za-z.+_-]*/(package\.json|aube-lock\.yaml)$'
+          sidecar_dir_re='^(dev-base|ai|user)-locks(/npm-[a-z0-9][a-z0-9._-]*(/[0-9A-Za-z][0-9A-Za-z.+_-]*)?)?$'
+          while IFS= read -r -d '' path; do
+            rel="${path#"$src"/}"
+            if [ -L "$path" ]; then
+              echo "シンボリックリンクが含まれています: $rel" >&2
+              exit 1
+            elif [ -d "$path" ]; then
+              if ! [[ "$rel" =~ $sidecar_dir_re ]]; then
+                echo "想定外のディレクトリです: $rel" >&2
+                exit 1
+              fi
+            elif [ -f "$path" ]; then
+              case "$rel" in
+                dev-base.lock | ai.lock | user.lock) ;;
+                *)
+                  if ! [[ "$rel" =~ $sidecar_re ]]; then
+                    echo "想定外のファイルです: $rel" >&2
+                    exit 1
+                  fi
+                  ;;
+              esac
+              # サイズが妥当であること
+              if [ "$(stat -c %s "$path")" -gt 1048576 ]; then
+                echo "$rel が大きすぎます" >&2
+                exit 1
+              fi
+            else
+              echo "通常ファイルではありません: $rel" >&2
               exit 1
             fi
-            if [ "$(stat -c %s "$file")" -gt 1048576 ]; then
-              echo "$name が大きすぎます" >&2
+          done < <(find "$src" -mindepth 1 -print0)
+
+          for stage in "${!dirs[@]}"; do
+            if [ ! -f "$src/$stage.lock" ]; then
+              echo "$stage.lock がありません" >&2
               exit 1
             fi
 
-            # mise.lock の形式であること（TOML として解釈でき、想定外のキーを含まない）
-            python3 - "$file" <<'PY'
-          import sys, tomllib
-          with open(sys.argv[1], "rb") as f:
+            # mise.lock の形式であること（TOML として解釈でき、想定外のキーを含まない）。
+            # npm backend のエントリは依存グラフ（aube）を必ず参照し、その digest がサイドカーと一致すること。
+            # 参照されないサイドカーは受け付けない。
+            python3 - "$src/$stage.lock" "$src/$stage-locks" <<'PY'
+          import hashlib, json, os, re, sys, tomllib
+          lock_path, sidecar_root = sys.argv[1], sys.argv[2]
+          with open(lock_path, "rb") as f:
               data = tomllib.load(f)
           if set(data) - {"lockfile_version", "tools"}:
               sys.exit(f"想定外のキー: {sorted(set(data) - {'lockfile_version', 'tools'})}")
-          if data.get("lockfile_version") != 1:
-              sys.exit("lockfile_version が 1 ではありません")
+          if data.get("lockfile_version") != 2:
+              sys.exit("lockfile_version が 2 ではありません")
+
+          path_re = re.compile(r"\.mise/locks/(npm-[a-z0-9][a-z0-9._-]*/[0-9A-Za-z][0-9A-Za-z.+_-]*)")
+          referenced = set()
+          for tool, entries in data.get("tools", {}).items():
+              for entry in entries:
+                  if "uv" in entry:
+                      sys.exit(f"{tool}: uv の依存グラフには対応していません")
+                  graph = entry.get("aube")
+                  if graph is None:
+                      if tool.startswith("npm:"):
+                          sys.exit(f"{tool}: 依存グラフ（aube）の参照がありません")
+                      continue
+                  m = path_re.fullmatch(graph.get("path", ""))
+                  if not m:
+                      sys.exit(f"{tool}: 想定外のサイドカーのパス: {graph.get('path')!r}")
+                  rel = m.group(1)
+                  aube_lock = os.path.join(sidecar_root, rel, "aube-lock.yaml")
+                  package_json = os.path.join(sidecar_root, rel, "package.json")
+                  if not os.path.isfile(aube_lock) or not os.path.isfile(package_json):
+                      sys.exit(f"{tool}: サイドカーがありません: {rel}")
+                  with open(aube_lock, "rb") as f:
+                      digest = "sha256:" + hashlib.sha256(f.read()).hexdigest()
+                  if graph.get("digest") != digest:
+                      sys.exit(f"{tool}: サイドカーの digest が一致しません: {rel}")
+                  with open(package_json, "rb") as f:
+                      json.load(f)
+                  referenced.add(rel)
+
+          present = set()
+          if os.path.isdir(sidecar_root):
+              for root, _, files in os.walk(sidecar_root):
+                  if files:
+                      present.add(os.path.relpath(root, sidecar_root))
+          if present - referenced:
+              sys.exit(f"lock から参照されていないサイドカー: {sorted(present - referenced)}")
           PY
+          done
+
+          for stage in "${!dirs[@]}"; do
+            dir="${dirs[$stage]}"
+            lock="$dir/mise.lock"
+            sidecars="$dir/.mise/locks"
 
             # 書き込み先がリポジトリ内の想定パスそのものであること
             # （PR 側で書き込み先やその親ディレクトリをシンボリックリンクにしていないこと）
-            if [ -L "$target" ] || [ "$(realpath -m "$target")" != "$GITHUB_WORKSPACE/$target" ]; then
-              echo "書き込み先 $target が想定外です" >&2
-              exit 1
-            fi
+            for target in "$lock" "$dir/.mise" "$sidecars"; do
+              if [ -L "$target" ] || [ "$(realpath -m "$target")" != "$GITHUB_WORKSPACE/$target" ]; then
+                echo "書き込み先 $target が想定外です" >&2
+                exit 1
+              fi
+            done
 
-            cat "$file" > "$target"
+            cat "$src/$stage.lock" > "$lock"
+
+            # サイドカーは丸ごと置き換える（参照されなくなった古い版を消すため）
+            rm -rf "$sidecars"
+            if [ -d "$src/$stage-locks" ]; then
+              (cd "$src/$stage-locks" && find . -type f -printf '%P\n') | while IFS= read -r rel; do
+                install -D -m 0644 "$src/$stage-locks/$rel" "$sidecars/$rel"
+              done
+            fi
           done
 
-          if git diff --quiet -- "${dest[@]}"; then
+          # 新規のサイドカーは未追跡のため、ステージしてから差分を確認する。
+          # サイドカーが無いステージもあるため、各ステージの mise ディレクトリ単位で指定する
+          # （書き込んだのは mise.lock と .mise/locks だけで、それ以外は checkout したままの状態）。
+          git add -A -- "${dirs[@]}"
+          if git diff --cached --quiet -- "${dirs[@]}"; then
             echo "changed=false" >> "$GITHUB_OUTPUT"
           else
-            git diff --stat -- "${dest[@]}"
+            git diff --cached --stat -- "${dirs[@]}"
             echo "changed=true" >> "$GITHUB_OUTPUT"
           fi
 
@@ -209,10 +304,7 @@ jobs:
           # renovate.json5 の gitIgnoredAuthors と揃えること（Renovate がPRの更新を止めないように）
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add -- \
-            docker-images/dev-base/etc/mise/mise.lock \
-            docker-images/ai/opt/mise/mise.lock \
-            docker-images/user/opt/mise/mise.lock
+          # 対象（mise.lock とサイドカー）は Validate and apply lock files でステージ済み
           # 念のため hook を一切実行させない
           git -c core.hooksPath=/dev/null commit --no-verify -m 'chore(deps): mise.lock を更新する'
           # generate ジョブの基準コミットから進んでいれば non-fast-forward で失敗する

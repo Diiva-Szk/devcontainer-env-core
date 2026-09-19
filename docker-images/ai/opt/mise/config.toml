@@ -13,6 +13,15 @@
 "aqua:github/copilot-cli" = "1.0.86"
 "aqua:github/copilot-language-server-release" = "1.547.0"
 "aqua:google-antigravity/antigravity-cli" = "1.2.6"
+# AI エージェント向けのルール・設定を各ツールの形式で生成する CLI
+"aqua:dyoshikawa/rulesync" = "16.39.1"
+
+# Playwright CLI（コーディングエージェント向けのブラウザ操作 CLI）
+#   npm でのみ配布されているため npm backend で入れる。mise lock が依存グラフを
+#   integrity 付きで .mise/locks/ のサイドカー（package.json / aube-lock.yaml）に書き出し、
+#   mise.lock にはその digest が記録される。サイドカーも mise.lock と一緒にコミットすること。
+#   ブラウザは Debian の Chromium を使う（Dockerfile の PLAYWRIGHT_MCP_EXECUTABLE_PATH）。
+"npm:@playwright/cli" = "0.1.21"
 
 # OpenAI Codex CLI
 #   aqua backend では linux 向け成果物を解決できず lock が生成されなかったため、github backend で取得する。
