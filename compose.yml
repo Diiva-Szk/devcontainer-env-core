@@ -47,6 +47,7 @@ services:
   ###########################################################################
   # ai: AIエージェント環境。
   #   sudo なし / AWS 認証情報なし / docker.sock なし。
+  #   AI エージェントが操作するブラウザ用のデスクトップ（KasmVNC）を持つ。
   ###########################################################################
   ai:
     build:
@@ -64,6 +65,13 @@ services:
     environment:
       NODE_OPTIONS: "--max-old-space-size=4096"
       POWERLEVEL9K_DISABLE_GITSTATUS: "true"
+      # デスクトップ（KasmVNC）のログインパスワード（ユーザー名は USER_NAME）
+      KASMVNC_PASSWORD: ${KASMVNC_PASSWORD:-dev}
+    # デスクトップ（KasmVNC）のポート。ホストには公開せず（ports は書かない）、
+    # 同じネットワークの user コンテナからだけ接続させる。
+    # ホストからは user コンテナの ai-desktop（aid）が VS Code のポート転送経由で開く。
+    expose:
+      - "8444"
     volumes:
       - ../../:/home/${USER_NAME:-dev}/work:delegated
       # docker.sock は渡さない

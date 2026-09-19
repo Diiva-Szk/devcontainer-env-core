@@ -1,0 +1,6 @@
+# Openbox の起動後に実行する（~/.vnc/xstartup → openbox-session → この autostart）。
+xsetroot -cursor_name left_ptr &
+# 日本語入力（Ctrl+Space で切り替える）
+fcitx5 -d &
+# デスクトップのアイコン（~/.idesktop/*.lnk）
+idesk &

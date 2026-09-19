@@ -1,0 +1,72 @@
+#!/bin/bash
+###########################################################################
+# start-desktop
+#   ai コンテナのデスクトップ（KasmVNC + Openbox）を起動する。
+#   ai-entrypoint.sh がコンテナの起動時に呼ぶ。止まってしまった場合は手動で再実行できる。
+#
+#   KasmVNC は https://<ai コンテナ>:8444 で待ち受ける。compose.yml ではホストへ公開せず、
+#   user コンテナの ai-desktop（aid）がホストまで転送する。
+#
+#   ログインのユーザー名はコンテナのユーザー名、パスワードは環境変数 KASMVNC_PASSWORD
+#   （compose.yml で .env の値を渡す。既定値は dev）。
+###########################################################################
+set -euo pipefail
+
+display="${DISPLAY:-:1}"
+user="$(id -un)"
+password="${KASMVNC_PASSWORD:-dev}"
+vnc_dir="${HOME}/.vnc"
+cert="${vnc_dir}/self-signed.pem"
+key="${vnc_dir}/self-signed.key"
+
+mkdir -p "$vnc_dir"
+
+# TLS の自己署名証明書。コンテナごとに生成する
+# （ssl-cert パッケージの証明書はビルド時に作られ、公開しているビルドキャッシュを通じて
+#   全利用者で同じ秘密鍵になってしまうため使わない）。
+if [[ ! -s "$cert" || ! -s "$key" ]]; then
+  (
+    umask 077
+    openssl req -x509 -newkey rsa:2048 -nodes -days 3650 \
+      -subj "/CN=localhost" -addext "subjectAltName=DNS:localhost,IP:127.0.0.1" \
+      -keyout "$key" -out "$cert" 2>/dev/null
+  )
+fi
+
+# KasmVNC の設定（~/.vnc/kasmvnc.yaml。/etc/kasmvnc/kasmvnc.yaml を上書きする）。
+#   interface 0.0.0.0: user コンテナから接続できるよう、コンテナのすべてのアドレスで待ち受ける
+#                      （compose.yml でホストへは公開しない）。
+#   require_ssl:       TLS でのみ接続を受け付ける。
+cat >"${vnc_dir}/kasmvnc.yaml" <<EOF
+network:
+  interface: 0.0.0.0
+  websocket_port: 8444
+  ssl:
+    pem_certificate: ${cert}
+    pem_key: ${key}
+    require_ssl: true
+EOF
+
+# ログイン用のパスワードファイル（ユーザー名:ハッシュ:権限）。
+#   ow = 画面の操作（o）と、ユーザー管理を除く書き込み（w）を許可する。
+#   起動のたびに作り直し、.env で変更したパスワードを反映する。
+(
+  umask 077
+  printf '%s:%s:ow\n' "$user" "$(openssl passwd -5 -stdin <<<"$password")" >"${HOME}/.kasmpasswd"
+)
+
+# コンテナを再起動した場合、前回の X サーバーのロックが残っていると起動できないため消す。
+vncserver -kill "$display" >/dev/null 2>&1 || true
+rm -f "/tmp/.X${display#:}-lock" "/tmp/.X11-unix/X${display#:}"
+
+# -StunServer / -PublicIP: WebRTC 用の外部問い合わせ（STUN）をしない。
+exec vncserver "$display" \
+  -FrameRate=60 \
+  -BlacklistThreshold=0 \
+  -FreeKeyMappings \
+  -PreferBandwidth \
+  -DynamicQualityMin=4 \
+  -DynamicQualityMax=7 \
+  -DLP_ClipDelay=0 \
+  -StunServer="" \
+  -PublicIP=127.0.0.1

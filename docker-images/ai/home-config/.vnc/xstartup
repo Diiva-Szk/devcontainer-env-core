@@ -1,0 +1,5 @@
+#!/bin/bash
+# KasmVNC がデスクトップ（X セッション）を起動するときに実行する。
+#   セッション用の D-Bus を用意してから Openbox を起動する（fcitx5 などが使う）。
+#   Openbox の起動後の処理は ~/.config/openbox/autostart に書く。
+exec dbus-launch --exit-with-session openbox-session

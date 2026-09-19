@@ -36,11 +36,14 @@ Feature（`devcontainer-features/` 配下）には `Dockerfile` を含めず、�
 │   │   └── usr/local/bin/        # entrypoint.sh
 │   ├── ai/
 │   │   ├── opt/mise/             # mise の設定と lock（global スコープ）
-│   │   └── home-config/          # AI エージェントの設定ファイル
+│   │   ├── etc/chromium.d/       # Chromium の起動オプション
+│   │   ├── usr/local/bin/        # ai-entrypoint.sh / start-desktop（デスクトップの起動）
+│   │   ├── usr/share/            # Chromium の拡張機能（Antigravity）/ st のアイコン
+│   │   └── home-config/          # AI エージェントとデスクトップ（KasmVNC / Openbox / idesk）の設定ファイル
 │   └── user/
 │       ├── opt/mise/             # mise の設定と lock（global スコープ）
 │       ├── opt/renovate/         # ローカル確認用の Renovate CLI（package-lock.json）
-│       └── usr/local/bin/        # ai（ai コンテナに入るコマンド）
+│       └── usr/local/bin/        # ai（ai コンテナに入るコマンド）/ ai-desktop（aid）
 ├── devcontainer-features/        # vscode-common / vscode-python / vscode-terraform
 ├── scripts/                      # lock 更新・検査・Feature の version 更新
 ├── renovate.json5
@@ -99,6 +102,8 @@ CLI ツールと言語ランタイム（Python / Node.js）は [mise](https://mi
 | --- | --- | --- |
 | Python パッケージ | `docker-images/dev-base/opt/python/requirements.in`（直接依存） / `requirements.txt`（推移的依存とハッシュ） | `uv pip install --system --require-hashes` |
 | Renovate CLI（user） | `docker-images/user/opt/renovate/package.json` / `package-lock.json` | `npm ci --ignore-scripts` |
+| KasmVNC（ai） | `docker-images/Dockerfile` の `KASMVNC_VERSION` / `KASMVNC_SHA256_*` | GitHub リリースの `.deb` を sha256 で検証して `apt-get install` |
+| デスクトップ・Chromium（ai）、socat（user） | `docker-images/Dockerfile` | Debian のパッケージ（`apt-get`） |
 
 - Python パッケージを変更したら、`docker-images/dev-base/opt/python` で次を実行して `requirements.txt` を再生成します。オプションは Renovate がヘッダーから解釈できるよう `=` でつなぎます。
 
@@ -107,6 +112,9 @@ CLI ツールと言語ランタイム（Python / Node.js）は [mise](https://mi
   ```
 
 - Renovate CLI はインストールスクリプトを実行しないため、re2 のネイティブ拡張は入らず、標準の RegExp にフォールバックします。
+- KasmVNC は Renovate の更新対象外です（アーキテクチャごとの sha256 を合わせて更新する必要があるため）。更新するときは Dockerfile のコメントの手順で、`KASMVNC_VERSION` と amd64 / arm64 の sha256 を書き換えてください。
+- ブラウザは Google Chrome ではなく Debian の Chromium を使います（Google Chrome には Linux arm64 版が無いため）。
+- KasmVNC の TLS 証明書は、`ai` コンテナの起動時に `start-desktop` がコンテナごとに生成します。`ssl-cert` の証明書（snakeoil）はビルド時に作られ、公開しているビルドキャッシュを通じて全利用者で同じ秘密鍵になるため使いません。
 - Python のマイナーバージョンを上げた場合は、`--python-version` を合わせて `requirements.txt` を再生成してください。
 
 ## ビルドキャッシュ
@@ -234,6 +242,7 @@ Action の SHA 固定だけでは、Action が実行時に取得するものま�
 ## セキュリティ上の設計
 
 - **user / ai の権限分離:** ai コンテナには sudo・Docker ソケット・クラウドの認証情報を渡しません。そのうえで AI エージェントは確認プロンプトなしで動作する設定にしています（`docker-images/ai/home-config/`）。この前提を崩す変更（ai への Docker ソケットのマウント等）をしないでください。
+- **ai のデスクトップはホストに公開しない:** KasmVNC のポート（8444）は `compose.yml` の `expose` で同じネットワークの user コンテナにだけ見せ、`ports` でホストへは公開しません。ホストからは user コンテナの `ai-desktop`（`aid`）が `127.0.0.1` で待ち受けて転送し、VS Code のポート転送経由で開きます。
 - **App トークンの権限の最小化:** `create-github-app-token` は `permission-*` を指定しないと App installation の全権限を継承するため、ワークフローごとに必要な権限だけを指定しています。
   - renovate: Contents / Issues / Pull requests / Checks / Commit statuses / Workflows（write）、Dependabot alerts（read。`vulnerabilityAlerts` 用）
   - update-mise-lock: Contents（write）のみ

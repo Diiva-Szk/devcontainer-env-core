@@ -1,0 +1,9 @@
+table Icon
+  Caption: st - simple terminal
+  Command: /usr/bin/stterm
+  Icon: /usr/share/icons/st/st.png
+  Width: 45
+  Height: 45
+  X: 50
+  Y: 170
+end
