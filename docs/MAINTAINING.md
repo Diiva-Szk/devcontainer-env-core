@@ -37,8 +37,9 @@ Feature（`devcontainer-features/` 配下）には `Dockerfile` を含めず、�
 │   ├── ai/
 │   │   ├── opt/mise/             # mise の設定と lock（global スコープ）
 │   │   ├── etc/chromium.d/       # Chromium の起動オプション
+│   │   ├── etc/chromium/policies/ # Chromium のポリシー（Antigravity のブラウザ拡張を入れる）
 │   │   ├── usr/local/bin/        # ai-entrypoint.sh / start-desktop（デスクトップの起動）
-│   │   ├── usr/share/            # Chromium の拡張機能（Antigravity）/ st のアイコン
+│   │   ├── usr/share/icons/st/   # st のアイコン
 │   │   └── home-config/          # AI エージェントとデスクトップ（KasmVNC / Openbox / idesk）の設定ファイル
 │   └── user/
 │       ├── opt/mise/             # mise の設定と lock（global スコープ）
