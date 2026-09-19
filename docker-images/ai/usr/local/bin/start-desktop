@@ -50,9 +50,12 @@ EOF
 # ログイン用のパスワードファイル（ユーザー名:ハッシュ:権限）。
 #   ow = 画面の操作（o）と、ユーザー管理を除く書き込み（w）を許可する。
 #   起動のたびに作り直し、.env で変更したパスワードを反映する。
+#   ソルトは kasm 固定にする。KasmVNC は入力されたパスワードを固定のソルト（$5$kasm$）で
+#   ハッシュし、ファイルの文字列と比較するため、別のソルトでは正しいパスワードでも認証に失敗する
+#   （common/network/websocket.c）。
 (
   umask 077
-  printf '%s:%s:ow\n' "$user" "$(openssl passwd -5 -stdin <<<"$password")" >"${HOME}/.kasmpasswd"
+  printf '%s:%s:ow\n' "$user" "$(openssl passwd -5 -salt kasm -stdin <<<"$password")" >"${HOME}/.kasmpasswd"
 )
 
 # コンテナを再起動した場合、前回の X サーバーのロックが残っていると起動できないため消す。
