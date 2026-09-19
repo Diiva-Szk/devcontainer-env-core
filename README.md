@@ -63,7 +63,7 @@ flowchart LR
 
 Claude Code、OpenAI Codex CLI、GitHub Copilot CLI、GitHub Copilot Language Server、Amazon Kiro CLI、Google Antigravity CLI
 
-デスクトップ: KasmVNC、Openbox、Chromium（Antigravity のブラウザ拡張を初回起動時に導入）、st（ターミナル）、fcitx5-mozc（日本語入力）
+デスクトップ: KasmVNC、Openbox、Chromium（Antigravity のブラウザ拡張をポリシーで導入）、st（ターミナル）、fcitx5-mozc（日本語入力）
 
 **`user` コンテナ** — [docker-images/user/opt/mise/config.toml](docker-images/user/opt/mise/config.toml)
 

@@ -206,13 +206,17 @@ RUN arch="$(dpkg --print-architecture)" && \
     rm -rf /var/lib/apt/lists/* "${tmp_dir}"
 
 # Chromium の起動オプション（/usr/bin/chromium が /etc/chromium.d/ を読み込む）と、
-# 初回起動時に入れる拡張機能（Antigravity のブラウザ拡張）、デスクトップの起動スクリプト。
+# 拡張機能のポリシー、デスクトップの起動スクリプト。
+#   拡張機能（Antigravity のブラウザ拡張）はポリシー（ExtensionSettings の normal_installed）で
+#   Chrome ウェブストアから入れる。/usr/share/chromium/extensions には置かない
+#   （Debian の /etc/chromium.d/extensions が、そこを展開済みの拡張機能のディレクトリとして
+#   --load-extension で読み込むため、外部拡張機能の JSON を置くと読み込みエラーになる）。
 COPY --chown=root:root ai/etc/chromium.d /etc/chromium.d
-COPY --chown=root:root ai/usr/share/chromium/extensions /usr/share/chromium/extensions
+COPY --chown=root:root ai/etc/chromium/policies /etc/chromium/policies
 COPY --chown=root:root ai/usr/share/icons/st /usr/share/icons/st
 COPY --chown=root:root ai/usr/local/bin /usr/local/bin
 
-RUN chmod -R u=rwX,go=rX /etc/chromium.d /usr/share/chromium/extensions /usr/share/icons/st && \
+RUN chmod -R u=rwX,go=rX /etc/chromium.d /etc/chromium/policies /usr/share/icons/st && \
     chmod 0755 /usr/local/bin/start-desktop /usr/local/bin/ai-entrypoint.sh
 
 # docker exec で入ったシェルから起動した GUI アプリもデスクトップに表示する。
