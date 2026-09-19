@@ -144,6 +144,7 @@ ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 ###########################################################################
 # ai:
 #   AIエージェント環境。Claude Code / Codex / Copilot / Kiro CLI / Antigravity CLI を持つ。
+#   AI エージェントが操作するブラウザ用のデスクトップ（KasmVNC）も持つ。
 #   sudo なし / AWS認証情報なし / docker.sock なし（意図的に権限を絞る）。
 ###########################################################################
 FROM dev-base AS ai
@@ -152,12 +153,82 @@ ARG USER_NAME=dev
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
+USER root
+
+# -------------------------------------------------------------------
+# デスクトップ（KasmVNC + Openbox + Chromium）
+#   AI エージェントがブラウザを操作する画面を、user コンテナ経由（ai-desktop）で
+#   ホストのブラウザから見るためのもの。ポートは compose.yml で user コンテナ向けにだけ公開する。
+#   更新の早い AI ツール（mise install）より前に置き、日々の更新で作り直されないようにする。
+# -------------------------------------------------------------------
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+        dbus-x11 \
+        xdg-utils \
+        x11-xserver-utils \
+        xauth \
+        openbox \
+        python3-xdg \
+        idesk \
+        stterm \
+        chromium \
+        fonts-noto-cjk \
+        fonts-noto-color-emoji \
+        fcitx5 \
+        fcitx5-mozc \
+        fcitx5-frontend-gtk3 && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
+# KasmVNC（Debian のパッケージが無いため GitHub のリリースから導入する）。
+#   ダウンロードした .deb は sha256 で検証する（アーキテクチャごとに値が異なる）。
+#   【更新するとき】KASMVNC_VERSION と両アーキテクチャの sha256 を合わせて書き換える。
+#   sha256 はリリースの各アセットの digest で確認できる:
+#     curl -fsSL https://api.github.com/repos/kasmtech/KasmVNC/releases/tags/v<版> \
+#       | jq -r '.assets[] | select(.name | test("trixie")) | "\(.name) \(.digest)"'
+ARG KASMVNC_VERSION="1.5.0"
+ARG KASMVNC_SHA256_AMD64="80b241de7dfe53bba2b7e1cc5ac8c5246d72271efa16be2d4f76607f30fab1c4"
+ARG KASMVNC_SHA256_ARM64="fbb11589958a2acccd2d67f67944be79ac1e8e3a1d6172c0e6db6dc59e55a919"
+RUN arch="$(dpkg --print-architecture)" && \
+    case "${arch}" in \
+      amd64) sha256="${KASMVNC_SHA256_AMD64}" ;; \
+      arm64) sha256="${KASMVNC_SHA256_ARM64}" ;; \
+      *) echo "KasmVNC: 未対応のアーキテクチャです: ${arch}" >&2; exit 1 ;; \
+    esac && \
+    deb="kasmvncserver_trixie_${KASMVNC_VERSION}_${arch}.deb" && \
+    tmp_dir="$(mktemp -d)" && \
+    curl --proto '=https' --tlsv1.2 -fsSL -o "${tmp_dir}/${deb}" \
+      "https://github.com/kasmtech/KasmVNC/releases/download/v${KASMVNC_VERSION}/${deb}" && \
+    echo "${sha256}  ${tmp_dir}/${deb}" | sha256sum -c - && \
+    apt-get update && \
+    apt-get install -y --no-install-recommends "${tmp_dir}/${deb}" && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/* "${tmp_dir}"
+
+# Chromium の起動オプション（/usr/bin/chromium が /etc/chromium.d/ を読み込む）と、
+# 初回起動時に入れる拡張機能（Antigravity のブラウザ拡張）、デスクトップの起動スクリプト。
+COPY --chown=root:root ai/etc/chromium.d /etc/chromium.d
+COPY --chown=root:root ai/usr/share/chromium/extensions /usr/share/chromium/extensions
+COPY --chown=root:root ai/usr/share/icons/st /usr/share/icons/st
+COPY --chown=root:root ai/usr/local/bin /usr/local/bin
+
+RUN chmod -R u=rwX,go=rX /etc/chromium.d /usr/share/chromium/extensions /usr/share/icons/st && \
+    chmod 0755 /usr/local/bin/start-desktop /usr/local/bin/ai-entrypoint.sh
+
+# docker exec で入ったシェルから起動した GUI アプリもデスクトップに表示する。
+ENV DISPLAY=:1 \
+    GTK_IM_MODULE=fcitx \
+    QT_IM_MODULE=fcitx \
+    XMODIFIERS=@im=fcitx
+
+# デスクトップを起動してから共通の entrypoint.sh に処理を渡す。
+ENTRYPOINT ["/usr/local/bin/ai-entrypoint.sh"]
+
 # ai 専用のツール定義（global スコープ）。dev-base の system 設定と合成される。
 # root 所有・読み取り専用で配置する（パーミッションを明示する理由は dev-base と同じ）。
 COPY --chown=root:root ai/opt/mise /opt/mise
 ENV MISE_GLOBAL_CONFIG_FILE="/opt/mise/config.toml"
 
-USER root
 RUN chmod -R u=rwX,go=rX /opt/mise
 
 USER ${USER_NAME}
@@ -177,8 +248,9 @@ RUN mise install && \
     kiro-cli --version && \
     agy --version
 
-# ai 用の home 初期ファイル
+# ai 用の home 初期ファイル（AI ツールの設定と、デスクトップ（Openbox / idesk / KasmVNC）の設定）
 COPY --chown=${USER_NAME}:${USER_NAME} ai/home-config "/home/${USER_NAME}"
+RUN chmod 0755 "/home/${USER_NAME}/.vnc/xstartup"
 
 CMD ["sleep", "infinity"]
 
@@ -186,6 +258,7 @@ CMD ["sleep", "infinity"]
 # user:
 #   作業者(あなた)の環境。sudo(パスワード関門) と docker CLI を持ち、
 #   docker.sock 経由で ai コンテナを操作する。AWS認証情報を扱う側。
+#   ai コンテナのデスクトップをホストへ転送する ai-desktop（aid）も持つ。
 ###########################################################################
 FROM dev-base AS user
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
@@ -198,10 +271,12 @@ SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 ARG USER_NAME=dev
 
 # sudo はこの user ステージにのみ導入（攻撃面を ai から排除）
+# socat は ai-desktop（aid）が ai コンテナのデスクトップへポートを転送するために使う。
 USER root
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
-        sudo && \
+        sudo \
+        socat && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
@@ -240,9 +315,13 @@ USER root
 # カレントディレクトリに対応する ai コンテナ側のディレクトリで起動する。
 COPY --chown=root:root user/usr/local/bin/ai /usr/local/bin/ai
 
+# ai コンテナのデスクトップ（KasmVNC）をホストのブラウザで開くコマンド（ai-desktop / aid）。
+COPY --chown=root:root user/usr/local/bin/ai-desktop /usr/local/bin/ai-desktop
+
 RUN chown -R root:root /opt/renovate && \
     chmod -R u=rwX,go=rX /opt/renovate && \
-    chmod 0755 /usr/local/bin/ai && \
+    chmod 0755 /usr/local/bin/ai /usr/local/bin/ai-desktop && \
+    ln -s ai-desktop /usr/local/bin/aid && \
     ln -s /opt/renovate/node_modules/.bin/renovate /usr/local/bin/renovate
 
 # user 用の home 初期ファイル

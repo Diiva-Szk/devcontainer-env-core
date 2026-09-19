@@ -1,0 +1,24 @@
+# Chromium の起動オプション（ai コンテナ用）。
+#   /usr/bin/chromium（Debian のラッパースクリプト）が起動時に読み込む。
+#   デスクトップのアイコン・AI エージェント・ai コンテナのシェルのどこから起動しても同じ設定になる。
+#
+#   --no-sandbox / --test-type:
+#     コンテナ内では Chromium のサンドボックスを作れない（user namespace 等の権限が無い）ため無効にする。
+#     --test-type は --no-sandbox の警告バーを出さないためのもの。
+#   --remote-debugging-*:
+#     AI エージェント（Antigravity 等）が DevTools Protocol でブラウザを操作するため。
+#     コンテナの外からは接続させないよう 127.0.0.1 で待ち受ける。
+#     既定のプロファイルではリモートデバッグが無効になるため、専用の user-data-dir を使う。
+#   --disable-dev-shm-usage: コンテナの /dev/shm は小さい（既定 64MB）ため /tmp を使わせる。
+export CHROMIUM_FLAGS="${CHROMIUM_FLAGS:-} \
+  --no-sandbox \
+  --test-type \
+  --no-first-run \
+  --no-default-browser-check \
+  --password-store=basic \
+  --disable-dev-shm-usage \
+  --disable-gpu \
+  --disable-features=Translate \
+  --remote-debugging-address=127.0.0.1 \
+  --remote-debugging-port=9222 \
+  --user-data-dir=${HOME}/.config/chromium-ai"

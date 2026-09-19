@@ -1,0 +1,171 @@
+#!/bin/bash
+###########################################################################
+# ai-desktop（aid）
+#   ai コンテナのデスクトップ（KasmVNC）を、ホストのブラウザで開く。
+#
+#   ai コンテナの KasmVNC（ai:8444）はホストに公開していないため、user コンテナの
+#   localhost:<port> へ転送（socat）する。VS Code はこのポートを検出してホストへ転送するため、
+#   ホストのブラウザから https://localhost:<port> で開ける。
+#   転送はバックグラウンドで動き続ける（ai-desktop stop で止める）。
+#
+#   使い方:
+#     ai-desktop          # 転送を開始して、ホストのブラウザで開く
+#     ai-desktop stop     # 転送を止める
+#     ai-desktop status   # 転送の状態を表示する
+###########################################################################
+set -euo pipefail
+
+# ai コンテナの KasmVNC（compose.yml のサービス名で名前解決する）
+target_host="ai"
+target_port=8444
+
+port="${AI_DESKTOP_PORT:-8444}"
+open=true
+
+usage() {
+  cat <<EOF
+usage: ai-desktop [start|stop|status] [-p PORT] [--no-open]
+       aid ...（ai-desktop の短縮形）
+
+ai コンテナのデスクトップ（KasmVNC）を、ホストのブラウザで開きます。
+user コンテナの localhost:PORT を ai コンテナの KasmVNC（${target_host}:${target_port}）へ転送し、
+VS Code のポート転送でホストから https://localhost:PORT として開けるようにします。
+
+  ai-desktop          転送を開始して、ホストのブラウザで開く（既定）
+  ai-desktop stop     転送を止める
+  ai-desktop status   転送の状態を表示する
+
+  -p, --port PORT      user コンテナで待ち受けるポート（既定: \$AI_DESKTOP_PORT または 8444）
+  --no-open            ブラウザを開かず、転送だけを開始する
+
+ログインのユーザー名は dev（USER_NAME）、パスワードは .env の KASMVNC_PASSWORD（既定: dev）です。
+自己署名証明書のため、初回はブラウザに警告が表示されます。
+EOF
+}
+
+die() {
+  echo "ai-desktop: $*" >&2
+  exit 1
+}
+
+action=start
+while (($#)); do
+  case "$1" in
+    start | stop | status) action="$1" ;;
+    -p | --port)
+      (($# >= 2)) || die "$1 にはポート番号を指定してください。"
+      port="$2"
+      shift
+      ;;
+    --port=*) port="${1#*=}" ;;
+    --no-open) open=false ;;
+    -h | --help)
+      usage
+      exit 0
+      ;;
+    *) die "不明な引数です: $1（ai-desktop --help を参照）" ;;
+  esac
+  shift
+done
+
+[[ "$port" =~ ^[0-9]+$ ]] && ((port >= 1 && port <= 65535)) ||
+  die "ポート番号が不正です: ${port}"
+
+state_dir="${XDG_RUNTIME_DIR:-/tmp}/ai-desktop-$(id -u)"
+pid_file="${state_dir}/${port}.pid"
+log_file="${state_dir}/${port}.log"
+url="https://localhost:${port}/"
+
+# 転送中の socat の PID を出力する（転送していなければ失敗を返す）
+running_pid() {
+  local pid
+  [[ -f "$pid_file" ]] || return 1
+  pid="$(<"$pid_file")"
+  # PID が再利用されている場合に別のプロセスを止めないよう、socat であることを確かめる
+  if [[ "$pid" =~ ^[0-9]+$ && "$(cat "/proc/${pid}/comm" 2>/dev/null)" == "socat" ]]; then
+    echo "$pid"
+  else
+    rm -f "$pid_file"
+    return 1
+  fi
+}
+
+# ai コンテナの KasmVNC に接続できるか
+target_reachable() {
+  socat -u OPEN:/dev/null "TCP:${target_host}:${target_port},connect-timeout=3" 2>/dev/null
+}
+
+do_stop() {
+  local pid
+  if pid="$(running_pid)"; then
+    kill "$pid"
+    rm -f "$pid_file"
+    echo "ai-desktop: 転送を止めました（localhost:${port}）。"
+  else
+    echo "ai-desktop: 転送していません（localhost:${port}）。"
+  fi
+}
+
+do_status() {
+  local pid
+  if pid="$(running_pid)"; then
+    echo "ai-desktop: 転送中です: localhost:${port} -> ${target_host}:${target_port}（PID ${pid}）"
+    echo "    ${url}"
+  else
+    echo "ai-desktop: 転送していません（localhost:${port}）。"
+  fi
+  if target_reachable; then
+    echo "ai-desktop: ai コンテナのデスクトップは起動しています。"
+  else
+    echo "ai-desktop: ai コンテナのデスクトップに接続できません（${target_host}:${target_port}）。"
+  fi
+}
+
+do_start() {
+  local pid
+
+  getent hosts "$target_host" >/dev/null ||
+    die "ai コンテナが見つかりません。ai コンテナが起動しているか確認してください。"
+  target_reachable ||
+    die "ai コンテナのデスクトップ（${target_host}:${target_port}）に接続できません。ai コンテナで start-desktop を実行して起動し直してください（ログ: ai コンテナの ~/.vnc/）。"
+
+  if pid="$(running_pid)"; then
+    echo "ai-desktop: 転送中です: localhost:${port} -> ${target_host}:${target_port}（PID ${pid}）"
+  else
+    mkdir -p "$state_dir"
+    chmod 0700 "$state_dir"
+    # 端末を閉じても転送が続くよう、セッションを切り離して起動する。
+    # 127.0.0.1 でのみ待ち受ける（VS Code のポート転送はコンテナ内の localhost に接続する）。
+    setsid socat \
+      "TCP-LISTEN:${port},bind=127.0.0.1,reuseaddr,fork" \
+      "TCP:${target_host}:${target_port}" \
+      </dev/null >"$log_file" 2>&1 &
+    pid=$!
+    echo "$pid" >"$pid_file"
+
+    # ポートが使用中などで socat がすぐに終了していないか確かめる
+    sleep 0.5
+    if ! running_pid >/dev/null; then
+      cat "$log_file" >&2
+      die "転送を開始できませんでした（localhost:${port}）。別のポートを -p で指定してください。"
+    fi
+    echo "ai-desktop: 転送を開始しました: localhost:${port} -> ${target_host}:${target_port}"
+  fi
+
+  if ! $open; then
+    echo "    ${url}"
+    return
+  fi
+
+  # VS Code のターミナルでは BROWSER にホストのブラウザで開くヘルパーが設定されている。
+  # ヘルパーは localhost の URL のポートをホストへ転送してから開く。
+  if [[ -n "${BROWSER:-}" ]]; then
+    echo "ai-desktop: ホストのブラウザで開きます: ${url}"
+    "$BROWSER" "$url"
+  else
+    echo "ai-desktop: ホストのブラウザで次の URL を開いてください（VS Code の「ポート」タブで ${port} が転送されていること）:"
+    echo "    ${url}"
+  fi
+}
+
+"do_${action}"

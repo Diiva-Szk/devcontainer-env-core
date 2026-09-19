@@ -63,9 +63,11 @@ flowchart LR
 
 Claude Code、OpenAI Codex CLI、GitHub Copilot CLI、GitHub Copilot Language Server、Amazon Kiro CLI、Google Antigravity CLI
 
+デスクトップ: KasmVNC、Openbox、Chromium（Antigravity のブラウザ拡張を初回起動時に導入）、st（ターミナル）、fcitx5-mozc（日本語入力）
+
 **`user` コンテナ** — [docker-images/user/opt/mise/config.toml](docker-images/user/opt/mise/config.toml)
 
-Docker CLI、Renovate CLI、sudo
+Docker CLI、Renovate CLI、sudo、`ai` コンテナのデスクトップを開く `ai-desktop`（`aid`）
 
 ## 必要なもの
 
@@ -151,6 +153,35 @@ agy        # Google Antigravity CLI
 - 各ツールのログイン（認証）は、初回に `ai` コンテナ内で行ってください。
 - `ai` コンテナと共有していないディレクトリ（`~` など）で実行した場合は、`ai` コンテナの `~/work` で起動します。
 - mise のタスクとしても実行できます（`mise run ai`、`mise run ai claude`）。ただし、trust していない `mise.toml` があるディレクトリでは mise がエラーになるため、`ai` コマンドを直接実行してください（[`mise trust` が必要](#user-コンテナでは-mise-trust-が必要)）。
+
+### 6. `ai` コンテナのデスクトップを見る
+
+`ai` コンテナではデスクトップ（KasmVNC）が起動しており、AI エージェントが操作するブラウザ（Chromium）の画面をホストのブラウザで見られます。`user` コンテナのターミナル（VS Code）で `ai-desktop`（短縮形: `aid`）を実行すると、ホストのブラウザでデスクトップが開きます。
+
+```sh
+ai-desktop            # ポートの転送を開始して、ホストのブラウザで開く
+ai-desktop status     # 転送の状態を表示する
+ai-desktop stop       # 転送を止める
+ai-desktop -p 18444   # user コンテナで待ち受けるポートを変える（既定: 8444）
+```
+
+```mermaid
+flowchart LR
+    browser["ホストのブラウザ<br/>https://localhost:8444"] -->|"VS Code のポート転送"| user
+    subgraph host["ホスト（Docker）"]
+        user["user コンテナ<br/>localhost:8444（ai-desktop）"]
+        ai["ai コンテナ<br/>KasmVNC :8444"]
+    end
+    user -->|"Compose のネットワーク"| ai
+```
+
+- `ai` コンテナのポートはホストに公開していません。`ai-desktop` が `user` コンテナの `localhost:8444` を `ai` コンテナへ転送し、VS Code がそれをホストへ転送します。転送はバックグラウンドで続き、ターミナルを閉じても止まりません。
+- ログインのユーザー名は `dev`、パスワードは `.env` の `KASMVNC_PASSWORD`（既定: `dev`）です（[設定項目](#設定項目)）。
+- 証明書は `ai` コンテナの起動時に作る自己署名証明書のため、初回はブラウザに警告が表示されます。
+- ブラウザが自動で開かない場合（VS Code 以外のターミナルなど）は、VS Code の「ポート」タブで 8444 が転送されていることを確認し、表示された URL を開いてください。
+- デスクトップが起動していない場合は、`ai` コンテナで `start-desktop` を実行すると起動し直せます（ログは `ai` コンテナの `~/.vnc/`）。
+- `ai` コンテナのシェルから起動した GUI アプリ（`chromium` など）も、このデスクトップに表示されます。Chromium は DevTools Protocol（`127.0.0.1:9222`、`ai` コンテナ内のみ）で AI エージェントから操作できます。
+
 ## VS Code の Feature
 
 | Feature | 内容 |
@@ -227,6 +258,7 @@ mise trust mise.toml  # 確認してから trust する
 | `DOCKER_GID` | `988` | Docker ソケットのグループ ID。コンテナの起動時に付与する（`setup-docker-env.sh` が設定） |
 | `DOCKER_SOCK_PATH` | `/var/run/docker.sock` | ホストの Docker ソケットのパス（`setup-docker-env.sh` が設定） |
 | `AWS_REGION` | `ap-northeast-1` | `user` コンテナの AWS リージョン |
+| `KASMVNC_PASSWORD` | `dev` | `ai` コンテナのデスクトップ（KasmVNC）のログインパスワード。コンテナの起動時に反映する |
 | `UID` / `GID` | `1000` | コンテナ内ユーザーの UID / GID。**通常は変更しないでください**（下記） |
 | `USER_NAME` | `dev` | コンテナ内のユーザー名。**通常は変更しないでください**（下記） |
 
