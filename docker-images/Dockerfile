@@ -13,7 +13,7 @@ ARG ARG_BASE_IMAGE_DIGEST="sha256:d7e12182ce18b85b93007c1dedf31f2d29e01ccf3182cc
 #   公式イメージは debian trixie ベースでビルドされているため、
 #   base（debian 13）とは glibc が一致する。
 ###########################################################################
-FROM jdxcode/mise:2026.9.2@sha256:812f7860a2fb911e1d5dd3375834abb2a08f8c783a23f783fcbccaf7fc7357aa AS mise
+FROM jdxcode/mise:2026.9.11@sha256:f01b88463f3a8396b2273d88469bd09d097aa3cacfe343177eb5457f1d8d2a92 AS mise
 
 ###########################################################################
 # base:
@@ -225,6 +225,15 @@ ENV DISPLAY=:1 \
     QT_IM_MODULE=fcitx \
     XMODIFIERS=@im=fcitx
 
+# Playwright CLI は Playwright 同梱のブラウザをダウンロードせず、Debian の Chromium を使う。
+#   /usr/bin/chromium（ラッパー）は /etc/chromium.d/ai-desktop の --remote-debugging-port=9222 や
+#   --user-data-dir を付け、デスクトップの Chromium と衝突するため、実体を直接指定する。
+#   NO_UPDATE_NOTIFIER: 起動時に npm レジストリへ最新版を問い合わせる更新通知を止める。
+#     バージョンは mise と Renovate で管理しており、通知の指示（npm install -g）は mise 管理外の
+#     インストールを促すため。
+ENV PLAYWRIGHT_MCP_EXECUTABLE_PATH=/usr/lib/chromium/chromium \
+    NO_UPDATE_NOTIFIER=1
+
 # デスクトップを起動してから共通の entrypoint.sh に処理を渡す。
 ENTRYPOINT ["/usr/local/bin/ai-entrypoint.sh"]
 
@@ -237,7 +246,7 @@ RUN chmod -R u=rwX,go=rX /opt/mise
 
 USER ${USER_NAME}
 
-# ai 専用ツールをインストール（Kiro CLI / Antigravity CLI を含む）
+# ai 専用ツールをインストール（Kiro CLI / Antigravity CLI / rulesync / Playwright CLI を含む）
 #   バイナリの取得・検証は mise が行う。各 CLI の付属のセットアップコマンドは実行しない。
 #
 # Kiro CLI: `kiro-cli setup` は実行しない（シェル統合を入れない）。
@@ -250,7 +259,9 @@ USER ${USER_NAME}
 #   PATH は base で設定済みのため実行しない（~/.local/bin に mise 管理外の agy を置かせないため）。
 RUN mise install && \
     kiro-cli --version && \
-    agy --version
+    agy --version && \
+    rulesync --version && \
+    playwright-cli --version
 
 # ai 用の home 初期ファイル（AI ツールの設定と、デスクトップ（Openbox / idesk / KasmVNC）の設定）
 COPY --chown=${USER_NAME}:${USER_NAME} ai/home-config "/home/${USER_NAME}"
