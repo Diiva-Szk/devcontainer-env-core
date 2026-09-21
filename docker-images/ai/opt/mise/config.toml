@@ -25,17 +25,22 @@
 
 # OpenAI Codex CLI
 #   aqua backend では linux 向け成果物を解決できず lock が生成されなかったため、github backend で取得する。
-#   タグは rust-v0.120.0 形式。静的リンクの musl 版を使う（アーカイブ内の実行ファイル名はターゲット名付き）。
+#   タグは rust-v0.120.0 形式。静的リンクの musl 版を使う。
+#   単体の実行ファイル（codex-<target>.tar.gz）ではなくパッケージ版（codex-package-<target>.tar.gz）を使う。
+#   codex は codex-package.json を基準に bin/codex-code-mode-host（Code Mode のホスト）や
+#   codex-path/rg（検索）を探すため、単体版では Code Mode が使えない。
+#   アーカイブは bin/ codex-path/ codex-resources/ codex-package.json の構成なので、bin_path で bin を指す
+#   （直下が複数エントリのため先頭ディレクトリの自動除去は働かず、strip_components は不要）。
 #   asset_pattern に {{ arch() }} を使うと mise lock を実行したマシンのアーキテクチャで展開され、
 #   全プラットフォームに同じ成果物が記録されてしまうため、プラットフォームごとに指定する。
 [tools."github:openai/codex"]
 version = "0.155.1"
 version_prefix = "rust-v"
-rename_exe = "codex"
+bin_path = "bin"
 
 [tools."github:openai/codex".platforms]
-linux-x64 = { asset_pattern = "codex-x86_64-unknown-linux-musl.tar.gz" }
-linux-arm64 = { asset_pattern = "codex-aarch64-unknown-linux-musl.tar.gz" }
+linux-x64 = { asset_pattern = "codex-package-x86_64-unknown-linux-musl.tar.gz" }
+linux-arm64 = { asset_pattern = "codex-package-aarch64-unknown-linux-musl.tar.gz" }
 
 # Amazon Kiro CLI
 #   GitHub リリースも aqua レジストリも無いため http backend で取得する。
