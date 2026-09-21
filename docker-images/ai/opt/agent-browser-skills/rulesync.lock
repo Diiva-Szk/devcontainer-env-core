@@ -4,7 +4,7 @@
     "vercel-labs/agent-browser": {
       "requestedRef": "v0.38.1",
       "resolvedRef": "09c0984798c75db63cf52030cdd39e10ca4bd334",
-      "resolvedAt": "2026-09-21T10:36:32.465Z",
+      "resolvedAt": "2026-09-21T10:37:36.313Z",
       "skills": {
         "vercel-sandbox": {
           "integrity": "sha256-664b1d90654e1e68b7d662f9f2558125be96f6f21dc70087643185fade141d7f"
