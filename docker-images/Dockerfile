@@ -222,7 +222,8 @@ COPY --chown=root:root ai/usr/share/icons/st /usr/share/icons/st
 COPY --chown=root:root ai/usr/local/bin /usr/local/bin
 
 RUN chmod -R u=rwX,go=rX /etc/chromium.d /etc/chromium/policies /usr/share/icons/st && \
-    chmod 0755 /usr/local/bin/start-desktop /usr/local/bin/ai-entrypoint.sh
+    chmod 0755 /usr/local/bin/start-desktop /usr/local/bin/ai-entrypoint.sh \
+               /usr/local/bin/sync-home-defaults
 
 # docker exec で入ったシェルから起動した GUI アプリもデスクトップに表示する。
 ENV DISPLAY=:1 \
@@ -272,6 +273,12 @@ RUN mise install && \
     playwright-cli --version
 
 # ai 用の home 初期ファイル（AI ツールの設定と、デスクトップ（Openbox / idesk / KasmVNC）の設定）
+#   【注意】このうち AI ツールの設定（.claude / .codex / .kiro / .gemini 配下）は、
+#   ステージの最後で rulesync が生成したスキルとともに /opt/ai-home-defaults へ原本として
+#   取り込まれる。該当ディレクトリは compose.yml で volume にしてあるため、ここを変更しても
+#   既存のコンテナには sync-home-defaults を実行するまで反映されない。
+#   デスクトップの設定（.ideskrc / .idesktop / .vnc / .icons / .config）は volume ではないので、
+#   イメージを作り直せばそのまま反映される。
 COPY --chown=${USER_NAME}:${USER_NAME} ai/home-config "/home/${USER_NAME}"
 RUN chmod 0755 "/home/${USER_NAME}/.vnc/xstartup"
 
@@ -329,7 +336,38 @@ WORKDIR "/home/${USER_NAME}"
 USER root
 RUN chown -R root:root /opt/rulesync /opt/agent-browser-skills /opt/agent-browser && \
     chmod -R u=rwX,go=rX /opt/rulesync /opt/agent-browser-skills /opt/agent-browser
+
+# イメージが管理するホーム配下の設定の「原本」。
+#   各 AI ツールのディレクトリは compose.yml で volume にしており、認証情報や
+#   会話履歴がコンテナを作り直しても残る。ただし Docker が named volume へ
+#   イメージの中身をコピーするのは volume が空のとき（初回作成時）だけなので、
+#   そのままではここで作った設定が初回の版のまま固まり、イメージを更新しても
+#   反映されない。原本を /opt に置き、sync-home-defaults で配る。
+#   ここに入るのはビルド時点の中身だけ（各ツールの設定ファイルと、rulesync が
+#   生成したスキル）。実行時に作られるものは対象にならないため、認証情報や
+#   会話履歴は volume 側に残る。
+RUN install -d /opt/ai-home-defaults && \
+    cp -a "/home/${USER_NAME}/.claude" \
+          "/home/${USER_NAME}/.codex" \
+          "/home/${USER_NAME}/.copilot" \
+          "/home/${USER_NAME}/.kiro" \
+          "/home/${USER_NAME}/.gemini" \
+          /opt/ai-home-defaults/ && \
+    chown -R root:root /opt/ai-home-defaults && \
+    chmod -R u=rwX,go=rX /opt/ai-home-defaults
+
+# Kiro CLI は認証情報を ~/.local/share/kiro-cli/data.sqlite3（secret store）に置く。
+# ここはイメージには無く実行時に作られるため、そのまま volume にすると root 所有の
+# 空ディレクトリになり、ユーザーが書き込めない。先に作っておく。
+RUN install -d -o "${USER_NAME}" -g "${USER_NAME}" "/home/${USER_NAME}/.local/share/kiro-cli"
+
 USER ${USER_NAME}
+
+# アカウント情報とオンボーディング状態を持つ .claude.json は、既定ではホーム直下
+# （~/.claude.json）に置かれ、~/.claude の volume に入らない。CLAUDE_CONFIG_DIR を
+# 明示すると ~/.claude/.claude.json になり、volume に含まれる。
+# 値は既定の場所と同じ ~/.claude を指しているため、設定やスキルの読み込み先は変わらない。
+ENV CLAUDE_CONFIG_DIR="/home/${USER_NAME}/.claude"
 
 CMD ["sleep", "infinity"]
 

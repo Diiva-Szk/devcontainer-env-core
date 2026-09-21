@@ -15,6 +15,7 @@
 - [VS Code の Feature](#vs-code-の-feature)
 - [ツールの追加・バージョンの上書き](#ツールの追加バージョンの上書き)
 - [設定項目](#設定項目)
+- [AI ツールの状態の保存](#ai-ツールの状態の保存)
 - [ビルドキャッシュ](#ビルドキャッシュ)
 - [注意事項](#注意事項)
 - [ライセンス](#ライセンス)
@@ -151,11 +152,12 @@ copilot    # GitHub Copilot CLI
 kiro-cli   # Amazon Kiro CLI
 agy        # Google Antigravity CLI
 rulesync   # AI エージェント向けのルール・設定の生成
+sync-home-defaults  # イメージが管理する設定をイメージ側の内容に合わせる
 playwright-cli  # ブラウザ操作（Playwright CLI）
 agent-browser   # ブラウザ操作（agent-browser）
 ```
 
-- 各ツールのログイン（認証）は、初回に `ai` コンテナ内で行ってください。
+- 各ツールのログイン（認証）は、初回に `ai` コンテナ内で行ってください。**ログイン情報と会話履歴は、コンテナを作り直しても残ります**（[AI ツールの状態の保存](#ai-ツールの状態の保存)）。
 - `ai` コンテナと共有していないディレクトリ（`~` など）で実行した場合は、`ai` コンテナの `~/work` で起動します。
 - mise のタスクとしても実行できます（`mise run ai`、`mise run ai claude`）。ただし、trust していない `mise.toml` があるディレクトリでは mise がエラーになるため、`ai` コマンドを直接実行してください（[`mise trust` が必要](#user-コンテナでは-mise-trust-が必要)）。
 
@@ -270,6 +272,50 @@ mise trust mise.toml  # 確認してから trust する
 - **`UID` / `GID` / `USER_NAME` を変更すると、ビルドキャッシュがほぼ使われず、すべてをローカルでビルドします。** Linux ホストでは、Dev Containers がコンテナの作成時にユーザーの UID / GID をホストのユーザーに合わせるため（`updateRemoteUserUID`、既定で有効）、ファイルの所有者を合わせる目的で変更する必要はありません。
 - `USER_NAME` を変更した場合は、`devcontainer.json` の `workspaceFolder`（`/home/<USER_NAME>/work`）と `remoteUser` も合わせて変更してください。
 
+## AI ツールの状態の保存
+
+`ai` コンテナの AI ツールの設定ディレクトリは Docker の volume にしてあり、**ログイン情報と会話履歴はコンテナを作り直しても残ります**。volume はプロジェクトごとに分かれるため、別のプロジェクトとは混ざりません（実際の名前は `<プロジェクト名>_devcontainer_ai-claude` のようになります）。
+
+| ツール | volume にしているパス |
+| --- | --- |
+| Claude Code | `~/.claude` |
+| Codex CLI | `~/.codex` |
+| Copilot CLI | `~/.copilot` |
+| Kiro CLI | `~/.kiro` と `~/.local/share/kiro-cli`（認証情報は後者の `data.sqlite3`） |
+| Antigravity CLI | `~/.gemini` |
+
+- Claude Code のアカウント情報を持つ `.claude.json` は、既定ではホーム直下に置かれて volume に入らないため、`CLAUDE_CONFIG_DIR` で `~/.claude/.claude.json` に移しています。
+
+### イメージが管理する設定の更新
+
+設定の一部はイメージが持ち主です（下表）。これらも volume に残るため、**イメージを更新しても古いままになります**。反映するタイミングは利用者が決められるよう、`ai` コンテナの `sync-home-defaults` で明示的に実行する形にしています。
+
+```sh
+# ai コンテナ内で
+sync-home-defaults --check   # イメージ側と違うところを一覧する（何も変更しない）
+sync-home-defaults           # 反映する
+```
+
+| | 対象 |
+| --- | --- |
+| `sync-home-defaults` で入れ替わる | `~/.claude/settings.json`、`~/.codex/config.toml`、`~/.kiro/settings/cli.json`、`~/.gemini/antigravity-cli/settings.json`、rulesync が生成した各ツールの `skills/` |
+| 触られない | ログイン情報、会話履歴・セッション、上記と同じディレクトリにある実行時の状態（`~/.kiro/settings/feed_state.json` など） |
+
+- **コンテナの起動時に勝手に上書きされることはありません。** 起動時に配られるのは「まだ無いファイル」だけです（イメージ側に増えた設定やスキルは自動で配られ、既にあるファイルは利用者が書き換えたものも含めてそのまま残ります）。
+- 恒久的に変えたいときは、コンテナ内ではなくイメージ側（`docker-images/ai/home-config/` など）を変更してください。
+
+### 状態を消す
+
+ログインし直したい・状態をまっさらにしたいときは、コンテナを止めてから volume を削除します。
+
+```sh
+# ホストで実行する
+docker volume ls | grep '_ai-'                     # 名前を確認する
+docker volume rm <プロジェクト名>_devcontainer_ai-claude
+```
+
+ログイン情報は volume の中に平文で置かれます（コンテナ内と同じ扱いです）。
+
 ## ビルドキャッシュ
 
 このリポジトリの CI は、`main` のイメージ定義からビルドした各層のキャッシュを GHCR（`ghcr.io/diiva-szk/devcontainer-env-core/build-cache`）に公開しています（amd64 / arm64）。`compose.yml` がこれを参照するため、ビルド時にキャッシュがある層はダウンロードされ、無い層だけがローカルでビルドされます。
@@ -300,7 +346,7 @@ mise trust mise.toml  # 確認してから trust する
 
 - **AI エージェントは確認なしで動作します。** `ai` コンテナの Claude Code・Codex などは、コマンド実行やファイル編集の確認プロンプトを出さない設定です。sudo・Docker ソケット・クラウドの認証情報を持たないことを前提にしているため、この設定を `user` コンテナやホストへ持ち出さないでください。
 - **ワークスペースの内容は AI エージェントから読み書きできます。** API キーなどの秘密情報を、プロジェクトルート配下に置かないでください。
-- **`ai` コンテナのログイン情報は、コンテナを作り直すと消えます。** 再度ログインしてください。
+- **AI ツールのログイン情報は volume に平文で残ります。** コンテナを作り直しても消えないため、共有マシンで使う場合は [AI ツールの状態の保存](#ai-ツールの状態の保存)の手順で volume を削除してください。
 - `ai` コンテナはネットワークに接続できます（外部 API の利用やパッケージの取得のため）。
 
 ## ライセンス

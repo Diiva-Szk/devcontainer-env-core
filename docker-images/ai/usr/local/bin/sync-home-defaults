@@ -1,0 +1,145 @@
+#!/bin/bash
+###########################################################################
+# sync-home-defaults
+#   イメージが管理するホーム配下の設定を、原本（/opt/ai-home-defaults）から配る。
+#
+#   各 AI ツールのディレクトリ（~/.claude ~/.codex ~/.copilot ~/.kiro ~/.gemini）は
+#   compose.yml で volume にしてあり、認証情報や会話履歴がコンテナを作り直しても残る。
+#   その副作用として、イメージが管理する設定（settings.json / skills / config.toml /
+#   cli.json）も volume に残り続け、イメージを更新しても古いままになる。
+#   そのため原本をイメージの /opt に持たせ、このスクリプトで配る。
+#
+#   起動時（ai-entrypoint.sh）は --seed で「まだ無いものだけ」作る。
+#   既にあるファイルは勝手に書き換えない。イメージ側の更新を取り込むかどうかと、
+#   そのタイミングは、--check で中身を確かめてから利用者が決める。
+#
+#   イメージが管理するものは2種類あり、扱いを分ける。
+#     1. スキルのディレクトリ（rulesync が生成する）
+#          まるごと入れ替える。イメージ側で消えたスキルを残さないため。
+#     2. それ以外のファイル（settings.json / config.toml / cli.json）
+#          同じ相対パスへ上書きするだけにする。同じディレクトリに同居する
+#          実行時の状態（~/.kiro/settings/feed_state.json や
+#          ~/.gemini/antigravity-cli/cache/ など）を消さないため。
+###########################################################################
+set -euo pipefail
+
+DEFAULTS_DIR="/opt/ai-home-defaults"
+
+usage() {
+  cat <<'USAGE'
+使い方: sync-home-defaults [--check | --seed]
+
+  （引数なし）  イメージ側の内容を反映する（既にあるファイルは上書きされる）
+  --check       イメージ側と違うところを一覧する（何も変更しない。差分があれば終了ステータス 1）
+  --seed        まだ無いものだけ作る（既にあるファイルは触らない。コンテナの起動時に実行される）
+USAGE
+}
+
+mode="apply"
+case "${1-}" in
+  "") ;;
+  --check)   mode="check" ;;
+  --seed)    mode="seed" ;;
+  -h|--help) usage; exit 0 ;;
+  *)
+    echo "sync-home-defaults: 不明な引数です: $1" >&2
+    usage >&2
+    exit 2
+    ;;
+esac
+
+[ -d "${DEFAULTS_DIR}" ] || exit 0
+
+# HOME は起動のしかたによっては空のことがあるため、パスワードデータベースから引く
+HOME_DIR="$(getent passwd "$(id -u)" | cut -d: -f6)"
+if [ -z "${HOME_DIR}" ]; then
+  echo "sync-home-defaults: ホームディレクトリを特定できませんでした" >&2
+  exit 1
+fi
+
+differences=0
+
+# --seed は「まだ無いものを作る」だけなので、スキルかどうかを問わずファイル単位で扱う。
+#   こうしておくと、イメージ側にスキルやファイルが増えたときは自動で配られ、
+#   既にあるファイル（利用者が書き換えたものを含む）は決して書き換わらない。
+if [ "${mode}" = "seed" ]; then
+  while IFS= read -r -d '' src; do
+    dest="${HOME_DIR}/${src#"${DEFAULTS_DIR}/"}"
+    if [ ! -e "${dest}" ]; then
+      mkdir -p "$(dirname "${dest}")"
+      # /opt 配下は root 所有のため、所有者は引き継がずモードとタイムスタンプだけ保つ
+      cp --preserve=mode,timestamps "${src}" "${dest}"
+      # あとで入れ替えられるよう、コピー先は必ず書き込み可能にしておく
+      chmod u+w "${dest}"
+    fi
+  done < <(find "${DEFAULTS_DIR}" -type f -print0)
+  exit 0
+fi
+
+# 原本とコピー先のファイルを相対パスで並べる
+list_rel() {
+  [ -d "$1" ] || return 0
+  (cd "$1" && find . -type f -printf '%P\n' | sort)
+}
+
+# 1. スキルのディレクトリ（まるごと入れ替える）
+while IFS= read -r -d '' src; do
+  rel="${src#"${DEFAULTS_DIR}/"}"
+  dest="${HOME_DIR}/${rel}"
+  if [ "${mode}" = "check" ]; then
+    changed=""
+    while IFS= read -r f; do
+      if [ ! -e "${dest}/${f}" ]; then
+        changed="${changed}                追加: ${f}"$'\n'
+      elif ! cmp -s "${src}/${f}" "${dest}/${f}"; then
+        changed="${changed}                更新: ${f}"$'\n'
+      fi
+    done < <(list_rel "${src}")
+    while IFS= read -r f; do
+      [ -e "${src}/${f}" ] || changed="${changed}                削除: ${f}"$'\n'
+    done < <(list_rel "${dest}")
+    if [ -n "${changed}" ]; then
+      echo "入れ替わる:   ~/${rel}/"
+      printf '%s' "${changed}"
+      differences=1
+    fi
+    continue
+  fi
+  mkdir -p "$(dirname "${dest}")"
+  rm -rf "${dest}"
+  # /opt 配下は root 所有のため、所有者は引き継がずモードとタイムスタンプだけ保つ
+  cp -R --preserve=mode,timestamps "${src}" "${dest}"
+  # 次回の入れ替えで消せるよう、コピー先は必ず書き込み可能にしておく
+  # （原本に書き込み不可のディレクトリがあると、上の rm -rf が失敗する）
+  chmod -R u+w "${dest}"
+done < <(find "${DEFAULTS_DIR}" -type d -name skills -print0)
+
+# 2. スキル以外のファイル（同じ相対パスへ上書きする）
+while IFS= read -r -d '' src; do
+  rel="${src#"${DEFAULTS_DIR}/"}"
+  dest="${HOME_DIR}/${rel}"
+  if [ "${mode}" = "check" ]; then
+    if [ ! -e "${dest}" ]; then
+      echo "追加される:   ~/${rel}"
+      differences=1
+    elif ! cmp -s "${src}" "${dest}"; then
+      echo "上書きされる: ~/${rel}"
+      differences=1
+    fi
+    continue
+  fi
+  mkdir -p "$(dirname "${dest}")"
+  rm -f "${dest}"
+  cp --preserve=mode,timestamps "${src}" "${dest}"
+  chmod u+w "${dest}"
+done < <(find "${DEFAULTS_DIR}" -type d -name skills -prune -o -type f -print0)
+
+if [ "${mode}" = "check" ]; then
+  if [ "${differences}" -eq 0 ]; then
+    echo "イメージが管理する設定は、イメージ側と同じです。"
+  else
+    echo
+    echo "反映するには: sync-home-defaults"
+  fi
+  exit "${differences}"
+fi
