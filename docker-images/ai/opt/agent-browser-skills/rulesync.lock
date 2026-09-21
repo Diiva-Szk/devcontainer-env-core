@@ -1,0 +1,42 @@
+{
+  "lockfileVersion": 1,
+  "sources": {
+    "vercel-labs/agent-browser": {
+      "requestedRef": "v0.38.1",
+      "resolvedRef": "09c0984798c75db63cf52030cdd39e10ca4bd334",
+      "resolvedAt": "2026-09-21T08:24:55.653Z",
+      "skills": {
+        "webmcp-gen": {
+          "integrity": "sha256-44bcde272e3afbea5bcee923565e7b5adb4f5b467a36e0ab7d80aae38f8c23ec"
+        },
+        "core": {
+          "integrity": "sha256-a732f329b1486b5c297d7e9e0d4a1afa8c234570f87a6d672f8b0cd319ccdd9e"
+        },
+        "slack": {
+          "integrity": "sha256-57f471158cab325680ccbdf629079f04e6098ad1191b4c907166ecad5afc5fe9"
+        },
+        "protected-vercel-deployments": {
+          "integrity": "sha256-2bad620e44801bcab8bd96b8de077bfc1656c744c45bfc6c4da5674861fcfa4c"
+        },
+        "vercel-sandbox": {
+          "integrity": "sha256-664b1d90654e1e68b7d662f9f2558125be96f6f21dc70087643185fade141d7f"
+        },
+        "dogfood": {
+          "integrity": "sha256-ea1252839e4f6bf2d4fdf94d621fc5e2a57fa3ec5407c80e9fc8344ece5a7741"
+        },
+        "derive-client": {
+          "integrity": "sha256-6967e6720e2042b0b23eab377c2622d6fa5e96cd2be53078ccf5acf3f58f8ab0"
+        },
+        "agentcore": {
+          "integrity": "sha256-194f6567ad83e506be6a6f29861aec0da3829ecbfdf118c25d5045aa65090108"
+        },
+        "electron": {
+          "integrity": "sha256-637d08276e7d16c4a4fa1a5d661cb88830ce39679053b74d0b48a7f792667f91"
+        }
+      },
+      "skillSelection": [
+        "*"
+      ]
+    }
+  }
+}

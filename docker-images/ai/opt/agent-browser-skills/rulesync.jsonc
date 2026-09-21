@@ -1,0 +1,17 @@
+{
+  "$schema": "https://github.com/dyoshikawa/rulesync/releases/latest/download/config-schema.json",
+  // 取得専用。generate はしない（core や slack という汎用名のスキルを
+  // 各ツールへ並べないため）。取得結果は AGENT_BROWSER_SKILLS_DIR が指す。
+  "features": ["skills"],
+  "sources": [
+    // GitHub API はレート制限でビルドが落ちるため git transport を使う。
+    // renovate: datasource=github-releases depName=vercel-labs/agent-browser
+    {
+      "source": "https://github.com/vercel-labs/agent-browser",
+      "transport": "git",
+      "ref": "v0.38.1",
+      "path": "skill-data",
+      "skills": ["*"]
+    }
+  ]
+}

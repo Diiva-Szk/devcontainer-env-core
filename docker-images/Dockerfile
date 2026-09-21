@@ -225,13 +225,16 @@ ENV DISPLAY=:1 \
     QT_IM_MODULE=fcitx \
     XMODIFIERS=@im=fcitx
 
-# Playwright CLI は Playwright 同梱のブラウザをダウンロードせず、Debian の Chromium を使う。
+# Playwright CLI と agent-browser は同梱のブラウザをダウンロードせず、Debian の Chromium を使う。
 #   /usr/bin/chromium（ラッパー）は /etc/chromium.d/ai-desktop の --remote-debugging-port=9222 や
 #   --user-data-dir を付け、デスクトップの Chromium と衝突するため、実体を直接指定する。
+#   agent-browser は指定しないと自動検出でラッパーの方を掴む。この指定により
+#   `agent-browser install`（Chrome for Testing のダウンロード）も不要になる。
 #   NO_UPDATE_NOTIFIER: 起動時に npm レジストリへ最新版を問い合わせる更新通知を止める。
 #     バージョンは mise と Renovate で管理しており、通知の指示（npm install -g）は mise 管理外の
 #     インストールを促すため。
-ENV PLAYWRIGHT_MCP_EXECUTABLE_PATH=/usr/lib/chromium/chromium \
+ENV AGENT_BROWSER_EXECUTABLE_PATH=/usr/lib/chromium/chromium \
+    PLAYWRIGHT_MCP_EXECUTABLE_PATH=/usr/lib/chromium/chromium \
     NO_UPDATE_NOTIFIER=1
 
 # デスクトップを起動してから共通の entrypoint.sh に処理を渡す。
@@ -266,6 +269,57 @@ RUN mise install && \
 # ai 用の home 初期ファイル（AI ツールの設定と、デスクトップ（Openbox / idesk / KasmVNC）の設定）
 COPY --chown=${USER_NAME}:${USER_NAME} ai/home-config "/home/${USER_NAME}"
 RUN chmod 0755 "/home/${USER_NAME}/.vnc/xstartup"
+
+# ブラウザ操作 CLI のスキルを、各 AI エージェントのグローバル設定へ展開する。
+#   スキルの内容は自分では書かない。各 CLI が配布しているものをそのまま使い、
+#   mise が固定したツールの版と一致させる（自作すると CLI 更新で陳腐化するため）。
+#
+#   playwright-cli: npm パッケージに SKILL.md が入っているのでイメージ内から取る。
+#   agent-browser: GitHub リリースの素のバイナリにはスキルが入らないため、リポジトリから取る。
+#     スキルは2層構造で、両方が必要。
+#       skills/     … 各ツールへ渡す discovery stub（frontmatter に hidden: true）
+#       skill-data/ … stub が `agent-browser skills get core` で読ませる本体。
+#                     AGENT_BROWSER_SKILLS_DIR から CLI が配る。
+#     skill-data 側は rulesync generate に通さない（core や slack という汎用名のスキルが
+#     全ツールに並び、stub の案内とも二重になるため）。
+#
+#   取得は rulesync の宣言的ソースで行い、rulesync.lock がコミット SHA と
+#   成果物ごとのハッシュを固定する。--frozen により lock とズレたらビルドを落とす。
+#   GitHub API はレート制限（匿名は60回/時）でビルドが落ちるため git transport を使う。
+ENV AGENT_BROWSER_SKILLS_DIR="/opt/agent-browser/skills"
+
+COPY --chown=${USER_NAME}:${USER_NAME} ai/opt/rulesync /opt/rulesync
+COPY --chown=${USER_NAME}:${USER_NAME} ai/opt/agent-browser-skills /opt/agent-browser-skills
+
+WORKDIR /opt/agent-browser-skills
+RUN set -eu; \
+    rulesync install --frozen; \
+    mkdir -p "${AGENT_BROWSER_SKILLS_DIR}"; \
+    cp -a .rulesync/skills/.curated/. "${AGENT_BROWSER_SKILLS_DIR}/"; \
+    agent-browser skills get core > /dev/null
+
+WORKDIR /opt/rulesync
+RUN set -eu; \
+    skill="$(find "$(mise where 'npm:@playwright/cli')" -path '*/skills/playwright-cli/SKILL.md' -print -quit)"; \
+    if [ -z "${skill}" ]; then \
+      echo "playwright-cli の SKILL.md が見つかりません（パッケージの構成が変わった可能性があります）" >&2; \
+      exit 1; \
+    fi; \
+    mkdir -p .rulesync/skills/playwright-cli; \
+    cp "${skill}" .rulesync/skills/playwright-cli/SKILL.md; \
+    rulesync install --frozen; \
+    rulesync generate --global; \
+    test -f "/home/${USER_NAME}/.claude/skills/agent-browser/SKILL.md"; \
+    test -f "/home/${USER_NAME}/.claude/skills/playwright-cli/SKILL.md"
+
+# dev-base で設定した作業ディレクトリに戻す（最終イメージの既定を変えないため）
+WORKDIR "/home/${USER_NAME}"
+
+# 生成が済んだら、他の /opt 配下と同じく root 所有・読み取り専用にする。
+USER root
+RUN chown -R root:root /opt/rulesync /opt/agent-browser-skills /opt/agent-browser && \
+    chmod -R u=rwX,go=rX /opt/rulesync /opt/agent-browser-skills /opt/agent-browser
+USER ${USER_NAME}
 
 CMD ["sleep", "infinity"]
 

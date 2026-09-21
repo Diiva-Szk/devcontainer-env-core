@@ -1,0 +1,264 @@
+name: Update rulesync lock
+
+# イメージのビルドは `rulesync install --frozen` のため、rulesync.jsonc の ref だけを
+# 更新すると rulesync.lock と不一致になり、ビルドが失敗する。Renovate には ref だけを
+# 更新させ、PR上でこのワークフローが lock を作り直して push する。
+#
+# 【構成】update-mise-lock.yml と同じく、PR のコードを実行する generate ジョブと、
+# 書き込み用トークンを扱う push ジョブを別ジョブ（= 別 runner）に分離する。同じ runner で
+# PR のコード実行後にトークンを扱うと、PR のスクリプトや侵害されたイメージが .git/hooks 等を
+# 仕込み、後続の git 操作からトークンを盗めるため。push ジョブでは PR のコードを一切実行せず、
+# 受け取った lock のパス・形式を検証してから取り込む。
+on:
+  pull_request:
+    paths:
+      - 'docker-images/**/rulesync.jsonc'
+      - 'docker-images/**/rulesync.lock'
+      # rulesync 本体のバージョンが変わると lock の生成結果も変わり得る
+      - 'docker-images/ai/opt/mise/config.toml'
+      # mise 本体のバージョンが変わると rulesync の取得結果も変わり得る
+      - 'docker-images/Dockerfile'
+      - 'scripts/update-rulesync-locks.sh'
+      - '.github/workflows/update-rulesync-lock.yml'
+  workflow_dispatch:
+
+# 同一ブランチへ順に push するため、並行実行させない
+concurrency:
+  group: update-rulesync-lock-${{ github.head_ref || github.ref }}
+  cancel-in-progress: false
+
+permissions: {}
+
+jobs:
+  # PR のコードを実行して lock を生成する。書き込み可能なトークン・シークレットは扱わない。
+  generate:
+    # フォークからのPRではシークレットを使えず、他者のブランチへ push すべきでもない
+    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    outputs:
+      sha: ${{ steps.head.outputs.sha }}
+    steps:
+      - name: Checkout PR branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.head_ref || github.ref_name }}
+          persist-credentials: false
+
+      # push ジョブで同じコミットを基準にするため記録する（途中でブランチが進んだら push を失敗させる）
+      - name: Record head commit
+        id: head
+        run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+      # イメージに入る rulesync と同じバージョンで lock を生成する。rulesync は mise で
+      # 管理しているため、Dockerfile の mise ステージと同じイメージ（タグ + digest）の中で
+      # `mise x` を使って取得する。rulesync の git transport は git を使うが、
+      # 公式の mise イメージ（buildpack-deps ベース）には git が入っている。
+      - name: Regenerate rulesync.lock
+        env:
+          # aqua backend のツール取得が GitHub API を使うため、レート制限回避用に読み取りトークンを渡す
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+
+          image="$(sed -n 's/^FROM \(jdxcode\/mise:[^[:space:]]*\) AS mise$/\1/p' docker-images/Dockerfile)"
+          if [ -z "$image" ]; then
+            echo "Dockerfile から mise イメージを特定できませんでした" >&2
+            exit 1
+          fi
+          echo "mise image: $image"
+
+          version="$(sed -n 's/^"aqua:dyoshikawa\/rulesync" = "\([^"]*\)"$/\1/p' docker-images/ai/opt/mise/config.toml)"
+          if [ -z "$version" ]; then
+            echo "ai の mise 設定から rulesync のバージョンを特定できませんでした" >&2
+            exit 1
+          fi
+          echo "rulesync version: $version"
+
+          # 公式イメージは MISE_DATA_DIR 等を root 所有の /mise に向けているため、
+          # 実行ユーザが書き込める場所へ振り替える。
+          docker run --rm \
+            --user "$(id -u):$(id -g)" \
+            --volume "$PWD:/work" \
+            --workdir /work \
+            --env GITHUB_TOKEN \
+            --env RULESYNC_VERSION="$version" \
+            --env HOME=/tmp/home \
+            --env MISE_DATA_DIR=/tmp/mise/data \
+            --env MISE_CACHE_DIR=/tmp/mise/cache \
+            --env MISE_CONFIG_DIR=/tmp/mise/config \
+            --env MISE_STATE_DIR=/tmp/mise/state \
+            --entrypoint bash \
+            "$image" \
+            -c 'mise x "aqua:dyoshikawa/rulesync@${RULESYNC_VERSION}" -- bash scripts/update-rulesync-locks.sh'
+
+      # 受け渡すのは lock ファイルの中身だけ。ここで固定の名前に変換し、
+      # 作業ツリーのパス構造やシンボリックリンクを持ち出さない。
+      - name: Collect lock files
+        shell: bash
+        run: |
+          set -euo pipefail
+          out="$RUNNER_TEMP/rulesync-locks"
+          mkdir -p "$out"
+          declare -A dirs=(
+            [rulesync]="docker-images/ai/opt/rulesync"
+            [agent-browser-skills]="docker-images/ai/opt/agent-browser-skills"
+          )
+          for project in "${!dirs[@]}"; do
+            cat "${dirs[$project]}/rulesync.lock" > "$out/$project.lock"
+          done
+
+      - name: Upload lock files
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: rulesync-locks
+          path: ${{ runner.temp }}/rulesync-locks/
+          if-no-files-found: error
+          retention-days: 1
+
+  # 検証済みの lock を PR ブランチへ push する。PR のコードは一切実行しない。
+  push:
+    needs: generate
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      # generate ジョブと同じコミットを取得する。以降、作業ツリー内のスクリプト等は実行しない。
+      - name: Checkout PR branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ needs.generate.outputs.sha }}
+          persist-credentials: false
+
+      # 作業ツリーの外へ展開する
+      - name: Download lock files
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: rulesync-locks
+          path: ${{ runner.temp }}/rulesync-locks
+
+      # 受け取った lock を検証し、決まったパスにだけ書き込む。
+      # （このステップのスクリプトはワークフロー定義内のもので、PR 側のファイルは使わない）
+      - name: Validate and apply lock files
+        id: apply
+        shell: bash
+        run: |
+          set -euo pipefail
+          src="$RUNNER_TEMP/rulesync-locks"
+
+          declare -A dirs=(
+            [rulesync]="docker-images/ai/opt/rulesync"
+            [agent-browser-skills]="docker-images/ai/opt/agent-browser-skills"
+          )
+
+          # artifact に含まれてよいのは、決まった名前の lock だけ
+          while IFS= read -r -d '' path; do
+            rel="${path#"$src"/}"
+            if [ -L "$path" ] || [ ! -f "$path" ]; then
+              echo "通常ファイルではありません: $rel" >&2
+              exit 1
+            fi
+            case "$rel" in
+              rulesync.lock | agent-browser-skills.lock) ;;
+              *) echo "想定外のファイルです: $rel" >&2; exit 1 ;;
+            esac
+            if [ "$(stat -c %s "$path")" -gt 1048576 ]; then
+              echo "$rel が大きすぎます" >&2
+              exit 1
+            fi
+          done < <(find "$src" -mindepth 1 -print0)
+
+          for project in "${!dirs[@]}"; do
+            if [ ! -f "$src/$project.lock" ]; then
+              echo "$project.lock がありません" >&2
+              exit 1
+            fi
+
+            # rulesync.lock の形式であること（JSON として解釈でき、想定外のキーを含まない）。
+            # 各ソースは解決済みのコミット（40桁の16進）と、成果物ごとの sha256 を持つこと。
+            python3 - "$src/$project.lock" <<'PY'
+          import json, re, sys
+          path = sys.argv[1]
+          with open(path, encoding="utf-8") as f:
+              data = json.load(f)
+          if not isinstance(data, dict):
+              sys.exit("最上位がオブジェクトではありません")
+          if set(data) - {"lockfileVersion", "sources"}:
+              sys.exit(f"想定外のキー: {sorted(set(data) - {'lockfileVersion', 'sources'})}")
+          if data.get("lockfileVersion") != 1:
+              sys.exit("lockfileVersion が 1 ではありません")
+          sources = data.get("sources")
+          if not isinstance(sources, dict) or not sources:
+              sys.exit("sources がありません")
+
+          sha_re = re.compile(r"\A[0-9a-f]{40}\Z")
+          integrity_re = re.compile(r"\Asha256-[0-9a-f]{64}\Z")
+          for name, source in sources.items():
+              if not isinstance(source, dict):
+                  sys.exit(f"{name}: ソースがオブジェクトではありません")
+              if not sha_re.fullmatch(str(source.get("resolvedRef", ""))):
+                  sys.exit(f"{name}: resolvedRef がコミットSHAではありません")
+              if not source.get("requestedRef"):
+                  sys.exit(f"{name}: requestedRef がありません")
+              skills = source.get("skills")
+              if not isinstance(skills, dict) or not skills:
+                  sys.exit(f"{name}: skills がありません")
+              for skill, meta in skills.items():
+                  if not integrity_re.fullmatch(str((meta or {}).get("integrity", ""))):
+                      sys.exit(f"{name}/{skill}: integrity が sha256 ではありません")
+          PY
+          done
+
+          for project in "${!dirs[@]}"; do
+            lock="${dirs[$project]}/rulesync.lock"
+
+            # 書き込み先がリポジトリ内の想定パスそのものであること
+            # （PR 側で書き込み先やその親ディレクトリをシンボリックリンクにしていないこと）
+            if [ -L "$lock" ] || [ "$(realpath -m "$lock")" != "$GITHUB_WORKSPACE/$lock" ]; then
+              echo "書き込み先 $lock が想定外です" >&2
+              exit 1
+            fi
+
+            cat "$src/$project.lock" > "$lock"
+          done
+
+          git add -A -- "${dirs[@]}"
+          if git diff --cached --quiet -- "${dirs[@]}"; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            git diff --cached --stat -- "${dirs[@]}"
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      # GITHUB_TOKEN による push は他のワークフローを起動しないため、
+      # そのままでは build-images.yml が lock 更新後のコミットで再実行されない。
+      # App のトークンで push し、ビルド検証を連鎖させる。
+      # 権限は lock の push に必要な Contents:write だけに絞る。
+      - name: Generate GitHub App token
+        if: steps.apply.outputs.changed == 'true'
+        id: app-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          client-id: ${{ secrets.RENOVATE_APP_CLIENT_ID }}
+          private-key: ${{ secrets.RENOVATE_APP_PRIVATE_KEY }}
+          permission-contents: write
+
+      - name: Commit and push
+        if: steps.apply.outputs.changed == 'true'
+        env:
+          APP_TOKEN: ${{ steps.app-token.outputs.token }}
+          BRANCH: ${{ github.head_ref || github.ref_name }}
+        run: |
+          # renovate.json5 の gitIgnoredAuthors と揃えること（Renovate がPRの更新を止めないように）
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          # 対象（rulesync.lock）は Validate and apply lock files でステージ済み
+          # 念のため hook を一切実行させない
+          git -c core.hooksPath=/dev/null commit --no-verify -m 'chore(deps): rulesync.lock を更新する'
+          # generate ジョブの基準コミットから進んでいれば non-fast-forward で失敗する
+          git -c core.hooksPath=/dev/null push --no-verify \
+            "https://x-access-token:${APP_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" \
+            "HEAD:refs/heads/${BRANCH}"
