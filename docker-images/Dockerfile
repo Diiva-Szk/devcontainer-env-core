@@ -288,13 +288,18 @@ RUN chmod 0755 "/home/${USER_NAME}/.vnc/xstartup"
 #   GitHub API はレート制限（匿名は60回/時）でビルドが落ちるため git transport を使う。
 ENV AGENT_BROWSER_SKILLS_DIR="/opt/agent-browser/skills"
 
+# /opt 配下の配置先は root で作成し、スキルの配置中だけ一般ユーザーに書き込みを許可する。
+# 生成後は、下の処理で他の /opt 配下とともに root 所有・読み取り専用へ戻す。
+USER root
+RUN install -d -m 0755 -o "${USER_NAME}" -g "${USER_NAME}" "${AGENT_BROWSER_SKILLS_DIR}"
+USER ${USER_NAME}
+
 COPY --chown=${USER_NAME}:${USER_NAME} ai/opt/rulesync /opt/rulesync
 COPY --chown=${USER_NAME}:${USER_NAME} ai/opt/agent-browser-skills /opt/agent-browser-skills
 
 WORKDIR /opt/agent-browser-skills
 RUN set -eu; \
     rulesync install --frozen; \
-    mkdir -p "${AGENT_BROWSER_SKILLS_DIR}"; \
     cp -a .rulesync/skills/.curated/. "${AGENT_BROWSER_SKILLS_DIR}/"; \
     agent-browser skills get core > /dev/null
 
