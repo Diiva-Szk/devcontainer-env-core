@@ -61,7 +61,7 @@ flowchart LR
 
 **`ai` コンテナ** — [docker-images/ai/opt/mise/config.toml](docker-images/ai/opt/mise/config.toml)
 
-Claude Code、OpenAI Codex CLI、GitHub Copilot CLI、GitHub Copilot Language Server、Amazon Kiro CLI、Google Antigravity CLI、rulesync、Playwright CLI（ブラウザは Debian の Chromium を使う）
+Claude Code、OpenAI Codex CLI、GitHub Copilot CLI、GitHub Copilot Language Server、Amazon Kiro CLI、Google Antigravity CLI、rulesync、Playwright CLI・agent-browser（ブラウザは Debian の Chromium を使う）
 
 デスクトップ: KasmVNC、Openbox、Chromium（Antigravity のブラウザ拡張をポリシーで導入）、st（ターミナル）、fcitx5-mozc（日本語入力）
 
@@ -150,6 +150,7 @@ kiro-cli   # Amazon Kiro CLI
 agy        # Google Antigravity CLI
 rulesync   # AI エージェント向けのルール・設定の生成
 playwright-cli  # ブラウザ操作（Playwright CLI）
+agent-browser   # ブラウザ操作（agent-browser）
 ```
 
 - 各ツールのログイン（認証）は、初回に `ai` コンテナ内で行ってください。

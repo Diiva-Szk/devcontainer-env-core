@@ -225,13 +225,16 @@ ENV DISPLAY=:1 \
     QT_IM_MODULE=fcitx \
     XMODIFIERS=@im=fcitx
 
-# Playwright CLI は Playwright 同梱のブラウザをダウンロードせず、Debian の Chromium を使う。
+# Playwright CLI と agent-browser は同梱のブラウザをダウンロードせず、Debian の Chromium を使う。
 #   /usr/bin/chromium（ラッパー）は /etc/chromium.d/ai-desktop の --remote-debugging-port=9222 や
 #   --user-data-dir を付け、デスクトップの Chromium と衝突するため、実体を直接指定する。
+#   agent-browser は指定しないと自動検出でラッパーの方を掴む。この指定により
+#   `agent-browser install`（Chrome for Testing のダウンロード）も不要になる。
 #   NO_UPDATE_NOTIFIER: 起動時に npm レジストリへ最新版を問い合わせる更新通知を止める。
 #     バージョンは mise と Renovate で管理しており、通知の指示（npm install -g）は mise 管理外の
 #     インストールを促すため。
-ENV PLAYWRIGHT_MCP_EXECUTABLE_PATH=/usr/lib/chromium/chromium \
+ENV AGENT_BROWSER_EXECUTABLE_PATH=/usr/lib/chromium/chromium \
+    PLAYWRIGHT_MCP_EXECUTABLE_PATH=/usr/lib/chromium/chromium \
     NO_UPDATE_NOTIFIER=1
 
 # デスクトップを起動してから共通の entrypoint.sh に処理を渡す。

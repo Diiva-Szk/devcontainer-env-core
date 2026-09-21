@@ -79,6 +79,21 @@ checksum = "sha256:e410dd56d8c213ef12643d3ff5eaaab57a17e05bbf72e9415322f23879fc4
 url = "https://github.com/google-antigravity/antigravity-cli/releases/download/1.2.7/agy_cli_linux_x64.tar.gz"
 url_api = "https://api.github.com/repos/google-antigravity/antigravity-cli/releases/assets/573795008"
 
+[[tools."aqua:vercel-labs/agent-browser"]]
+version = "0.38.1"
+backend = "aqua:vercel-labs/agent-browser"
+specifiers = ["0.38.1"]
+
+[tools."aqua:vercel-labs/agent-browser"."platforms.linux-arm64"]
+checksum = "sha256:937b315ee0761e8a62f7950ddcfef9b3d3d8e8d5eb9c9d2bf9e23e5725664511"
+url = "https://github.com/vercel-labs/agent-browser/releases/download/v0.38.1/agent-browser-linux-arm64"
+url_api = "https://api.github.com/repos/vercel-labs/agent-browser/releases/assets/568699597"
+
+[tools."aqua:vercel-labs/agent-browser"."platforms.linux-x64"]
+checksum = "sha256:e4b4555c450d6903567f18ae572c26a6f86dcad31c401f9b56d5bc00334afc91"
+url = "https://github.com/vercel-labs/agent-browser/releases/download/v0.38.1/agent-browser-linux-musl-x64"
+url_api = "https://api.github.com/repos/vercel-labs/agent-browser/releases/assets/568699594"
+
 [[tools."github:openai/codex"]]
 version = "0.155.1"
 backend = "github:openai/codex"
