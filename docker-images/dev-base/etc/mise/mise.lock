@@ -3,34 +3,34 @@
 lockfile_version = 2
 
 [[tools."aqua:astral-sh/uv"]]
-version = "0.12.10"
+version = "0.12.13"
 backend = "aqua:astral-sh/uv"
-specifiers = ["0.12.10"]
+specifiers = ["0.12.13"]
 
 [tools."aqua:astral-sh/uv"."platforms.linux-arm64"]
-checksum = "sha256:9ff6b9d4665edcdd3a88dcc73cd1eb641754deb927f14e8c62ebfde6bf4f5f5e"
-url = "https://github.com/astral-sh/uv/releases/download/0.12.10/uv-aarch64-unknown-linux-gnu.tar.gz"
-url_api = "https://api.github.com/repos/astral-sh/uv/releases/assets/545034356"
+checksum = "sha256:2eaa5d94f5db7b3a1a092156b9420459e42ab0217d917fe74a876309cef9b5e9"
+url = "https://github.com/astral-sh/uv/releases/download/0.12.13/uv-aarch64-unknown-linux-gnu.tar.gz"
+url_api = "https://api.github.com/repos/astral-sh/uv/releases/assets/555670186"
 provenance = "github-attestations"
 
 [tools."aqua:astral-sh/uv"."platforms.linux-x64"]
-checksum = "sha256:173d95a0c32d18c896c46ba6fafbf3cf9c14ab74b033f81b76c883ef492a976b"
-url = "https://github.com/astral-sh/uv/releases/download/0.12.10/uv-x86_64-unknown-linux-gnu.tar.gz"
-url_api = "https://api.github.com/repos/astral-sh/uv/releases/assets/545034465"
+checksum = "sha256:745765a3b6e360ad76743599ae5c42e9278c7edf8bbff9fc76d05bf2623a04dd"
+url = "https://github.com/astral-sh/uv/releases/download/0.12.13/uv-x86_64-unknown-linux-gnu.tar.gz"
+url_api = "https://api.github.com/repos/astral-sh/uv/releases/assets/555670375"
 provenance = "github-attestations"
 
 [[tools."aqua:aws/aws-cli"]]
-version = "2.36.40"
+version = "2.36.45"
 backend = "aqua:aws/aws-cli"
-specifiers = ["2.36.40"]
+specifiers = ["2.36.45"]
 
 [tools."aqua:aws/aws-cli"."platforms.linux-arm64"]
-checksum = "sha256:f26e08d0d64d9f35f304a9df94d63cbd11ffe8881c8b4bf60be934cf9e4d13a9"
-url = "https://awscli.amazonaws.com/awscli-exe-linux-aarch64-2.36.40.zip"
+checksum = "sha256:a10b80249b10c8fe9d433a42ee90d34c60cf50089b7e65d45c8d75e782c921ec"
+url = "https://awscli.amazonaws.com/awscli-exe-linux-aarch64-2.36.45.zip"
 
 [tools."aqua:aws/aws-cli"."platforms.linux-x64"]
-checksum = "sha256:a904e314340ad4c4b62beb50e9259d4becb2acf3dffc86c96c553c834d7fdf7a"
-url = "https://awscli.amazonaws.com/awscli-exe-linux-x86_64-2.36.40.zip"
+checksum = "sha256:0f02381483b0a5ca127a4cb379e656a73007b346561a5e41d3249d3bc1861226"
+url = "https://awscli.amazonaws.com/awscli-exe-linux-x86_64-2.36.45.zip"
 
 [[tools."aqua:cli/cli"]]
 version = "2.100.0"
