@@ -9,10 +9,10 @@
 
 [tools]
 # ai tools
-"aqua:anthropics/claude-code" = "2.1.277"
+"aqua:anthropics/claude-code" = "2.1.278"
 "aqua:github/copilot-cli" = "1.0.86"
 "aqua:github/copilot-language-server-release" = "1.547.0"
-"aqua:google-antigravity/antigravity-cli" = "1.2.6"
+"aqua:google-antigravity/antigravity-cli" = "1.2.7"
 # AI エージェント向けのルール・設定を各ツールの形式で生成する CLI
 "aqua:dyoshikawa/rulesync" = "16.39.1"
 

@@ -3,19 +3,19 @@
 lockfile_version = 2
 
 [[tools."aqua:anthropics/claude-code"]]
-version = "2.1.277"
+version = "2.1.278"
 backend = "aqua:anthropics/claude-code"
-specifiers = ["2.1.277"]
+specifiers = ["2.1.278"]
 
 [tools."aqua:anthropics/claude-code"."platforms.linux-arm64"]
-checksum = "sha256:e912430cc2dc16e15bc34cb86622bbf2f3a6a3e4d0753e73ef38325ce9fecfba"
-url = "https://github.com/anthropics/claude-code/releases/download/v2.1.277/claude-linux-arm64.tar.gz"
-url_api = "https://api.github.com/repos/anthropics/claude-code/releases/assets/572988428"
+checksum = "sha256:5e3cc367f997847c89cdba3f5b1cd6ff5aabb8e94e14b19bad401124c0e838ed"
+url = "https://github.com/anthropics/claude-code/releases/download/v2.1.278/claude-linux-arm64.tar.gz"
+url_api = "https://api.github.com/repos/anthropics/claude-code/releases/assets/573850764"
 
 [tools."aqua:anthropics/claude-code"."platforms.linux-x64"]
-checksum = "sha256:6ade0a13de4a1967a4ed6b72a4485a028b3d86c9f8873317b12acee5f92aca99"
-url = "https://github.com/anthropics/claude-code/releases/download/v2.1.277/claude-linux-x64.tar.gz"
-url_api = "https://api.github.com/repos/anthropics/claude-code/releases/assets/572988689"
+checksum = "sha256:1d1f9950b96acb5a50bf342a3d3bd51cdf40b1714b2ca3ce2319ba8e8e7f3633"
+url = "https://github.com/anthropics/claude-code/releases/download/v2.1.278/claude-linux-x64.tar.gz"
+url_api = "https://api.github.com/repos/anthropics/claude-code/releases/assets/573850915"
 
 [[tools."aqua:dyoshikawa/rulesync"]]
 version = "16.39.1"
@@ -65,33 +65,19 @@ url = "https://github.com/github/copilot-language-server-release/releases/downlo
 url_api = "https://api.github.com/repos/github/copilot-language-server-release/releases/assets/571444654"
 
 [[tools."aqua:google-antigravity/antigravity-cli"]]
-version = "1.2.6"
+version = "1.2.7"
 backend = "aqua:google-antigravity/antigravity-cli"
-specifiers = ["1.2.6"]
+specifiers = ["1.2.7"]
 
 [tools."aqua:google-antigravity/antigravity-cli"."platforms.linux-arm64"]
-checksum = "sha256:02a0a2c863113f89ac684226ef81de47b9865238fac1076e8f9aea7ec5f4914a"
-url = "https://github.com/google-antigravity/antigravity-cli/releases/download/1.2.6/agy_cli_linux_arm64.tar.gz"
-url_api = "https://api.github.com/repos/google-antigravity/antigravity-cli/releases/assets/571792686"
+checksum = "sha256:8ddbb669158de1d1bc4c1fe5c130dca8f51da80d62569a54a4133f06768a723b"
+url = "https://github.com/google-antigravity/antigravity-cli/releases/download/1.2.7/agy_cli_linux_arm64.tar.gz"
+url_api = "https://api.github.com/repos/google-antigravity/antigravity-cli/releases/assets/573795006"
 
 [tools."aqua:google-antigravity/antigravity-cli"."platforms.linux-x64"]
-checksum = "sha256:3d4973187c4c074e70894068053eeef1b7dfa9c0a16bfe9c3b81954de0d2cc5c"
-url = "https://github.com/google-antigravity/antigravity-cli/releases/download/1.2.6/agy_cli_linux_x64.tar.gz"
-url_api = "https://api.github.com/repos/google-antigravity/antigravity-cli/releases/assets/571792681"
-
-[[tools."github:openai/codex"]]
-version = "0.155.1"
-backend = "github:openai/codex"
-specifiers = ["0.155.1"]
-
-[tools."github:openai/codex".options]
-asset_pattern = "codex-x86_64-unknown-linux-musl.tar.gz"
-version_prefix = "rust-v"
-
-[tools."github:openai/codex"."platforms.linux-x64"]
-checksum = "sha256:a0ef8b2debc3bf747e07b1a039354de31300ac0dcc2276498ba281470b5d9115"
-url = "https://github.com/openai/codex/releases/download/rust-v0.155.1/codex-x86_64-unknown-linux-musl.tar.gz"
-url_api = "https://api.github.com/repos/openai/codex/releases/assets/573353448"
+checksum = "sha256:e410dd56d8c213ef12643d3ff5eaaab57a17e05bbf72e9415322f23879fc4a18"
+url = "https://github.com/google-antigravity/antigravity-cli/releases/download/1.2.7/agy_cli_linux_x64.tar.gz"
+url_api = "https://api.github.com/repos/google-antigravity/antigravity-cli/releases/assets/573795008"
 
 [[tools."github:openai/codex"]]
 version = "0.155.1"
@@ -106,6 +92,20 @@ version_prefix = "rust-v"
 checksum = "sha256:d6c7e62fbd688d52ee04f3929d0613705d32a920a42db7a139e366eaf1f4a2d7"
 url = "https://github.com/openai/codex/releases/download/rust-v0.155.1/codex-aarch64-unknown-linux-musl.tar.gz"
 url_api = "https://api.github.com/repos/openai/codex/releases/assets/573353549"
+
+[[tools."github:openai/codex"]]
+version = "0.155.1"
+backend = "github:openai/codex"
+specifiers = ["0.155.1"]
+
+[tools."github:openai/codex".options]
+asset_pattern = "codex-x86_64-unknown-linux-musl.tar.gz"
+version_prefix = "rust-v"
+
+[tools."github:openai/codex"."platforms.linux-x64"]
+checksum = "sha256:a0ef8b2debc3bf747e07b1a039354de31300ac0dcc2276498ba281470b5d9115"
+url = "https://github.com/openai/codex/releases/download/rust-v0.155.1/codex-x86_64-unknown-linux-musl.tar.gz"
+url_api = "https://api.github.com/repos/openai/codex/releases/assets/573353448"
 
 [[tools."http:kiro-cli"]]
 version = "2.22.1"
