@@ -32,6 +32,7 @@ Feature（`devcontainer-features/` 配下）には `Dockerfile` を含めず、�
 │   ├── Dockerfile                # base → dev-base → ai / user のマルチステージ
 │   ├── dev-base/                 # ai / user 共通
 │   │   ├── etc/mise/             # mise の設定と lock（system スコープ）
+│   │   ├── etc/profile.d/        # ログインシェルで mise shims の PATH を復元
 │   │   ├── opt/python/           # Python パッケージ（requirements.in / requirements.txt）
 │   │   └── usr/local/bin/        # entrypoint.sh
 │   ├── ai/
@@ -59,6 +60,7 @@ Feature（`devcontainer-features/` 配下）には `Dockerfile` を含めず、�
 CLI ツールと言語ランタイム（Python / Node.js）は [mise](https://mise.jdx.dev/) で管理します。
 
 - mise 本体は、Dockerfile の `mise` ステージで公式イメージ `jdxcode/mise`（タグ + digest 固定）から取り出します。
+- mise shims は Dockerfile の `ENV PATH` で有効にし、ログインシェルでは `/etc/profile.d/mise.sh` で復元します。Debian の `/etc/profile` が継承した `PATH` を上書きするため、Codex の shell snapshot などでもこの復元が必要です。設定変更後はイメージを再ビルドしてコンテナを再作成し、Codex も起動し直してください。
 - Python は python-build-standalone、Node.js は nodejs.org の公式バイナリで、どちらも `mise.lock` のチェックサムで検証されます。
 - ツールは backend を明示して記述します（例: `"aqua:jqlang/jq"`）。短縮名は mise のレジストリ次第で解決先の backend が変わり得るため使いません。`aqua:` は mise に組み込まれた aqua レジストリを使う backend で、aqua 本体は使いません。
 

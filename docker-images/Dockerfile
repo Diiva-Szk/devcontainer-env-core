@@ -105,6 +105,10 @@ COPY --from=mise --chown=root:root /usr/local/bin/mise /usr/local/bin/mise
 # COPY --chmod はレガシービルダー（BuildKit 無効）で使えないため RUN で設定する。
 COPY --chown=root:root dev-base/etc/mise /etc/mise
 
+# Debian の /etc/profile はログイン時に ENV の PATH を上書きするため、
+# /etc/profile.d で mise shims を戻す（ai / user 共通）。
+COPY --chown=root:root dev-base/etc/profile.d/mise.sh /etc/profile.d/mise.sh
+
 # entrypoint もユーザから書き換えられないよう root 所有・実行権限付きで配置する。
 COPY --chown=root:root dev-base/usr/local/bin/entrypoint.sh /usr/local/bin/entrypoint.sh
 
@@ -112,6 +116,7 @@ COPY --chown=root:root dev-base/usr/local/bin/entrypoint.sh /usr/local/bin/entry
 COPY --chown=root:root dev-base/opt/python /opt/python
 
 RUN chmod -R u=rwX,go=rX /etc/mise /opt/python && \
+    chmod 0644 /etc/profile.d/mise.sh && \
     chmod 0755 /usr/local/bin/mise /usr/local/bin/entrypoint.sh
 
 # ツール本体はユーザの data dir（既定: ~/.local/share/mise）に入り、shims 経由で PATH に載る。
