@@ -103,6 +103,28 @@
     },
     {
       customType: 'regex',
+      description: 'rulesync の宣言的ソースの ref（Renovate に rulesync マネージャは無い）',
+      managerFilePatterns: [
+        '/^docker-images/[^/]+/opt/[^/]+/rulesync\\.jsonc$/',
+      ],
+      // 以下の形式を対象にする（コメントと "ref" の間に source / transport の行が挟まる）:
+      //   // renovate: datasource=github-releases depName=vercel-labs/agent-browser
+      //   {
+      //     "source": "https://github.com/vercel-labs/agent-browser",
+      //     "transport": "git",
+      //     "ref": "v0.38.1",
+      //
+      // v 接頭辞は捕捉範囲の外に置く。Renovate が書き戻すのは捕捉部分だけのため、
+      // 接頭辞を保つかどうかの挙動に依存せず "v<版>" の形を維持できる。
+      matchStrings: [
+        '//\\s*renovate:\\s*datasource=(?<datasource>\\S+)\\s+depName=(?<depName>\\S+)\\s*\\n[^}]*?"ref":\\s*"v(?<currentValue>[^"]+)"',
+      ],
+      // データソース側のタグ（v0.38.1 形式）から v を除き、捕捉した値と比較できるようにする
+      extractVersionTemplate: '^v?(?<version>.+)$',
+      versioningTemplate: 'semver',
+    },
+    {
+      customType: 'regex',
       description: 'ワークフローの env で固定したコンテナイメージ（Renovate 本体 / BuildKit。バージョン + digest）',
       managerFilePatterns: [
         '/^\\.github/workflows/(renovate|build-images|publish-build-cache)\\.yml$/',
@@ -168,8 +190,11 @@
       // 【順序に注意】packageRules は後のルールが優先される。このルールは Kiro CLI の
       // minimumReleaseAge: null より前に置くこと。後ろに置くと Kiro にも '1 day' が適用され、
       // リリース日時の無い Kiro の更新が永久に pending になる。
+      // rulesync.jsonc の ref も同じ周期にする。agent-browser は mise（CLI 本体）と
+      // rulesync（スキル）の2箇所に版が書かれており、周期がずれると片方だけ古くなるため。
       matchFileNames: [
         'docker-images/ai/opt/mise/config.toml',
+        'docker-images/ai/opt/*/rulesync.jsonc',
       ],
       schedule: [
         'at any time',

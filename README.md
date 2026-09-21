@@ -65,6 +65,8 @@ Claude Code、OpenAI Codex CLI、GitHub Copilot CLI、GitHub Copilot Language Se
 
 デスクトップ: KasmVNC、Openbox、Chromium（Antigravity のブラウザ拡張をポリシーで導入）、st（ターミナル）、fcitx5-mozc（日本語入力）
 
+Playwright CLI と agent-browser の使い方スキルは、各 CLI が配布しているものをビルド時に取得し、rulesync で Claude Code・Codex・Copilot・Kiro・Antigravity のグローバル設定へ展開しています。
+
 **`user` コンテナ** — [docker-images/user/opt/mise/config.toml](docker-images/user/opt/mise/config.toml)
 
 Docker CLI、Renovate CLI、sudo、`ai` コンテナのデスクトップを開く `ai-desktop`（`aid`）

@@ -1,0 +1,20 @@
+{
+  "$schema": "https://github.com/dyoshikawa/rulesync/releases/latest/download/config-schema.json",
+  // ai コンテナに入っている AI エージェントすべてのグローバル設定へ展開する。
+  // いずれも skills をネイティブ対応しており、--simulate-skills は不要。
+  "targets": ["claudecode", "codexcli", "copilotcli", "kiro-cli", "antigravity-cli"],
+  "features": ["skills"],
+  "sources": [
+    // agent-browser の discovery stub。本体は AGENT_BROWSER_SKILLS_DIR 側にあり、
+    // この stub が `agent-browser skills get core` で読ませる。
+    // GitHub API はレート制限でビルドが落ちるため git transport を使う。
+    // renovate: datasource=github-releases depName=vercel-labs/agent-browser
+    {
+      "source": "https://github.com/vercel-labs/agent-browser",
+      "transport": "git",
+      "ref": "v0.38.1",
+      "path": "skills",
+      "skills": ["agent-browser"]
+    }
+  ]
+}
