@@ -14,7 +14,7 @@
 "aqua:github/copilot-language-server-release" = "1.547.0"
 "aqua:google-antigravity/antigravity-cli" = "1.2.7"
 # AI エージェント向けのルール・設定を各ツールの形式で生成する CLI
-"aqua:dyoshikawa/rulesync" = "16.39.1"
+"aqua:dyoshikawa/rulesync" = "17.0.0"
 
 # agent-browser（コーディングエージェント向けのブラウザ操作 CLI）
 #   npm でも配布されているが、そちらは全プラットフォームのバイナリを1パッケージに同梱するため
