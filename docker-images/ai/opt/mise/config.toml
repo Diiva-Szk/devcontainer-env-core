@@ -10,8 +10,8 @@
 [tools]
 # ai tools
 "aqua:anthropics/claude-code" = "2.1.278"
-"aqua:github/copilot-cli" = "1.0.86"
-"aqua:github/copilot-language-server-release" = "1.547.0"
+"aqua:github/copilot-cli" = "1.0.87"
+"aqua:github/copilot-language-server-release" = "1.548.0"
 "aqua:google-antigravity/antigravity-cli" = "1.2.7"
 # AI エージェント向けのルール・設定を各ツールの形式で生成する CLI
 "aqua:dyoshikawa/rulesync" = "16.39.1"
@@ -56,7 +56,7 @@ linux-arm64 = { asset_pattern = "codex-package-aarch64-unknown-linux-musl.tar.gz
 #   載っていない（latest が先に進んだ）場合、mise lock は成果物を実際にダウンロードして計算する。
 [tools."http:kiro-cli"]
 # renovate: datasource=custom.kiro-cli depName=kiro-cli
-version = "2.22.1"
+version = "2.23.0"
 url = 'https://desktop-release.q.us-east-1.amazonaws.com/{{ version }}/kirocli-{{ arch(x64="x86_64", arm64="aarch64") }}-linux.tar.gz'
 checksum_url = "https://desktop-release.q.us-east-1.amazonaws.com/latest/manifest.json"
 checksum_expr = '"sha256:" + filter(fromJSON(body).packages, { "https://desktop-release.q.us-east-1.amazonaws.com/" + #.download == url })[0].sha256'
