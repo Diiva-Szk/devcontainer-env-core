@@ -35,13 +35,13 @@ locked_scopes = ["system", "global"]
 "core:python" = "3.14.7"
 "core:node" = "24.21.0"             # LTS のみ（Renovate も LTS 以外へは更新しない）
 # lang managers tools
-"aqua:astral-sh/uv" = "0.12.10"       # Python パッケージ管理（Python 本体は mise が入れる）
+"aqua:astral-sh/uv" = "0.12.13"       # Python パッケージ管理（Python 本体は mise が入れる）
 "aqua:tfutils/tfenv" = "3.2.2"       # Terraform
 # terraform
 "aqua:terraform-linters/tflint" = "0.64.0"
 "aqua:terraform-docs/terraform-docs" = "0.24.0"
 # cloud tools
 "aqua:twistedpair/google-cloud-sdk" = "562.0.0"
-"aqua:aws/aws-cli" = "2.36.40"
+"aqua:aws/aws-cli" = "2.36.45"
 
 # 必要に応じて ai/user 共通ツールを追加
