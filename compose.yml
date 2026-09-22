@@ -74,8 +74,35 @@ services:
       - "8444"
     volumes:
       - ../../:/home/${USER_NAME:-dev}/work:delegated
+      # 各 AI ツールの認証情報と会話履歴を、コンテナを作り直しても残す。
+      #   名前を書かない（external にしない）ため、volume はプロジェクトごとに分かれる
+      #   （実際の名前は "<プロジェクト名>_devcontainer_ai-claude" のようになる）。
+      #   イメージが管理する設定（settings.json / skills / config.toml / cli.json）は
+      #   volume に残り続けるため、イメージ側の更新は ai コンテナで
+      #   sync-home-defaults を実行して反映する（起動時は無いものを作るだけ）。
+      - ai-claude:/home/${USER_NAME:-dev}/.claude
+      - ai-codex:/home/${USER_NAME:-dev}/.codex
+      - ai-copilot:/home/${USER_NAME:-dev}/.copilot
+      - ai-kiro:/home/${USER_NAME:-dev}/.kiro
+      # Antigravity CLI（agy）。~/.gemini/antigravity-cli と ~/.gemini/config を含む
+      - ai-gemini:/home/${USER_NAME:-dev}/.gemini
+      # Kiro CLI の認証情報は ~/.kiro ではなく、こちらの secret store（data.sqlite3）にある
+      - ai-kiro-data:/home/${USER_NAME:-dev}/.local/share/kiro-cli
       # docker.sock は渡さない
     working_dir: /home/${USER_NAME:-dev}/work
     command:
       - sleep
       - infinity
+
+###########################################################################
+# volumes: ai コンテナの AI ツールの状態を残す。
+#   消したいとき（ログインし直す・状態をまっさらにする）は、コンテナを止めてから
+#   docker volume rm <プロジェクト名>_devcontainer_ai-claude のように削除する。
+###########################################################################
+volumes:
+  ai-claude:
+  ai-codex:
+  ai-copilot:
+  ai-kiro:
+  ai-kiro-data:
+  ai-gemini:
