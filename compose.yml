@@ -67,6 +67,10 @@ services:
       POWERLEVEL9K_DISABLE_GITSTATUS: "true"
       # デスクトップ（KasmVNC）のログインパスワード（ユーザー名は USER_NAME）
       KASMVNC_PASSWORD: ${KASMVNC_PASSWORD:-dev}
+      # このコンテナには CAP_SYS_ADMIN が無く unprivileged user namespace も使えないため、
+      # Chromium のサンドボックスが起動できない（agent-browser は既定で --no-sandbox を付けるため対象外）。
+      # playwright-cli 用に既定で無効化しておく。
+      PLAYWRIGHT_MCP_SANDBOX: "false"
     # デスクトップ（KasmVNC）のポート。ホストには公開せず（ports は書かない）、
     # 同じネットワークの user コンテナからだけ接続させる。
     # ホストからは user コンテナの ai-desktop（aid）が VS Code のポート転送経由で開く。
