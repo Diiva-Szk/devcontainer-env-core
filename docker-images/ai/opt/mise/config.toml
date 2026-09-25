@@ -9,12 +9,12 @@
 
 [tools]
 # ai tools
-"aqua:anthropics/claude-code" = "2.1.281"
+"aqua:anthropics/claude-code" = "2.1.282"
 "aqua:github/copilot-cli" = "1.0.88"
-"aqua:github/copilot-language-server-release" = "1.550.0"
-"aqua:google-antigravity/antigravity-cli" = "1.2.9"
+"aqua:github/copilot-language-server-release" = "1.551.0"
+"aqua:google-antigravity/antigravity-cli" = "1.2.10"
 # AI エージェント向けのルール・設定を各ツールの形式で生成する CLI
-"aqua:dyoshikawa/rulesync" = "17.0.0"
+"aqua:dyoshikawa/rulesync" = "17.1.0"
 
 # agent-browser（コーディングエージェント向けのブラウザ操作 CLI）
 #   npm でも配布されているが、そちらは全プラットフォームのバイナリを1パッケージに同梱するため
