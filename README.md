@@ -13,6 +13,7 @@
 - [必要なもの](#必要なもの)
 - [使い方](#使い方)
 - [VS Code の Feature](#vs-code-の-feature)
+- [git worktree のタスク](#git-worktree-のタスク)
 - [ツールの追加・バージョンの上書き](#ツールの追加バージョンの上書き)
 - [設定項目](#設定項目)
 - [AI ツールの状態の保存](#ai-ツールの状態の保存)
@@ -215,6 +216,24 @@ flowchart LR
 - 許可リストにない拡張機能は VS Code にインストールできません。`vscode-python` / `vscode-terraform` を使う場合も、許可リストを提供する `vscode-common` を必ず併用してください。
 - `vscode-common` は Markdown Preview Enhanced の `chromePath` に `user` コンテナの Google Chrome（`/usr/local/bin/google-chrome`）を設定します。PDF・PNG などのエクスポートで使われます。
 - `:1` と指定すると、メジャーバージョン 1 の最新版が使われます。
+
+## git worktree のタスク
+
+`user` / `ai` の両方のコンテナで、`.worktree/<ブランチ名>` に git worktree を作る mise タスクが使えます（定義は [docker-images/dev-base/etc/mise/config.toml](docker-images/dev-base/etc/mise/config.toml)）。
+
+```sh
+mise run wt:add feat/foo           # .worktree/feat/foo を作る（ブランチが無ければ main から作成）
+mise run wt:add feat/foo -b dev    # 分岐元を指定する
+mise run wt:list                   # worktree の一覧
+mise run wt:rm feat/foo            # worktree とブランチを削除する（未コミットの変更・未マージのコミットがあれば中止）
+mise run wt:rm feat/foo -f         # 強制的に削除する
+```
+
+- リポジトリ内のどのディレクトリ（worktree の中を含む）で実行しても、メインの worktree 直下の `.worktree/` を使います。サブモジュールの中で実行した場合は、サブモジュールの `.worktree/` を使います。
+- `.worktree/` は git の管理対象外にしてください（プロジェクトの `.gitignore` に `.worktree/` を追加する）。
+- worktree はコンテナ内の絶対パス（`/home/dev/work/...`）で記録されるため、ホストの git からは使えません。
+- `wt:rm` は worktree を削除してからブランチを削除します。ブランチが未マージの場合、worktree だけが削除され、ブランチは残ります。
+- `user` コンテナでは、trust していない `mise.toml` があるディレクトリで実行すると mise がエラーになります（[`mise trust` が必要](#user-コンテナでは-mise-trust-が必要)）。
 
 ## ツールの追加・バージョンの上書き
 
