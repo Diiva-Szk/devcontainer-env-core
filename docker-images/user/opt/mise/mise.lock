@@ -3,14 +3,14 @@
 lockfile_version = 2
 
 [[tools."aqua:docker/cli"]]
-version = "29.8.0"
+version = "29.8.1"
 backend = "aqua:docker/cli"
-specifiers = ["29.8.0"]
+specifiers = ["29.8.1"]
 
 [tools."aqua:docker/cli"."platforms.linux-arm64"]
-checksum = "sha256:1462a696be6029bd478d7d60d7f3c31cdd15affd1178a4a278aaf4a1d1b7f8b5"
-url = "https://download.docker.com/linux/static/stable/aarch64/docker-29.8.0.tgz"
+checksum = "sha256:667395fbffab52901b80181dfbb39ea76da2fbd7642c4fbddd24e42146b07b48"
+url = "https://download.docker.com/linux/static/stable/aarch64/docker-29.8.1.tgz"
 
 [tools."aqua:docker/cli"."platforms.linux-x64"]
-checksum = "sha256:cc21815cf1e2efed867dc9c8b96b46ffed8ea176ffab32b0aacb54726ded8f25"
-url = "https://download.docker.com/linux/static/stable/x86_64/docker-29.8.0.tgz"
+checksum = "sha256:d8db66739d2e28d4933786d73e918d9be643a67fbd835db1bf740d650a259e70"
+url = "https://download.docker.com/linux/static/stable/x86_64/docker-29.8.1.tgz"
