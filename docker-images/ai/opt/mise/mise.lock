@@ -65,19 +65,19 @@ url = "https://github.com/github/copilot-language-server-release/releases/downlo
 url_api = "https://api.github.com/repos/github/copilot-language-server-release/releases/assets/584871586"
 
 [[tools."aqua:google-antigravity/antigravity-cli"]]
-version = "1.2.11"
+version = "1.2.12"
 backend = "aqua:google-antigravity/antigravity-cli"
-specifiers = ["1.2.11"]
+specifiers = ["1.2.12"]
 
 [tools."aqua:google-antigravity/antigravity-cli"."platforms.linux-arm64"]
-checksum = "sha256:01513bc61f9592353045ba801ebb407fbccb8984fcbfde591bc6b681b24e92bc"
-url = "https://github.com/google-antigravity/antigravity-cli/releases/download/1.2.11/agy_cli_linux_arm64.tar.gz"
-url_api = "https://api.github.com/repos/google-antigravity/antigravity-cli/releases/assets/587505246"
+checksum = "sha256:bd338c9d19ab963d9d2bc027e4e797b470ea84bae02080e4fde4555357ea9444"
+url = "https://github.com/google-antigravity/antigravity-cli/releases/download/1.2.12/agy_cli_linux_arm64.tar.gz"
+url_api = "https://api.github.com/repos/google-antigravity/antigravity-cli/releases/assets/592185064"
 
 [tools."aqua:google-antigravity/antigravity-cli"."platforms.linux-x64"]
-checksum = "sha256:c91c62c5e6fa954f5a7e1d7b9ad417d749db4aa60a4ba0b3d604dec1b645d190"
-url = "https://github.com/google-antigravity/antigravity-cli/releases/download/1.2.11/agy_cli_linux_x64.tar.gz"
-url_api = "https://api.github.com/repos/google-antigravity/antigravity-cli/releases/assets/587505244"
+checksum = "sha256:26c7c4c661d6c9beda734fcf305031056a6ea46e697c4533e8151179724e2950"
+url = "https://github.com/google-antigravity/antigravity-cli/releases/download/1.2.12/agy_cli_linux_x64.tar.gz"
+url_api = "https://api.github.com/repos/google-antigravity/antigravity-cli/releases/assets/592185063"
 
 [[tools."aqua:vercel-labs/agent-browser"]]
 version = "0.38.1"
@@ -95,32 +95,32 @@ url = "https://github.com/vercel-labs/agent-browser/releases/download/v0.38.1/ag
 url_api = "https://api.github.com/repos/vercel-labs/agent-browser/releases/assets/568699594"
 
 [[tools."github:openai/codex"]]
-version = "0.157.0"
+version = "0.157.1"
 backend = "github:openai/codex"
-specifiers = ["0.157.0"]
-
-[tools."github:openai/codex".options]
-asset_pattern = "codex-package-aarch64-unknown-linux-musl.tar.gz"
-version_prefix = "rust-v"
-
-[tools."github:openai/codex"."platforms.linux-arm64"]
-checksum = "sha256:c1c36beab0b4f72779adf53ba9e9e494bf7cbfbe4f3506a08ff67a24f5f00d08"
-url = "https://github.com/openai/codex/releases/download/rust-v0.157.0/codex-package-aarch64-unknown-linux-musl.tar.gz"
-url_api = "https://api.github.com/repos/openai/codex/releases/assets/587340226"
-
-[[tools."github:openai/codex"]]
-version = "0.157.0"
-backend = "github:openai/codex"
-specifiers = ["0.157.0"]
+specifiers = ["0.157.1"]
 
 [tools."github:openai/codex".options]
 asset_pattern = "codex-package-x86_64-unknown-linux-musl.tar.gz"
 version_prefix = "rust-v"
 
 [tools."github:openai/codex"."platforms.linux-x64"]
-checksum = "sha256:042f851ea3fc1083c45157520520944fc790632b53ebc580fc98eaca55862a25"
-url = "https://github.com/openai/codex/releases/download/rust-v0.157.0/codex-package-x86_64-unknown-linux-musl.tar.gz"
-url_api = "https://api.github.com/repos/openai/codex/releases/assets/587334214"
+checksum = "sha256:0e211868c9fd73cb49ad35ac675b5eafdf6b9f453df8a493df980c59a590fe5f"
+url = "https://github.com/openai/codex/releases/download/rust-v0.157.1/codex-package-x86_64-unknown-linux-musl.tar.gz"
+url_api = "https://api.github.com/repos/openai/codex/releases/assets/589593045"
+
+[[tools."github:openai/codex"]]
+version = "0.157.1"
+backend = "github:openai/codex"
+specifiers = ["0.157.1"]
+
+[tools."github:openai/codex".options]
+asset_pattern = "codex-package-aarch64-unknown-linux-musl.tar.gz"
+version_prefix = "rust-v"
+
+[tools."github:openai/codex"."platforms.linux-arm64"]
+checksum = "sha256:499fe70d70f4e4904b6a5a4ec1b1edf6c4a1a47a075ea7e2ec2b5262ba47b471"
+url = "https://github.com/openai/codex/releases/download/rust-v0.157.1/codex-package-aarch64-unknown-linux-musl.tar.gz"
+url_api = "https://api.github.com/repos/openai/codex/releases/assets/589602711"
 
 [[tools."http:kiro-cli"]]
 version = "2.24.1"
