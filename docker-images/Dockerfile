@@ -10,10 +10,12 @@ ARG ARG_BASE_IMAGE_DIGEST="sha256:d7e12182ce18b85b93007c1dedf31f2d29e01ccf3182cc
 # mise:
 #   mise 本体の取得元。公式イメージからバイナリだけを取り出す。
 #   タグと digest は Renovate が更新する（digest 固定ですり替えを防ぐ）。
-#   公式イメージは debian trixie ベースでビルドされているため、
-#   base（debian 13）とは glibc が一致する。
+#   公式イメージ（jdxcode/mise:<版>）は、mise のバイナリと CA 証明書だけの空のイメージ。
+#   バイナリは静的リンク（musl）のため、base（debian 13）の glibc に依存しない。
+#   update-mise-lock / update-rulesync-lock ワークフローも、ここに書かれたイメージから
+#   同じバイナリを取り出して lock を作る。
 ###########################################################################
-FROM jdxcode/mise:2026.9.11@sha256:f01b88463f3a8396b2273d88469bd09d097aa3cacfe343177eb5457f1d8d2a92 AS mise
+FROM jdxcode/mise:2026.9.11@sha256:2f6212f640d0347c9ccf0e7d49a0cbb90e3caf1d205162f2e2c3350ecb5eb1d5 AS mise
 
 ###########################################################################
 # base:
