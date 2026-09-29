@@ -37,9 +37,11 @@ Feature（`devcontainer-features/` 配下）には `Dockerfile` を含めず、�
 │   │   └── usr/local/bin/        # entrypoint.sh
 │   ├── ai/
 │   │   ├── opt/mise/             # mise の設定と lock（global スコープ）
+│   │   ├── opt/rulesync/         # ブラウザ操作 CLI のスキルの取得と各ツールへの展開（rulesync.jsonc / rulesync.lock）
+│   │   ├── opt/agent-browser-skills/ # agent-browser のスキル本体の取得（rulesync.jsonc / rulesync.lock）
 │   │   ├── etc/chromium.d/       # Chromium の起動オプション
 │   │   ├── etc/chromium/policies/ # Chromium のポリシー（Antigravity のブラウザ拡張を入れる）
-│   │   ├── usr/local/bin/        # ai-entrypoint.sh / start-desktop（デスクトップの起動）
+│   │   ├── usr/local/bin/        # ai-entrypoint.sh / start-desktop（デスクトップの起動）/ sync-home-defaults
 │   │   ├── usr/share/icons/st/   # st のアイコン
 │   │   └── home-config/          # AI エージェントとデスクトップ（KasmVNC / Openbox / idesk）の設定ファイル
 │   └── user/
@@ -117,8 +119,10 @@ CLI ツールと言語ランタイム（Python / Node.js）は [mise](https://mi
   uv pip compile --universal --generate-hashes --python-version=3.14 --output-file=requirements.txt requirements.in
   ```
 
+- Python のマイナーバージョンを上げた場合は、`--python-version` を合わせて `requirements.txt` を再生成してください。
 - Renovate CLI はインストールスクリプトを実行しないため、re2 のネイティブ拡張は入らず、標準の RegExp にフォールバックします。
 - KasmVNC は Renovate の更新対象外です（アーキテクチャごとの sha256 を合わせて更新する必要があるため）。更新するときは Dockerfile のコメントの手順で、`KASMVNC_VERSION` と amd64 / arm64 の sha256 を書き換えてください。
+- KasmVNC の TLS 証明書は、`ai` コンテナの起動時に `start-desktop` がコンテナごとに生成します。`ssl-cert` の証明書（snakeoil）はビルド時に作られ、公開しているビルドキャッシュを通じて全利用者で同じ秘密鍵になるため使いません。
 - ブラウザは Google Chrome ではなく Debian の Chromium を使います（Google Chrome には Linux arm64 版が無いため）。
 - Playwright CLI・agent-browser（ai）も、同梱のブラウザはダウンロードせず、Debian の Chromium を `PLAYWRIGHT_MCP_EXECUTABLE_PATH` / `AGENT_BROWSER_EXECUTABLE_PATH`（ともに `/usr/lib/chromium/chromium`）で使います。`/usr/bin/chromium` はラッパーで、`/etc/chromium.d/ai-desktop` のリモートデバッグ用ポートやプロファイルの指定を付け、デスクトップの Chromium と衝突するため実体を指定しています。
 
@@ -146,8 +150,6 @@ bash scripts/update-rulesync-locks.sh
 `--update` は必須です。付けないと rulesync は lock にある解決済みコミットを再利用するため、`ref` を変えても lock が追従しません。また `rulesync.lock` は解決した時刻（`resolvedAt`）を持つので、時刻を除いた内容が同じなら旧 lock を残します。これをしないと、lock を push するワークフローが毎回差分を作り、その push がワークフロー自身を再び起動して止まらなくなります（`mise.lock` の並び順を握り潰しているのと同じ理由です）。
 
 `update-rulesync-lock.yml` は `update-mise-lock.yml` と同じ構成です。PR のコードを実行する `generate` ジョブと、書き込み用トークンを扱う `push` ジョブを分離し、`push` 側は受け取った lock の形式（`lockfileVersion`、解決済みコミットが40桁の16進であること、成果物ごとの integrity が sha256 であること）を検証してから決まったパスにだけ書き込みます。rulesync は mise で管理しているため、`generate` ジョブは Dockerfile の mise ステージと同じイメージの中で `mise x` を使い、ai の設定に書かれたバージョンの rulesync で lock を作り直します。
-- KasmVNC の TLS 証明書は、`ai` コンテナの起動時に `start-desktop` がコンテナごとに生成します。`ssl-cert` の証明書（snakeoil）はビルド時に作られ、公開しているビルドキャッシュを通じて全利用者で同じ秘密鍵になるため使いません。
-- Python のマイナーバージョンを上げた場合は、`--python-version` を合わせて `requirements.txt` を再生成してください。
 
 ## ビルドキャッシュ
 
@@ -174,7 +176,7 @@ bash scripts/update-rulesync-locks.sh
 
 ## CI/CD パイプライン
 
-`.github/workflows/` の5ワークフローは、以下のように連鎖して動作します。
+`.github/workflows/` の6ワークフローは、以下のように連鎖して動作します。
 
 ```mermaid
 flowchart TD
@@ -190,9 +192,11 @@ flowchart TD
 
     PR -->|"docker-images/**"| build["build-images.yml<br/>lock の検査 + Node LTS の検査 + user / ai をビルド検証"]
     PR -->|"docker-images/**/mise/config.toml"| lock["update-mise-lock.yml<br/>generate: mise.lock とサイドカーを作り直す<br/>push: 検証して PR ブランチへ push（別 runner）"]
+    PR -->|"docker-images/**/rulesync.jsonc"| rlock["update-rulesync-lock.yml<br/>generate: rulesync.lock を作り直す<br/>push: 検証して PR ブランチへ push（別 runner）"]
     PR -->|"devcontainer-features/**"| validate["release-features.yml : validate<br/>features package のパース検証"]
 
     lock -->|"App token の push が再トリガー"| build
+    rlock -->|"App token の push が再トリガー"| build
 
     merge(["main へマージ"]) --> publish["release-features.yml : publish<br/>GHCR へ Feature を publish（main のみ・Environment release）"]
     merge --> cache["publish-build-cache.yml<br/>amd64 / arm64 のビルドキャッシュを GHCR へ push（main のみ）"]
@@ -202,6 +206,7 @@ flowchart TD
 - **Renovate が起点:** `GITHUB_TOKEN` 発の push は他ワークフローを起動しないため、GitHub App のトークンで PR を作ります。これにより生成された PR が下流の CI を起動できます。
 - **実行間隔:** `renovate.yml` は毎日 04:07 JST に実行します。新しい更新 PR を作るのは、AI ツールは毎日、それ以外は火曜のみです（[更新のタイミング](#更新のタイミング)）。
 - **lock → build の連鎖:** mise は `locked = true` のため、`config.toml` だけ更新すると `mise.lock` と不一致になりビルドが失敗します。Renovate には lock を更新させず（`skipArtifactsUpdate`）、`update-mise-lock` が PR ブランチへ lock を push します。push は GitHub App のトークンで行うため、その push が改めて `build-images` を起こします。push したコミットは `gitIgnoredAuthors` により Renovate から「人の編集」とみなされません。
+- **rulesync の lock → build の連鎖:** ビルドは `rulesync install --frozen` のため、`rulesync.jsonc` の `ref` だけ更新すると `rulesync.lock` と不一致になり失敗します。Renovate は `ref` だけを更新し、`update-rulesync-lock` が mise と同じ仕組みで lock を PR ブランチへ push します。
 - **validate → publish:** `publish` は `needs: validate` かつ `if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'` です。PR ではパース検証のみ行い、`main` からのみ GHCR へ publish します（手動実行で別ブランチを選んでも publish しません）。
 - **version bump との連動:** Feature の `version` を上げないと `publish` は何も配信しません。Renovate の `postUpgradeTasks` が `scripts/bump-feature-version.sh` で patch を上げます。手作業で Feature を変更した場合は `version` を上げてください。
 
@@ -209,8 +214,8 @@ flowchart TD
 
 | シークレット | 内容 | 利用ワークフロー |
 | --- | --- | --- |
-| `RENOVATE_APP_CLIENT_ID` | GitHub App の Client ID | renovate / update-mise-lock |
-| `RENOVATE_APP_PRIVATE_KEY` | GitHub App の秘密鍵 | renovate / update-mise-lock |
+| `RENOVATE_APP_CLIENT_ID` | GitHub App の Client ID | renovate / update-mise-lock / update-rulesync-lock |
+| `RENOVATE_APP_PRIVATE_KEY` | GitHub App の秘密鍵 | renovate / update-mise-lock / update-rulesync-lock |
 
 ## Renovate
 
@@ -218,7 +223,7 @@ flowchart TD
 
 | 対象 | 新しい PR を作る曜日（`schedule`） | 待機期間（`minimumReleaseAge`） |
 | --- | --- | --- |
-| AI ツール（`docker-images/ai/opt/mise/config.toml`） | 毎日 | 1日（Kiro CLI はなし） |
+| AI ツール（`docker-images/ai/opt/mise/config.toml`、`docker-images/ai/opt/*/rulesync.jsonc`） | 毎日 | 1日（Kiro CLI はなし） |
 | VS Code 拡張機能（`devcontainer-features/`） | 火曜 | 14日 |
 | その他（Docker イメージ・mise の他のツール・Node.js・npm・PyPI など） | 火曜 | 7日 |
 | 脆弱性修正（`vulnerabilityAlerts`） | 毎日（Renovate の既定で `schedule` の制限を受けない） | なし |
@@ -246,22 +251,23 @@ flowchart TD
 | mise の aqua / github / core backend のツール | Renovate の mise マネージャ（lock は `skipArtifactsUpdate` で更新させない） |
 | Kiro CLI（http backend） | `customManagers` の正規表現 + `customDatasources`（latest マニフェスト） |
 | mise の npm backend のツール（Playwright CLI） | Renovate の mise マネージャ（npm データソース）。依存グラフのサイドカー（`.mise/locks/`）は Renovate の対象外にし、`update-mise-lock.yml` が作り直す |
+| rulesync の取得元の `ref`（agent-browser のスキル） | `customManagers` の正規表現（`// renovate:` コメント）。lock は `update-rulesync-lock.yml` が作り直す |
 | Renovate 本体のコンテナ / BuildKit | `customManagers` の正規表現（`CLI_IMAGE_TAG` / `BUILDKIT_IMAGE_TAG` のバージョン + digest） |
 | Python パッケージ | pip-compile マネージャ（`requirements.txt` のヘッダーのコマンドで再生成） |
 | VS Code 拡張機能 | `customManagers` の正規表現（`// renovate:` コメント） |
 
 ## サードパーティ Action と実行時の依存
 
-ワークフローで利用している Action は、すべてコミット SHA で固定しています（Renovate が自動更新）。
+ワークフローで利用している Action は、すべてコミット SHA で固定しています（Renovate が自動更新）。実際の版は、各ワークフローの `uses:` の SHA とその行末のコメント（`# v7.0.1` など）を参照してください。
 
-| Action | バージョン | 利用ワークフロー |
-| --- | --- | --- |
-| [`actions/checkout`](https://github.com/actions/checkout) | v7.0.0 | build-images / release-features / update-mise-lock |
-| [`actions/upload-artifact`](https://github.com/actions/upload-artifact) | v7.0.1 | update-mise-lock |
-| [`actions/download-artifact`](https://github.com/actions/download-artifact) | v8.0.1 | update-mise-lock |
-| [`devcontainers/action`](https://github.com/devcontainers/action) | v1.4.3 | release-features |
-| [`actions/create-github-app-token`](https://github.com/actions/create-github-app-token) | v3.2.0 | renovate / update-mise-lock |
-| [`renovatebot/github-action`](https://github.com/renovatebot/github-action) | v46.1.20 | renovate |
+| Action | 利用ワークフロー |
+| --- | --- |
+| [`actions/checkout`](https://github.com/actions/checkout) | build-images / publish-build-cache / release-features / update-mise-lock / update-rulesync-lock |
+| [`actions/upload-artifact`](https://github.com/actions/upload-artifact) | update-mise-lock / update-rulesync-lock |
+| [`actions/download-artifact`](https://github.com/actions/download-artifact) | update-mise-lock / update-rulesync-lock |
+| [`devcontainers/action`](https://github.com/devcontainers/action) | release-features |
+| [`actions/create-github-app-token`](https://github.com/actions/create-github-app-token) | renovate / update-mise-lock / update-rulesync-lock |
+| [`renovatebot/github-action`](https://github.com/renovatebot/github-action) | renovate |
 
 Action の SHA 固定だけでは、Action が実行時に取得するものまでは固定されません。以下は個別に固定しています。
 
@@ -270,7 +276,7 @@ Action の SHA 固定だけでは、Action が実行時に取得するものま�
 | Renovate 本体のコンテナ | `renovate.yml` の `CLI_IMAGE_TAG` でバージョン + digest を指定 | renovate |
 | BuildKit（docker-container ドライバー） | `BUILDKIT_IMAGE_TAG` でバージョン + digest を指定 | build-images / publish-build-cache |
 | Dev Containers CLI | `.github/tools/devcontainer-cli/package-lock.json` の integrity で固定し `npm ci` で事前導入 | release-features |
-| mise | Dockerfile と同じ `jdxcode/mise` イメージ（タグ + digest 固定）の中で `mise lock` を実行 | update-mise-lock |
+| mise | Dockerfile と同じ `jdxcode/mise` イメージ（タグ + digest 固定）の中で `mise lock`（update-mise-lock）や `mise x` による rulesync（update-rulesync-lock）を実行 | update-mise-lock / update-rulesync-lock |
 
 ## セキュリティ上の設計
 
@@ -278,8 +284,8 @@ Action の SHA 固定だけでは、Action が実行時に取得するものま�
 - **ai のデスクトップはホストに公開しない:** KasmVNC のポート（8444）は `compose.yml` の `expose` で同じネットワークの user コンテナにだけ見せ、`ports` でホストへは公開しません。ホストからは user コンテナの `ai-desktop`（`aid`）が `127.0.0.1` で待ち受けて転送し、VS Code のポート転送経由で開きます。
 - **App トークンの権限の最小化:** `create-github-app-token` は `permission-*` を指定しないと App installation の全権限を継承するため、ワークフローごとに必要な権限だけを指定しています。
   - renovate: Contents / Issues / Pull requests / Checks / Commit statuses / Workflows（write）、Dependabot alerts（read。`vulnerabilityAlerts` 用）
-  - update-mise-lock: Contents（write）のみ
-- **PR のコードを実行するジョブと、書き込みトークンを扱うジョブの分離:** `update-mise-lock.yml` は lock を生成する `generate` ジョブと push する `push` ジョブを別 runner で実行します。同じ runner で PR のコードを実行した後にトークンを扱うと、`.git/hooks` 等を仕込まれてトークンを盗まれるおそれがあるためです。`push` ジョブは PR のコードを実行せず、受け取った lock のファイル構成・形式・書き込み先（シンボリックリンクでないこと）を検証してから取り込みます。
+  - update-mise-lock / update-rulesync-lock: Contents（write）のみ
+- **PR のコードを実行するジョブと、書き込みトークンを扱うジョブの分離:** `update-mise-lock.yml` と `update-rulesync-lock.yml` は、lock を生成する `generate` ジョブと push する `push` ジョブを別 runner で実行します。同じ runner で PR のコードを実行した後にトークンを扱うと、`.git/hooks` 等を仕込まれてトークンを盗まれるおそれがあるためです。`push` ジョブは PR のコードを実行せず、受け取った lock のファイル構成・形式・書き込み先（シンボリックリンクでないこと）を検証してから取り込みます。
 - **publish は main からのみ:** `release-features.yml` の publish は `main` ブランチでのみ実行し、Environment `release` を使います。
 - **ビルドキャッシュの書き出しは main からのみ:** 利用者のビルドに取り込まれるため、`publish-build-cache.yml` は `main` でのみ `packages: write` を使います。PR のビルド（`build-images.yml`）はキャッシュを読むだけです。
-- **イメージ内の依存の固定:** mise のツールは `mise.lock`、Python パッケージはハッシュ付き `requirements.txt`、Renovate CLI は `package-lock.json` で固定しています。
+- **イメージ内の依存の固定:** mise のツールは `mise.lock`、Python パッケージはハッシュ付き `requirements.txt`、Renovate CLI は `package-lock.json`、ブラウザ操作 CLI のスキルは `rulesync.lock` で固定しています。
