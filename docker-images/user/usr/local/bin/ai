@@ -40,9 +40,9 @@ docker_() {
   (cd / && docker "$@")
 }
 
-# コンテナのマウントを「Source<TAB>Destination」の行で出力する
+# コンテナのマウントを「Type<TAB>Source<TAB>Destination」の行で出力する
 mounts_of() {
-  docker_ inspect -f '{{ range .Mounts }}{{ .Source }}{{ "\t" }}{{ .Destination }}{{ "\n" }}{{ end }}' "$1"
+  docker_ inspect -f '{{ range .Mounts }}{{ .Type }}{{ "\t" }}{{ .Source }}{{ "\t" }}{{ .Destination }}{{ "\n" }}{{ end }}' "$1"
 }
 
 # -------------------------------------------------------------------
@@ -67,11 +67,15 @@ ai_container="$(docker_ ps -q \
 # カレントディレクトリを ai コンテナ側のパスに変換する
 #   1. user コンテナのマウントのうち、カレントディレクトリを含む最も深いものを探す
 #   2. ai コンテナで同じ Source をマウントしている Destination に付け替える
+#   3. Source が一致しなければ、同じ Destination の bind マウントを、ディレクトリの inode が
+#      一致する場合に限って使う。Docker Desktop の WSL 連携では、同じホストのディレクトリでも
+#      コンテナによって Source が /run/desktop/mnt/host/wsl/docker-desktop-bind-mounts/... に
+#      変換されて記録され、文字列では突き合わせられないことがあるため。
 #   対応するマウントが無ければ、ai コンテナの作業ディレクトリ（compose.yml の working_dir）を使う。
 # -------------------------------------------------------------------
 cwd="$(pwd -P)"
 user_src="" user_dst=""
-while IFS=$'\t' read -r src dst; do
+while IFS=$'\t' read -r _ src dst; do
   [[ -n "$dst" ]] || continue
   if [[ "$cwd" == "$dst" || "$cwd" == "$dst"/* ]] && ((${#dst} > ${#user_dst})); then
     user_src="$src"
@@ -81,12 +85,24 @@ done < <(mounts_of "$self")
 
 workdir=""
 if [[ -n "$user_dst" ]]; then
-  while IFS=$'\t' read -r src dst; do
+  ai_mounts="$(mounts_of "$ai_container")"
+  while IFS=$'\t' read -r _ src dst; do
     if [[ -n "$dst" && "$src" == "$user_src" ]]; then
       workdir="${dst}${cwd#"$user_dst"}"
       break
     fi
-  done < <(mounts_of "$ai_container")
+  done <<<"$ai_mounts"
+
+  if [[ -z "$workdir" ]] && user_ino="$(stat -c %i -- "$user_dst" 2>/dev/null)"; then
+    while IFS=$'\t' read -r type _ dst; do
+      [[ "$type" == "bind" && "$dst" == "$user_dst" ]] || continue
+      ai_ino="$(docker_ exec "$ai_container" stat -c %i -- "$dst" 2>/dev/null)" || continue
+      if [[ "$ai_ino" == "$user_ino" ]]; then
+        workdir="${dst}${cwd#"$user_dst"}"
+        break
+      fi
+    done <<<"$ai_mounts"
+  fi
 fi
 
 if [[ -z "$workdir" ]]; then
