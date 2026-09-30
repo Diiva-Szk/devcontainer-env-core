@@ -30,3 +30,12 @@ dir = "{{cwd}}"
 raw = true
 quiet = true
 run = "ai"
+
+[tasks.ai-desktop]
+# /usr/local/bin/ai-desktop を呼ぶだけ。引数はそのまま渡る（mise run aid stop）。
+#   alias: コマンドと同じ短縮形（aid）でも実行できるようにする。
+#   ai-desktop は転送（socat）をセッションから切り離して起動するため、タスクが終わっても転送は続く。
+description = "ai コンテナのデスクトップをホストのブラウザで開く"
+alias = "aid"
+quiet = true
+run = "ai-desktop"
