@@ -61,6 +61,8 @@
   //
   // 拡張機能のバージョンは Marketplace が正だが、Renovate に Marketplace データソースは
   // 存在しないため、対応する GitHub リポジトリのリリースを代理指標として使う。
+  // （Marketplace の版一覧 API は POST のみで customDatasources では扱えない。
+  //   Marketplace 未公開の版を指定していないかは scripts/check-vscode-extensions.sh で CI 検査する）
   // 各バージョンの直前行に以下の形式のコメントを置くことで対象になる。
   //
   //   // renovate: datasource=github-releases depName=<owner>/<repo>

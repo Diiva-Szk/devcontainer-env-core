@@ -193,7 +193,7 @@ flowchart TD
     PR -->|"docker-images/**"| build["build-images.yml<br/>lock の検査 + Node LTS の検査 + user / ai をビルド検証"]
     PR -->|"docker-images/**/mise/config.toml"| lock["update-mise-lock.yml<br/>generate: mise.lock とサイドカーを作り直す<br/>push: 検証して PR ブランチへ push（別 runner）"]
     PR -->|"docker-images/**/rulesync.jsonc"| rlock["update-rulesync-lock.yml<br/>generate: rulesync.lock を作り直す<br/>push: 検証して PR ブランチへ push（別 runner）"]
-    PR -->|"devcontainer-features/**"| validate["release-features.yml : validate<br/>features package のパース検証"]
+    PR -->|"devcontainer-features/**"| validate["release-features.yml : validate<br/>features package のパース検証<br/>拡張機能の版が Marketplace に存在するかの検査"]
 
     lock -->|"App token の push が再トリガー"| build
     rlock -->|"App token の push が再トリガー"| build
@@ -254,7 +254,7 @@ flowchart TD
 | rulesync の取得元の `ref`（agent-browser のスキル） | `customManagers` の正規表現（`// renovate:` コメント）。lock は `update-rulesync-lock.yml` が作り直す |
 | Renovate 本体のコンテナ / BuildKit | `customManagers` の正規表現（`CLI_IMAGE_TAG` / `BUILDKIT_IMAGE_TAG` のバージョン + digest） |
 | Python パッケージ | pip-compile マネージャ（`requirements.txt` のヘッダーのコマンドで再生成） |
-| VS Code 拡張機能 | `customManagers` の正規表現（`// renovate:` コメント） |
+| VS Code 拡張機能 | `customManagers` の正規表現（`// renovate:` コメント）。Marketplace は参照できないため GitHub のリリースを代理指標にし、`release-features.yml` が `scripts/check-vscode-extensions.sh` で指定の版が Marketplace に存在することを検査する（未公開の版は `renovate.json5` の `allowedVersions` で除外する） |
 
 ## サードパーティ Action と実行時の依存
 
