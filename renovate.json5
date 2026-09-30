@@ -61,6 +61,8 @@
   //
   // 拡張機能のバージョンは Marketplace が正だが、Renovate に Marketplace データソースは
   // 存在しないため、対応する GitHub リポジトリのリリースを代理指標として使う。
+  // （Marketplace の版一覧 API は POST のみで customDatasources では扱えない。
+  //   Marketplace 未公開の版を指定していないかは scripts/check-vscode-extensions.sh で CI 検査する）
   // 各バージョンの直前行に以下の形式のコメントを置くことで対象になる。
   //
   //   // renovate: datasource=github-releases depName=<owner>/<repo>
@@ -229,6 +231,16 @@
         'streetsidesoftware/vscode-spell-checker',
       ],
       extractVersion: '^code-spell-checker-v(?<version>.+)$',
+    },
+    {
+      // GitHub リリースはあるが Marketplace に公開されていないバージョンを除外する。
+      // 採用すると Marketplace から取得できず、拡張機能がインストールされなくなる。
+      // Marketplace に公開されたらこの除外を外す。
+      //   - v0.11.10: GitHub 2026-04-26 リリース / Marketplace は 0.11.9 が最新（2026-09-30 時点）
+      matchDepNames: [
+        'janisdd/vscode-edit-csv',
+      ],
+      allowedVersions: '!/^0\\.11\\.10$/',
     },
     {
       // 拡張機能は extensions と extensions.allowed の2箇所に同じバージョンが書かれる。

@@ -7,11 +7,13 @@ on:
     paths:
       - 'devcontainer-features/**'
       - '.github/tools/devcontainer-cli/**'
+      - 'scripts/check-vscode-extensions.sh'
       - '.github/workflows/release-features.yml'
   pull_request:
     paths:
       - 'devcontainer-features/**'
       - '.github/tools/devcontainer-cli/**'
+      - 'scripts/check-vscode-extensions.sh'
       - '.github/workflows/release-features.yml'
   workflow_dispatch:
 
@@ -46,6 +48,11 @@ jobs:
             --force-clean-output-folder \
             -o /tmp/features-out \
             ./devcontainer-features
+
+      # Renovate は GitHub のリリースを代理指標に拡張機能を更新するため、
+      # Marketplace に未公開の版を指定してしまうことがある（インストール不能になる）。
+      - name: Check extension versions exist on Marketplace
+        run: bash scripts/check-vscode-extensions.sh
 
   publish:
     # publish は main からのみ行う。PR ではパースの検証だけ行う。
