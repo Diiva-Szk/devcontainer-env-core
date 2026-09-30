@@ -53,9 +53,11 @@ jobs:
         run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
       # イメージに入る rulesync と同じバージョンで lock を生成する。rulesync は mise で
-      # 管理しているため、Dockerfile の mise ステージと同じイメージ（タグ + digest）の中で
-      # `mise x` を使って取得する。rulesync の git transport は git を使うが、
-      # 公式の mise イメージ（buildpack-deps ベース）には git が入っている。
+      # 管理しているため、Dockerfile の mise ステージと同じイメージ（タグ + digest）から
+      # mise を取り出し、`mise x` で取得する。公式イメージは mise のバイナリ（静的リンク）と
+      # CA 証明書だけの空のイメージで、シェルが無く中でスクリプトを実行できないため、
+      # runner の上で実行する（rulesync の git transport が使う git や、スクリプトが使う
+      # python3 は runner のものを使う）。
       - name: Regenerate rulesync.lock
         env:
           # aqua backend のツール取得が GitHub API を使うため、レート制限回避用に読み取りトークンを渡す
@@ -77,22 +79,22 @@ jobs:
           fi
           echo "rulesync version: $version"
 
-          # 公式イメージは MISE_DATA_DIR 等を root 所有の /mise に向けているため、
-          # 実行ユーザが書き込める場所へ振り替える。
-          docker run --rm \
-            --user "$(id -u):$(id -g)" \
-            --volume "$PWD:/work" \
-            --workdir /work \
-            --env GITHUB_TOKEN \
-            --env RULESYNC_VERSION="$version" \
-            --env HOME=/tmp/home \
-            --env MISE_DATA_DIR=/tmp/mise/data \
-            --env MISE_CACHE_DIR=/tmp/mise/cache \
-            --env MISE_CONFIG_DIR=/tmp/mise/config \
-            --env MISE_STATE_DIR=/tmp/mise/state \
-            --entrypoint bash \
-            "$image" \
-            -c 'mise x "aqua:dyoshikawa/rulesync@${RULESYNC_VERSION}" -- bash scripts/update-rulesync-locks.sh'
+          # コンテナは作るだけで起動しない（バイナリを取り出すため）
+          mkdir -p "$RUNNER_TEMP/mise/bin"
+          container="$(docker create "$image")"
+          docker cp "$container:/usr/local/bin/mise" "$RUNNER_TEMP/mise/bin/mise"
+          docker rm "$container" > /dev/null
+          export PATH="$RUNNER_TEMP/mise/bin:$PATH"
+          mise --version
+
+          # runner の既定の場所や既存の設定（/etc/mise 等）を使わず、この実行専用の空のディレクトリで動かす
+          export MISE_SYSTEM_CONFIG_DIR="$RUNNER_TEMP/mise/system"
+          export MISE_DATA_DIR="$RUNNER_TEMP/mise/data"
+          export MISE_CACHE_DIR="$RUNNER_TEMP/mise/cache"
+          export MISE_CONFIG_DIR="$RUNNER_TEMP/mise/config"
+          export MISE_STATE_DIR="$RUNNER_TEMP/mise/state"
+
+          mise x "aqua:dyoshikawa/rulesync@${version}" -- bash scripts/update-rulesync-locks.sh
 
       # 受け渡すのは lock ファイルの中身だけ。ここで固定の名前に変換し、
       # 作業ツリーのパス構造やシンボリックリンクを持ち出さない。
