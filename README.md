@@ -186,6 +186,7 @@ flowchart LR
 - ログインのユーザー名は `dev`、パスワードは `.env` の `KASMVNC_PASSWORD`（既定: `dev`）です（[設定項目](#設定項目)）。
 - 証明書は `ai` コンテナの起動時に作る自己署名証明書のため、初回はブラウザに警告が表示されます。
 - ブラウザが自動で開かない場合（VS Code 以外のターミナルなど）は、VS Code の「ポート」タブで 8444 が転送されていることを確認し、表示された URL を開いてください。
+- mise のタスクとしても実行できます（`mise run ai-desktop`、短縮形 `mise run aid`、`mise run aid stop`）。ただし、trust していない `mise.toml` があるディレクトリでは mise がエラーになるため、`ai-desktop` コマンドを直接実行してください（[`mise trust` が必要](#user-コンテナでは-mise-trust-が必要)）。
 - デスクトップが起動していない場合は、`ai` コンテナで `start-desktop` を実行すると起動し直せます（ログは `ai` コンテナの `~/.vnc/`）。
 - `ai` コンテナのシェルから起動した GUI アプリ（`chromium` など）も、このデスクトップに表示されます。Chromium は DevTools Protocol（`127.0.0.1:9222`、`ai` コンテナ内のみ）で AI エージェントから操作できます。
 
