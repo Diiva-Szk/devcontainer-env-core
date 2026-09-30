@@ -1,6 +1,6 @@
 {
     "id": "vscode-common",
-    "version": "1.1.0",
+    "version": "1.1.1",
     "name": "VS Code Common (shared settings, extensions & allowlist)",
     "description": "共通のVS Code設定・拡張機能と、当リポジトリが管理する全拡張機能の許可リスト(extensions.allowed)を提供します。他のvscode-*Featureを使う場合も、必ず本Featureを併せて導入してください。",
     "documentationURL": "https://github.com/Diiva-Szk/devcontainer-env-core/tree/main/devcontainer-features/vscode-common",
@@ -95,7 +95,7 @@
                     // renovate: datasource=github-releases depName=mechatroner/vscode_rainbow_csv
                     "mechatroner.rainbow-csv": ["3.24.1"],
                     // renovate: datasource=github-releases depName=janisdd/vscode-edit-csv
-                    "janisdd.vscode-edit-csv": ["0.11.10"],
+                    "janisdd.vscode-edit-csv": ["0.11.9"],
 
                     // ### AI tools
                     // renovate: datasource=github-releases depName=microsoft/vscode-copilot-chat
@@ -150,7 +150,7 @@
                 // renovate: datasource=github-releases depName=mechatroner/vscode_rainbow_csv
                 "mechatroner.rainbow-csv@3.24.1",
                 // renovate: datasource=github-releases depName=janisdd/vscode-edit-csv
-                "janisdd.vscode-edit-csv@0.11.10",
+                "janisdd.vscode-edit-csv@0.11.9",
 
                 // ### AI tools
                 // renovate: datasource=github-releases depName=microsoft/vscode-copilot-chat

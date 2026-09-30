@@ -231,6 +231,16 @@
       extractVersion: '^code-spell-checker-v(?<version>.+)$',
     },
     {
+      // GitHub リリースはあるが Marketplace に公開されていないバージョンを除外する。
+      // 採用すると Marketplace から取得できず、拡張機能がインストールされなくなる。
+      // Marketplace に公開されたらこの除外を外す。
+      //   - v0.11.10: GitHub 2026-04-26 リリース / Marketplace は 0.11.9 が最新（2026-09-30 時点）
+      matchDepNames: [
+        'janisdd/vscode-edit-csv',
+      ],
+      allowedVersions: '!/^0\\.11\\.10$/',
+    },
+    {
       // 拡張機能は extensions と extensions.allowed の2箇所に同じバージョンが書かれる。
       // depName が同一なら Renovate が1つのPRで両方を更新する。
       matchManagers: [
