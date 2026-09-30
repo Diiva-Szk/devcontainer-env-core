@@ -9,10 +9,10 @@
 
 [tools]
 # ai tools
-"aqua:anthropics/claude-code" = "2.1.284"
+"aqua:anthropics/claude-code" = "2.1.285"
 "aqua:github/copilot-cli" = "1.0.89"
-"aqua:github/copilot-language-server-release" = "1.551.1"
-"aqua:google-antigravity/antigravity-cli" = "1.2.12"
+"aqua:github/copilot-language-server-release" = "1.551.2"
+"aqua:google-antigravity/antigravity-cli" = "1.2.13"
 # AI エージェント向けのルール・設定を各ツールの形式で生成する CLI
 "aqua:dyoshikawa/rulesync" = "24.0.0"
 
@@ -28,7 +28,7 @@
 #   integrity 付きで .mise/locks/ のサイドカー（package.json / aube-lock.yaml）に書き出し、
 #   mise.lock にはその digest が記録される。サイドカーも mise.lock と一緒にコミットすること。
 #   ブラウザは Debian の Chromium を使う（Dockerfile の PLAYWRIGHT_MCP_EXECUTABLE_PATH）。
-"npm:@playwright/cli" = "0.1.21"
+"npm:@playwright/cli" = "0.1.22"
 
 # OpenAI Codex CLI
 #   aqua backend では linux 向け成果物を解決できず lock が生成されなかったため、github backend で取得する。
@@ -41,7 +41,7 @@
 #   asset_pattern に {{ arch() }} を使うと mise lock を実行したマシンのアーキテクチャで展開され、
 #   全プラットフォームに同じ成果物が記録されてしまうため、プラットフォームごとに指定する。
 [tools."github:openai/codex"]
-version = "0.158.0"
+version = "0.159.1"
 version_prefix = "rust-v"
 bin_path = "bin"
 
@@ -56,7 +56,7 @@ linux-arm64 = { asset_pattern = "codex-package-aarch64-unknown-linux-musl.tar.gz
 #   載っていない（latest が先に進んだ）場合、mise lock は成果物を実際にダウンロードして計算する。
 [tools."http:kiro-cli"]
 # renovate: datasource=custom.kiro-cli depName=kiro-cli
-version = "2.26.0"
+version = "2.26.1"
 url = 'https://desktop-release.q.us-east-1.amazonaws.com/{{ version }}/kirocli-{{ arch(x64="x86_64", arm64="aarch64") }}-linux.tar.gz'
 checksum_url = "https://desktop-release.q.us-east-1.amazonaws.com/latest/manifest.json"
 checksum_expr = '"sha256:" + filter(fromJSON(body).packages, { "https://desktop-release.q.us-east-1.amazonaws.com/" + #.download == url })[0].sha256'
