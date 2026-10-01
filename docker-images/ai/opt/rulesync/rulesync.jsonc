@@ -4,6 +4,15 @@
   // いずれも skills をネイティブ対応しており、--simulate-skills は不要。
   "targets": ["claudecode", "codexcli", "copilotcli", "kiro-cli", "antigravity-cli"],
   "features": ["skills"],
+  // find-docs（Context7 CLI のスキル）は .rulesync/skills/find-docs/SKILL.md に
+  // vendoring している（sources に無い）。本来は agent-browser と同じく git transport で
+  // 公式リポジトリの ctx7@<版> タグから取得すべきだが、rulesync 24.0.0 は注釈付きタグ
+  // （ctx7@<版> 形式）の解決に失敗する既知の問題があり、使えない
+  // （https://github.com/dyoshikawa/rulesync の git transport 実装。ls-remote の
+  // 1行目のタグオブジェクト SHA を resolvedRef にしてしまい、チェックアウト後の
+  // コミット SHA と一致しない）。
+  // rulesync が直ったら git transport の source へ移行し、この vendoring は削除する。
+  // 詳細・ctx7 更新時の追従手順は docs/MAINTAINING.md を参照。
   "sources": [
     // agent-browser の discovery stub。本体は AGENT_BROWSER_SKILLS_DIR 側にあり、
     // この stub が `agent-browser skills get core` で読ませる。

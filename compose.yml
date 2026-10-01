@@ -92,6 +92,8 @@ services:
       - ai-gemini:/home/${USER_NAME:-dev}/.gemini
       # Kiro CLI の認証情報は ~/.kiro ではなく、こちらの secret store（data.sqlite3）にある
       - ai-kiro-data:/home/${USER_NAME:-dev}/.local/share/kiro-cli
+      # Context7 CLI（ctx7）の認証情報（ctx7 login で作られる credentials.json）
+      - ai-context7:/home/${USER_NAME:-dev}/.config/context7
       # docker.sock は渡さない
     working_dir: /home/${USER_NAME:-dev}/work
     command:
@@ -110,3 +112,4 @@ volumes:
   ai-kiro:
   ai-kiro-data:
   ai-gemini:
+  ai-context7:

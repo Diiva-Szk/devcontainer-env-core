@@ -62,11 +62,11 @@ flowchart LR
 
 **`ai` コンテナ** — [docker-images/ai/opt/mise/config.toml](docker-images/ai/opt/mise/config.toml)
 
-Claude Code、OpenAI Codex CLI、GitHub Copilot CLI、GitHub Copilot Language Server、Amazon Kiro CLI、Google Antigravity CLI、rulesync、Playwright CLI・agent-browser（ブラウザは Debian の Chromium を使う）
+Claude Code、OpenAI Codex CLI、GitHub Copilot CLI、GitHub Copilot Language Server、Amazon Kiro CLI、Google Antigravity CLI、rulesync、Playwright CLI・agent-browser（ブラウザは Debian の Chromium を使う）、Context7 CLI（ctx7）
 
 デスクトップ: KasmVNC、Openbox、Chromium（Antigravity のブラウザ拡張をポリシーで導入）、st（ターミナル）、fcitx5-mozc（日本語入力）
 
-Playwright CLI と agent-browser の使い方スキルは、各 CLI が配布しているものをビルド時に取得し、rulesync で Claude Code・Codex・Copilot・Kiro・Antigravity のグローバル設定へ展開しています。
+Playwright CLI・agent-browser の使い方スキルと、Context7 CLI（ctx7）のドキュメント検索スキル（find-docs）は、各 CLI・公式リポジトリが配布しているものをビルド時に取得し、rulesync で Claude Code・Codex・Copilot・Kiro・Antigravity のグローバル設定へ展開しています。
 
 **`user` コンテナ** — [docker-images/user/opt/mise/config.toml](docker-images/user/opt/mise/config.toml)
 
@@ -155,9 +155,11 @@ rulesync   # AI エージェント向けのルール・設定の生成
 sync-home-defaults  # イメージが管理する設定をイメージ側の内容に合わせる
 playwright-cli  # ブラウザ操作（Playwright CLI）
 agent-browser   # ブラウザ操作（agent-browser）
+ctx7            # ライブラリの最新ドキュメントを引く（Context7 CLI）
 ```
 
 - 各ツールのログイン（認証）は、初回に `ai` コンテナ内で行ってください。**ログイン情報と会話履歴は、コンテナを作り直しても残ります**（[AI ツールの状態の保存](#ai-ツールの状態の保存)）。
+- `ctx7` は認証なしでも使えますが、レート制限が厳しくなります。`ctx7 login`（OAuth）か `CONTEXT7_API_KEY` 環境変数で認証してください（`ctx7 setup` は実行しないでください。各ツールのグローバル設定はこのイメージが管理しているため）。
 - `ai` コンテナと共有していないディレクトリ（`~` など）で実行した場合は、`ai` コンテナの `~/work` で起動します。
 - mise のタスクとしても実行できます（`mise run ai`、`mise run ai claude`）。ただし、trust していない `mise.toml` があるディレクトリでは mise がエラーになるため、`ai` コマンドを直接実行してください（[`mise trust` が必要](#user-コンテナでは-mise-trust-が必要)）。
 
@@ -284,6 +286,7 @@ mise trust mise.toml  # 確認してから trust する
 | Copilot CLI | `~/.copilot` |
 | Kiro CLI | `~/.kiro` と `~/.local/share/kiro-cli`（認証情報は後者の `data.sqlite3`） |
 | Antigravity CLI | `~/.gemini` |
+| Context7 CLI（ctx7） | `~/.config/context7`（認証情報は `credentials.json`） |
 
 - Claude Code のアカウント情報を持つ `.claude.json` は、既定ではホーム直下に置かれて volume に入らないため、`CLAUDE_CONFIG_DIR` で `~/.claude/.claude.json` に移しています。
 
