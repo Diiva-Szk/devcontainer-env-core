@@ -241,9 +241,13 @@ ENV DISPLAY=:1 \
 #   NO_UPDATE_NOTIFIER: 起動時に npm レジストリへ最新版を問い合わせる更新通知を止める。
 #     バージョンは mise と Renovate で管理しており、通知の指示（npm install -g）は mise 管理外の
 #     インストールを促すため。
+#   CTX7_TELEMETRY_DISABLED: ctx7（Context7 CLI）が ctx7.com へ送るテレメトリを止める。
+#     NO_UPDATE_NOTIFIER と同じ考え方。ctx7 の更新通知（npm レジストリへの問い合わせ）は
+#     環境変数では止められない（対話端末のときだけ動くため、エージェントの実行では通常出ない）。
 ENV AGENT_BROWSER_EXECUTABLE_PATH=/usr/lib/chromium/chromium \
     PLAYWRIGHT_MCP_EXECUTABLE_PATH=/usr/lib/chromium/chromium \
-    NO_UPDATE_NOTIFIER=1
+    NO_UPDATE_NOTIFIER=1 \
+    CTX7_TELEMETRY_DISABLED=1
 
 # デスクトップを起動してから共通の entrypoint.sh に処理を渡す。
 ENTRYPOINT ["/usr/local/bin/ai-entrypoint.sh"]
@@ -257,7 +261,8 @@ RUN chmod -R u=rwX,go=rX /opt/mise
 
 USER ${USER_NAME}
 
-# ai 専用ツールをインストール（Kiro CLI / Antigravity CLI / rulesync / Playwright CLI を含む）
+# ai 専用ツールをインストール（Kiro CLI / Antigravity CLI / rulesync / Playwright CLI /
+# Context7 CLI を含む）
 #   バイナリの取得・検証は mise が行う。各 CLI の付属のセットアップコマンドは実行しない。
 #
 # Kiro CLI: `kiro-cli setup` は実行しない（シェル統合を入れない）。
@@ -268,11 +273,16 @@ USER ${USER_NAME}
 #
 # Antigravity CLI: `agy install` はシェルのプロファイルへ ~/.local/bin の PATH を追記するだけで、
 #   PATH は base で設定済みのため実行しない（~/.local/bin に mise 管理外の agy を置かせないため）。
+#
+# Context7 CLI: `ctx7 setup` は実行しない。MCP の設定やルール（CLAUDE.md 等）を
+#   各ツールのグローバル設定へ書き込むコマンドのため、イメージ（sync-home-defaults）が
+#   管理する範囲と衝突する。find-docs スキル（下記）だけを rulesync 経由で展開する。
 RUN mise install && \
     kiro-cli --version && \
     agy --version && \
     rulesync --version && \
-    playwright-cli --version
+    playwright-cli --version && \
+    ctx7 --version
 
 # ai 用の home 初期ファイル（AI ツールの設定と、デスクトップ（Openbox / idesk / KasmVNC）の設定）
 #   【注意】このうち AI ツールの設定（.claude / .codex / .kiro / .gemini 配下）は、
@@ -284,8 +294,8 @@ RUN mise install && \
 COPY --chown=${USER_NAME}:${USER_NAME} ai/home-config "/home/${USER_NAME}"
 RUN chmod 0755 "/home/${USER_NAME}/.vnc/xstartup"
 
-# ブラウザ操作 CLI のスキルを、各 AI エージェントのグローバル設定へ展開する。
-#   スキルの内容は自分では書かない。各 CLI が配布しているものをそのまま使い、
+# AI エージェント向けのスキルを、各 AI エージェントのグローバル設定へ展開する。
+#   スキルの内容は自分では書かない。各 CLI・公式リポジトリが配布しているものをそのまま使い、
 #   mise が固定したツールの版と一致させる（自作すると CLI 更新で陳腐化するため）。
 #
 #   playwright-cli: npm パッケージに SKILL.md が入っているのでイメージ内から取る。
@@ -296,6 +306,17 @@ RUN chmod 0755 "/home/${USER_NAME}/.vnc/xstartup"
 #                     AGENT_BROWSER_SKILLS_DIR から CLI が配る。
 #     skill-data 側は rulesync generate に通さない（core や slack という汎用名のスキルが
 #     全ツールに並び、stub の案内とも二重になるため）。
+#   find-docs（ctx7）: 本来は agent-browser と同じく git transport で公式リポジトリの
+#     ctx7@<版> タグから取得すべきだが、rulesync 24.0.0 は注釈付きタグの解決に失敗する
+#     既知の問題があり使えない。ai/opt/rulesync/.rulesync/skills/find-docs/SKILL.md に
+#     手動で vendoring している（取得元・置換の経緯は docs/MAINTAINING.md）。
+#     COPY ai/opt/rulesync /opt/rulesync で配置され、rulesync install --frozen が
+#     対象にしない（sources に無い）ため、そのまま generate --global に乗る。
+#     取得元の版は ai/opt/rulesync/find-docs.version に記録し（.rulesync/skills/ の
+#     外に置く。中に置くと generate が各ツールのスキルのディレクトリへそのファイルも
+#     コピーしてしまう）、下の RUN で ctx7 --version と照合する。ずれていれば
+#     ビルドを落とす（CLI の版だけが Renovate で上がり、スキルが古いまま残って
+#     気づけない事態を防ぐ）。
 #
 #   取得は rulesync の宣言的ソースで行い、rulesync.lock がコミット SHA と
 #   成果物ごとのハッシュを固定する。--frozen により lock とズレたらビルドを落とす。
@@ -326,10 +347,22 @@ RUN set -eu; \
     fi; \
     mkdir -p .rulesync/skills/playwright-cli; \
     cp "${skill}" .rulesync/skills/playwright-cli/SKILL.md; \
+    find_docs_version="$(cat find-docs.version)"; \
+    ctx7_version="$(ctx7 --version)"; \
+    if [ "${find_docs_version}" != "${ctx7_version}" ]; then \
+      echo "find-docs スキル（vendoring、版 ${find_docs_version}）が ctx7（版 ${ctx7_version}）と揃っていません。" >&2; \
+      echo "ctx7 を更新した版のタグから find-docs/SKILL.md を取り直し、find-docs.version も更新してください（docs/MAINTAINING.md）。" >&2; \
+      exit 1; \
+    fi; \
     rulesync install --frozen; \
     rulesync generate --global; \
     test -f "/home/${USER_NAME}/.claude/skills/agent-browser/SKILL.md"; \
-    test -f "/home/${USER_NAME}/.claude/skills/playwright-cli/SKILL.md"
+    test -f "/home/${USER_NAME}/.claude/skills/playwright-cli/SKILL.md"; \
+    test -f "/home/${USER_NAME}/.claude/skills/find-docs/SKILL.md"; \
+    if grep -qE 'npx ctx7|ctx7@latest|npm install -g' "/home/${USER_NAME}/.claude/skills/find-docs/SKILL.md"; then \
+      echo "find-docs/SKILL.md に npx ctx7 / ctx7@latest / npm install -g が残っています（置換漏れ）。" >&2; \
+      exit 1; \
+    fi
 
 # dev-base で設定した作業ディレクトリに戻す（最終イメージの既定を変えないため）
 WORKDIR "/home/${USER_NAME}"
@@ -362,6 +395,11 @@ RUN install -d /opt/ai-home-defaults && \
 # ここはイメージには無く実行時に作られるため、そのまま volume にすると root 所有の
 # 空ディレクトリになり、ユーザーが書き込めない。先に作っておく。
 RUN install -d -o "${USER_NAME}" -g "${USER_NAME}" "/home/${USER_NAME}/.local/share/kiro-cli"
+
+# Context7 CLI（ctx7）は認証情報を ~/.config/context7/credentials.json に置く
+# （ctx7 login、または CONTEXT7_API_KEY を使わない場合は作られない）。
+# Kiro CLI と同じ理由で、volume にする前に一般ユーザー所有で作っておく。
+RUN install -d -o "${USER_NAME}" -g "${USER_NAME}" "/home/${USER_NAME}/.config/context7"
 
 USER ${USER_NAME}
 

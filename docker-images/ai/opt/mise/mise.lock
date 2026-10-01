@@ -100,20 +100,6 @@ backend = "github:openai/codex"
 specifiers = ["0.159.1"]
 
 [tools."github:openai/codex".options]
-asset_pattern = "codex-package-aarch64-unknown-linux-musl.tar.gz"
-version_prefix = "rust-v"
-
-[tools."github:openai/codex"."platforms.linux-arm64"]
-checksum = "sha256:63b3b5a4e76b4174d651d2d363ac028fdb4961ba47eca9946da3c35267999aec"
-url = "https://github.com/openai/codex/releases/download/rust-v0.159.1/codex-package-aarch64-unknown-linux-musl.tar.gz"
-url_api = "https://api.github.com/repos/openai/codex/releases/assets/599151423"
-
-[[tools."github:openai/codex"]]
-version = "0.159.1"
-backend = "github:openai/codex"
-specifiers = ["0.159.1"]
-
-[tools."github:openai/codex".options]
 asset_pattern = "codex-package-x86_64-unknown-linux-musl.tar.gz"
 version_prefix = "rust-v"
 
@@ -121,6 +107,20 @@ version_prefix = "rust-v"
 checksum = "sha256:9a2dff8e1eb9bad83f52edb6f91175efeb5c68a316f880c95d7770f87a34fc5c"
 url = "https://github.com/openai/codex/releases/download/rust-v0.159.1/codex-package-x86_64-unknown-linux-musl.tar.gz"
 url_api = "https://api.github.com/repos/openai/codex/releases/assets/599140838"
+
+[[tools."github:openai/codex"]]
+version = "0.159.1"
+backend = "github:openai/codex"
+specifiers = ["0.159.1"]
+
+[tools."github:openai/codex".options]
+asset_pattern = "codex-package-aarch64-unknown-linux-musl.tar.gz"
+version_prefix = "rust-v"
+
+[tools."github:openai/codex"."platforms.linux-arm64"]
+checksum = "sha256:63b3b5a4e76b4174d651d2d363ac028fdb4961ba47eca9946da3c35267999aec"
+url = "https://github.com/openai/codex/releases/download/rust-v0.159.1/codex-package-aarch64-unknown-linux-musl.tar.gz"
+url_api = "https://api.github.com/repos/openai/codex/releases/assets/599151423"
 
 [[tools."http:kiro-cli"]]
 version = "2.26.1"
@@ -143,3 +143,9 @@ version = "0.1.22"
 aube = { path = ".mise/locks/npm-playwright-cli/0.1.22", digest = "sha256:f2db4a39ff14290524c7382d2b4b40dea121f00003bb18ba19551c717adb2b17" }
 backend = "npm:@playwright/cli"
 specifiers = ["0.1.22"]
+
+[[tools."npm:ctx7"]]
+version = "0.5.12"
+aube = { path = ".mise/locks/npm-ctx7/0.5.12", digest = "sha256:fb640f1e9fbff853512b04dc589d39611a931b30cb95caade6ae367a021d1a83" }
+backend = "npm:ctx7"
+specifiers = ["0.5.12"]

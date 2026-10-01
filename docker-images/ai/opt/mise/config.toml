@@ -30,6 +30,14 @@
 #   ブラウザは Debian の Chromium を使う（Dockerfile の PLAYWRIGHT_MCP_EXECUTABLE_PATH）。
 "npm:@playwright/cli" = "0.1.22"
 
+# Context7 CLI（ライブラリの最新ドキュメントを引く CLI）
+#   npm でのみ配布されているため npm backend で入れる（サイドカーは playwright-cli と同じ扱い）。
+#   スキル（find-docs）は opt/rulesync/.rulesync/skills/find-docs/SKILL.md に、
+#   公式リポジトリの同じ版のタグから取得した内容を vendoring している（rulesync が
+#   注釈付きタグ（ctx7@<版> 形式）を解決できないため。dyoshikawa/rulesync 側の既知の問題）。
+#   版を変えるときは SKILL.md も同じタグから取り直すこと。
+"npm:ctx7" = "0.5.12"
+
 # OpenAI Codex CLI
 #   aqua backend では linux 向け成果物を解決できず lock が生成されなかったため、github backend で取得する。
 #   タグは rust-v0.120.0 形式。静的リンクの musl 版を使う。

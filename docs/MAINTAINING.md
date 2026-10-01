@@ -37,7 +37,7 @@ Feature（`devcontainer-features/` 配下）には `Dockerfile` を含めず、�
 │   │   └── usr/local/bin/        # entrypoint.sh
 │   ├── ai/
 │   │   ├── opt/mise/             # mise の設定と lock（global スコープ）
-│   │   ├── opt/rulesync/         # ブラウザ操作 CLI のスキルの取得と各ツールへの展開（rulesync.jsonc / rulesync.lock）
+│   │   ├── opt/rulesync/         # AI ツールのスキルの取得と各ツールへの展開（rulesync.jsonc / rulesync.lock / find-docs.version / find-docs の vendoring）
 │   │   ├── opt/agent-browser-skills/ # agent-browser のスキル本体の取得（rulesync.jsonc / rulesync.lock）
 │   │   ├── etc/chromium.d/       # Chromium の起動オプション
 │   │   ├── etc/chromium/policies/ # Chromium のポリシー（Antigravity のブラウザ拡張を入れる）
@@ -111,6 +111,7 @@ CLI ツールと言語ランタイム（Python / Node.js）は [mise](https://mi
 | Renovate CLI（user） | `docker-images/user/opt/renovate/package.json` / `package-lock.json` | `npm ci --ignore-scripts` |
 | KasmVNC（ai） | `docker-images/Dockerfile` の `KASMVNC_VERSION` / `KASMVNC_SHA256_*` | GitHub リリースの `.deb` を sha256 で検証して `apt-get install` |
 | ブラウザ操作 CLI のスキル（ai） | `docker-images/ai/opt/rulesync/` / `docker-images/ai/opt/agent-browser-skills/`（`rulesync.jsonc` と `rulesync.lock`） | `rulesync install --frozen` で取得し `rulesync generate --global` で各ツールへ展開 |
+| find-docs スキル（ai） | `docker-images/ai/opt/rulesync/.rulesync/skills/find-docs/SKILL.md`（vendoring） | `rulesync generate --global` で各ツールへ展開（取得は手動。[AI ツールのスキル](#ai-ツールのスキルai)を参照） |
 | デスクトップ・Chromium（ai）、socat（user） | `docker-images/Dockerfile` | Debian のパッケージ（`apt-get`） |
 
 - Python パッケージを変更したら、`docker-images/dev-base/opt/python` で次を実行して `requirements.txt` を再生成します。オプションは Renovate がヘッダーから解釈できるよう `=` でつなぎます。
@@ -126,14 +127,15 @@ CLI ツールと言語ランタイム（Python / Node.js）は [mise](https://mi
 - ブラウザは Google Chrome ではなく Debian の Chromium を使います（Google Chrome には Linux arm64 版が無いため）。
 - Playwright CLI・agent-browser（ai）も、同梱のブラウザはダウンロードせず、Debian の Chromium を `PLAYWRIGHT_MCP_EXECUTABLE_PATH` / `AGENT_BROWSER_EXECUTABLE_PATH`（ともに `/usr/lib/chromium/chromium`）で使います。`/usr/bin/chromium` はラッパーで、`/etc/chromium.d/ai-desktop` のリモートデバッグ用ポートやプロファイルの指定を付け、デスクトップの Chromium と衝突するため実体を指定しています。
 
-### ブラウザ操作 CLI のスキル（ai）
+### AI ツールのスキル（ai）
 
-スキルの内容は書きません。各 CLI が配布しているものをそのまま使い、mise が固定したツールの版と一致させます（自作すると CLI の更新で陳腐化するため）。
+スキルの内容は書きません。各 CLI・公式リポジトリが配布しているものをそのまま使い、mise が固定したツールの版と一致させます（自作すると CLI の更新で陳腐化するため）。
 
 - **playwright-cli** — npm パッケージ内の `SKILL.md` をイメージ内から取ります。
 - **agent-browser** — GitHub リリースの素のバイナリにはスキルが入らないため、リポジトリから取ります。スキルは2層構造で、両方が必要です。
   - `skills/` … 各ツールへ渡す discovery stub（frontmatter に `hidden: true`）
   - `skill-data/` … stub が `agent-browser skills get core` で読ませる本体。`AGENT_BROWSER_SKILLS_DIR` から CLI が配る
+- **find-docs（Context7 CLI / ctx7）** — 下記「find-docs の vendoring」を参照。
 
 取得は rulesync の宣言的ソースで行い、`rulesync.lock` がコミット SHA と成果物ごとのハッシュを固定します。ビルドは `rulesync install --frozen` なので、lock とズレていれば失敗します。GitHub API は匿名だと 60回/時で制限されビルドが落ちるため、**git transport** を使います。
 
@@ -150,6 +152,30 @@ bash scripts/update-rulesync-locks.sh
 `--update` は必須です。付けないと rulesync は lock にある解決済みコミットを再利用するため、`ref` を変えても lock が追従しません。また `rulesync.lock` は解決した時刻（`resolvedAt`）を持つので、時刻を除いた内容が同じなら旧 lock を残します。これをしないと、lock を push するワークフローが毎回差分を作り、その push がワークフロー自身を再び起動して止まらなくなります（`mise.lock` の並び順を握り潰しているのと同じ理由です）。
 
 `update-rulesync-lock.yml` は `update-mise-lock.yml` と同じ構成です。PR のコードを実行する `generate` ジョブと、書き込み用トークンを扱う `push` ジョブを分離し、`push` 側は受け取った lock の形式（`lockfileVersion`、解決済みコミットが40桁の16進であること、成果物ごとの integrity が sha256 であること）を検証してから決まったパスにだけ書き込みます。rulesync は mise で管理しているため、`generate` ジョブは Dockerfile の mise ステージと同じイメージから mise を取り出して `mise x` を使い、ai の設定に書かれたバージョンの rulesync で lock を作り直します。
+
+#### find-docs の vendoring
+
+`find-docs`（Context7 CLI / ctx7 のドキュメント検索スキル）は、他のスキルと違い `rulesync.jsonc` の `sources` に無く、`docker-images/ai/opt/rulesync/.rulesync/skills/find-docs/SKILL.md` へ直接コミットしています（vendoring）。
+
+**理由:** 本来は agent-browser と同じく git transport で、公式リポジトリ（`upstash/context7`）の `ctx7@<版>` タグから取得するべきです。しかし `ctx7@<版>` は**注釈付きタグ**で、rulesync 24.0.0 の git transport はこれを解決できません（`git ls-remote` の出力の1行目（タグオブジェクトの SHA）を `resolvedRef` にしてしまい、チェックアウト後の `git rev-parse HEAD`（コミットの SHA、`ls-remote` では2行目の `^{}` 側）と一致せず `GitClientError: Checked out commit ..., expected locked commit ...` で失敗します）。agent-browser のタグ（`v0.38.1`）は軽量タグのためこの問題が起きません。
+
+**版のずれの検出:** `npm:ctx7` は Renovate が CLI 本体の版を自動で上げますが、vendoring した `SKILL.md` は連動して更新されません。CLI とスキルの版がずれたまま黙って通ることを防ぐため、取得元の版を `docker-images/ai/opt/rulesync/find-docs.version` に記録しています。このファイルは `.rulesync/skills/find-docs/` の**外**に置いています（中に置くと `rulesync generate` が各ツールのスキルのディレクトリへ一緒にコピーしてしまうため）。Dockerfile のビルドステップで `find-docs.version` の内容と `ctx7 --version` の出力を比較し、ずれていればビルドを失敗させます。そのため、ctx7 の版を Renovate が上げた PR は、スキルを取り直すまでビルドが落ち続けます。
+
+**取得・置換の手順（ctx7 を更新するとき）:**
+
+1. 新しい版のタグ（`ctx7@<新版>`）から `skills/find-docs/SKILL.md` を取得します（例: `git clone --depth 1 --branch ctx7@<新版> https://github.com/upstash/context7.git`）。
+2. 取得した `SKILL.md` を `docker-images/ai/opt/rulesync/.rulesync/skills/find-docs/SKILL.md` に上書きします。
+3. `python3 docker-images/ai/opt/rulesync/patch-find-docs.py docker-images/ai/opt/rulesync/.rulesync/skills/find-docs/SKILL.md` を実行します。上流のスキルはすべてのコマンドを `npx ctx7@latest ...` で実行させる前提で書かれているため、これをそのまま配ると mise で固定した版ではなく実行時に npm から最新版を取得してしまいます。このスクリプトが、インストール手順の段落を「`ctx7` はイメージに入っている」という1文へ置き換え、残りの `npx ctx7@latest` を `ctx7` へ置換します。
+4. `docker-images/ai/opt/rulesync/find-docs.version` を新しい版の番号（`ctx7 --version` と同じ表記）に書き換えます。
+5. mise 側の `npm:ctx7` のバージョンと必ず揃えます（`docker-images/ai/opt/mise/config.toml`）。
+6. `docker compose build ai` で、版の照合（`find-docs.version` と `ctx7 --version`）と置換の確認（`npx ctx7` / `ctx7@latest` / `npm install -g` が残っていないこと）のチェックが通ることを確認します。
+
+**置換が失敗したとき:** `patch-find-docs.py` は、想定した文字列（`Run commands with `npx ctx7@latest` ...` の段落など）が見つからない場合に失敗します。これは上流のスキルの文言が変わったことを意味するため、黙って `npx ctx7@latest` が残ることはありません。失敗した場合は、取得した新しい `SKILL.md` の文言を見て `patch-find-docs.py` の正規表現を直してください。
+
+**rulesync が直った場合:** rulesync の git transport が注釈付きタグを解決できるようになったら、vendoring をやめて agent-browser と同じ形（`rulesync.jsonc` の `sources` に git transport のエントリを追加）へ移行してください。移行後は次の変更が必要です。
+
+- `.rulesync/skills/find-docs/` の手動配置、`find-docs.version` と版の照合チェックは削除します（lock がコミット SHA を固定するため不要になります）。
+- `npx ctx7@latest` の置換自体は引き続き必要です。ビルドで取得したあとに `patch-find-docs.py` を呼ぶ処理を Dockerfile に追加してください（取得元が変わるだけで、置換そのものは今と同じ理由で必要です）。
 
 ## ビルドキャッシュ
 
@@ -250,8 +276,9 @@ flowchart TD
 | --- | --- |
 | mise の aqua / github / core backend のツール | Renovate の mise マネージャ（lock は `skipArtifactsUpdate` で更新させない） |
 | Kiro CLI（http backend） | `customManagers` の正規表現 + `customDatasources`（latest マニフェスト） |
-| mise の npm backend のツール（Playwright CLI） | Renovate の mise マネージャ（npm データソース）。依存グラフのサイドカー（`.mise/locks/`）は Renovate の対象外にし、`update-mise-lock.yml` が作り直す |
+| mise の npm backend のツール（Playwright CLI、ctx7） | Renovate の mise マネージャ（npm データソース）。依存グラフのサイドカー（`.mise/locks/`）は Renovate の対象外にし、`update-mise-lock.yml` が作り直す |
 | rulesync の取得元の `ref`（agent-browser のスキル） | `customManagers` の正規表現（`// renovate:` コメント）。lock は `update-rulesync-lock.yml` が作り直す |
+| find-docs スキル（ctx7、vendoring） | Renovate の対象外。ctx7 の版を更新するたびに手動で取り直す（[find-docs の vendoring](#find-docs-の-vendoring)）。rulesync の git transport が注釈付きタグに対応したら、agent-browser と同じ `customManagers` の正規表現に移行する |
 | Renovate 本体のコンテナ / BuildKit | `customManagers` の正規表現（`CLI_IMAGE_TAG` / `BUILDKIT_IMAGE_TAG` のバージョン + digest） |
 | Python パッケージ | pip-compile マネージャ（`requirements.txt` のヘッダーのコマンドで再生成） |
 | VS Code 拡張機能 | `customManagers` の正規表現（`// renovate:` コメント）。Marketplace は参照できないため GitHub のリリースを代理指標にし、`release-features.yml` が `scripts/check-vscode-extensions.sh` で指定の版が Marketplace に存在することを検査する（未公開の版は `renovate.json5` の `allowedVersions` で除外する） |
