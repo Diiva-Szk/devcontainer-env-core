@@ -1,6 +1,6 @@
 {
     "id": "vscode-common",
-    "version": "1.1.1",
+    "version": "1.2.0",
     "name": "VS Code Common (shared settings, extensions & allowlist)",
     "description": "共通のVS Code設定・拡張機能と、当リポジトリが管理する全拡張機能の許可リスト(extensions.allowed)を提供します。他のvscode-*Featureを使う場合も、必ず本Featureを併せて導入してください。",
     "documentationURL": "https://github.com/Diiva-Szk/devcontainer-env-core/tree/main/devcontainer-features/vscode-common",
@@ -15,6 +15,10 @@
                 "markdown.extension.list.indentationSize": "inherit",
                 "markdown.extension.print.absoluteImgPath": false,
                 "markdown.extension.tableFormatter.enabled": false,
+                // shd101wyy.markdown-preview-enhanced の設定
+                // PDF・PNG 等のエクスポート（Puppeteer）に使う Chrome。
+                // devcontainer-env-core の user コンテナにあるラッパー（コンテナ用の起動オプションを付ける）を指す。
+                "markdown-preview-enhanced.chromePath": "/usr/local/bin/google-chrome",
                 // extensions.allowed は「値がオブジェクトである単一の設定キー」であり、
                 // 複数Featureが定義した場合のマージ挙動は仕様上ツール依存（VS Code側は未文書）。
                 // 後勝ちで丸ごと置換される可能性があるため、キーが排他でも分割は危険。

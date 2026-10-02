@@ -1,0 +1,27 @@
+#!/bin/bash
+###########################################################################
+# google-chrome
+#   Google Chrome をコンテナ用の起動オプション付きで起動するラッパー（user コンテナ用）。
+#   Chrome には Debian の Chromium（/etc/chromium.d/）のような起動オプションの設定ファイルが
+#   無いため、このラッパーで付ける。/usr/bin/google-chrome-stable もこのラッパーを指す
+#   （Dockerfile で dpkg-divert している）。
+#   VS Code の拡張機能（Markdown Preview Enhanced の chromePath など）はこのラッパーを指定し、
+#   Puppeteer からヘッドレスで起動する。
+#   ai コンテナでは、リモートデバッグ等を付ける ai 用のラッパー
+#   （docker-images/ai/usr/local/bin/google-chrome）に置き換わる。
+#
+#   --no-sandbox / --test-type:
+#     コンテナ内では Chrome のサンドボックスを作れない（user namespace 等の権限が無い）ため無効にする。
+#     --test-type は --no-sandbox の警告バーを出さないためのもの。
+#   --disable-dev-shm-usage: コンテナの /dev/shm は小さい（既定 64MB）ため /tmp を使わせる。
+###########################################################################
+exec /opt/google/chrome/google-chrome \
+  --no-sandbox \
+  --test-type \
+  --no-first-run \
+  --no-default-browser-check \
+  --password-store=basic \
+  --disable-dev-shm-usage \
+  --disable-gpu \
+  --disable-features=Translate \
+  "$@"

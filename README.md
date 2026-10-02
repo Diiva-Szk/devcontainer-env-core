@@ -62,15 +62,15 @@ flowchart LR
 
 **`ai` コンテナ** — [docker-images/ai/opt/mise/config.toml](docker-images/ai/opt/mise/config.toml)
 
-Claude Code、OpenAI Codex CLI、GitHub Copilot CLI、GitHub Copilot Language Server、Amazon Kiro CLI、Google Antigravity CLI、rulesync、Playwright CLI・agent-browser（ブラウザは Debian の Chromium を使う）、Context7 CLI（ctx7）
+Claude Code、OpenAI Codex CLI、GitHub Copilot CLI、GitHub Copilot Language Server、Amazon Kiro CLI、Google Antigravity CLI、rulesync、Playwright CLI・agent-browser（ブラウザは Google Chrome を使う）、Context7 CLI（ctx7）
 
-デスクトップ: KasmVNC、Openbox、Chromium（Antigravity のブラウザ拡張をポリシーで導入）、st（ターミナル）、fcitx5-mozc（日本語入力）
+デスクトップ: KasmVNC、Openbox、Google Chrome、st（ターミナル）、fcitx5-mozc（日本語入力）
 
 Playwright CLI・agent-browser の使い方スキルと、Context7 CLI（ctx7）のドキュメント検索スキル（find-docs）は、各 CLI・公式リポジトリが配布しているものをビルド時に取得し、rulesync で Claude Code・Codex・Copilot・Kiro・Antigravity のグローバル設定へ展開しています。
 
 **`user` コンテナ** — [docker-images/user/opt/mise/config.toml](docker-images/user/opt/mise/config.toml)
 
-Docker CLI、Renovate CLI、sudo、`ai` コンテナのデスクトップを開く `ai-desktop`（`aid`）
+Docker CLI、Renovate CLI、sudo、`ai` コンテナのデスクトップを開く `ai-desktop`（`aid`）、Google Chrome（デスクトップなし。VS Code の拡張機能がヘッドレスで使う）
 
 ## 必要なもの
 
@@ -165,7 +165,7 @@ ctx7            # ライブラリの最新ドキュメントを引く（Context7
 
 ### 6. `ai` コンテナのデスクトップを見る
 
-`ai` コンテナではデスクトップ（KasmVNC）が起動しており、AI エージェントが操作するブラウザ（Chromium）の画面をホストのブラウザで見られます。`user` コンテナのターミナル（VS Code）で `ai-desktop`（短縮形: `aid`）を実行すると、ホストのブラウザでデスクトップが開きます。
+`ai` コンテナではデスクトップ（KasmVNC）が起動しており、AI エージェントが操作するブラウザ（Google Chrome）の画面をホストのブラウザで見られます。`user` コンテナのターミナル（VS Code）で `ai-desktop`（短縮形: `aid`）を実行すると、ホストのブラウザでデスクトップが開きます。
 
 ```sh
 ai-desktop            # ポートの転送を開始して、ホストのブラウザで開く
@@ -190,7 +190,7 @@ flowchart LR
 - ブラウザが自動で開かない場合（VS Code 以外のターミナルなど）は、VS Code の「ポート」タブで 8444 が転送されていることを確認し、表示された URL を開いてください。
 - mise のタスクとしても実行できます（`mise run ai-desktop`、短縮形 `mise run aid`、`mise run aid stop`）。ただし、trust していない `mise.toml` があるディレクトリでは mise がエラーになるため、`ai-desktop` コマンドを直接実行してください（[`mise trust` が必要](#user-コンテナでは-mise-trust-が必要)）。
 - デスクトップが起動していない場合は、`ai` コンテナで `start-desktop` を実行すると起動し直せます（ログは `ai` コンテナの `~/.vnc/`）。
-- `ai` コンテナのシェルから起動した GUI アプリ（`chromium` など）も、このデスクトップに表示されます。Chromium は DevTools Protocol（`127.0.0.1:9222`、`ai` コンテナ内のみ）で AI エージェントから操作できます。
+- `ai` コンテナのシェルから起動した GUI アプリ（`google-chrome` など）も、このデスクトップに表示されます。Chrome は DevTools Protocol（`127.0.0.1:9222`、`ai` コンテナ内のみ）で AI エージェントから操作できます。
 
 ## VS Code の Feature
 
@@ -201,6 +201,7 @@ flowchart LR
 | `ghcr.io/diiva-szk/devcontainer-env-core/vscode-terraform` | Terraform 開発用の拡張機能 |
 
 - 許可リストにない拡張機能は VS Code にインストールできません。`vscode-python` / `vscode-terraform` を使う場合も、許可リストを提供する `vscode-common` を必ず併用してください。
+- `vscode-common` は Markdown Preview Enhanced の `chromePath` に `user` コンテナの Google Chrome（`/usr/local/bin/google-chrome`）を設定します。PDF・PNG などのエクスポートで使われます。
 - `:1` と指定すると、メジャーバージョン 1 の最新版が使われます。
 
 ## ツールの追加・バージョンの上書き
