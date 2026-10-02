@@ -64,7 +64,7 @@ flowchart LR
 
 Claude Code、OpenAI Codex CLI、GitHub Copilot CLI、GitHub Copilot Language Server、Amazon Kiro CLI、Google Antigravity CLI、rulesync、Playwright CLI・agent-browser（ブラウザは Google Chrome を使う）、Context7 CLI（ctx7）
 
-デスクトップ: KasmVNC、Openbox、Google Chrome（Antigravity のブラウザ拡張をポリシーで導入）、st（ターミナル）、fcitx5-mozc（日本語入力）
+デスクトップ: KasmVNC、Openbox、Google Chrome、st（ターミナル）、fcitx5-mozc（日本語入力）
 
 Playwright CLI・agent-browser の使い方スキルと、Context7 CLI（ctx7）のドキュメント検索スキル（find-docs）は、各 CLI・公式リポジトリが配布しているものをビルド時に取得し、rulesync で Claude Code・Codex・Copilot・Kiro・Antigravity のグローバル設定へ展開しています。
 

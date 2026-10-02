@@ -285,15 +285,12 @@ RUN arch="$(dpkg --print-architecture)" && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/* "${tmp_dir}"
 
-# 拡張機能のポリシーと、デスクトップの起動スクリプト、ai 用の google-chrome（ラッパー）。
+# デスクトップの起動スクリプトと、ai 用の google-chrome（ラッパー）。
 #   google-chrome は dev-base で置いた共通のラッパーを、リモートデバッグ等を付ける ai 用のものに置き換える。
-#   拡張機能（Antigravity のブラウザ拡張）はポリシー（ExtensionSettings の normal_installed）で
-#   Chrome ウェブストアから入れる。
-COPY --chown=root:root ai/etc/opt/chrome/policies /etc/opt/chrome/policies
 COPY --chown=root:root ai/usr/share/icons/st /usr/share/icons/st
 COPY --chown=root:root ai/usr/local/bin /usr/local/bin
 
-RUN chmod -R u=rwX,go=rX /etc/opt/chrome/policies /usr/share/icons/st && \
+RUN chmod -R u=rwX,go=rX /usr/share/icons/st && \
     chmod 0755 /usr/local/bin/start-desktop /usr/local/bin/ai-entrypoint.sh \
                /usr/local/bin/sync-home-defaults /usr/local/bin/google-chrome
 

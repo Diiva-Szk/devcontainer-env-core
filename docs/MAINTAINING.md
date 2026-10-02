@@ -39,7 +39,6 @@ Feature（`devcontainer-features/` 配下）には `Dockerfile` を含めず、�
 │   │   ├── opt/mise/             # mise の設定と lock（global スコープ）
 │   │   ├── opt/rulesync/         # AI ツールのスキルの取得と各ツールへの展開（rulesync.jsonc / rulesync.lock / find-docs.version / find-docs の vendoring）
 │   │   ├── opt/agent-browser-skills/ # agent-browser のスキル本体の取得（rulesync.jsonc / rulesync.lock）
-│   │   ├── etc/opt/chrome/policies/ # Google Chrome のポリシー（Antigravity のブラウザ拡張を入れる）
 │   │   ├── usr/local/bin/        # ai-entrypoint.sh / start-desktop（デスクトップの起動）/ sync-home-defaults / google-chrome（ai 用のラッパー。dev-base のものを置き換える）
 │   │   ├── usr/share/icons/st/   # st のアイコン
 │   │   └── home-config/          # AI エージェントとデスクトップ（KasmVNC / Openbox / idesk）の設定ファイル
