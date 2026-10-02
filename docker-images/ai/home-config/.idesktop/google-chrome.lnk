@@ -1,0 +1,9 @@
+table Icon
+  Caption: Google Chrome
+  Command: /usr/local/bin/google-chrome
+  Icon: /opt/google/chrome/product_logo_48.png
+  Width: 48
+  Height: 48
+  X: 50
+  Y: 50
+end

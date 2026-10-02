@@ -19,7 +19,7 @@
 # agent-browser（コーディングエージェント向けのブラウザ操作 CLI）
 #   npm でも配布されているが、そちらは全プラットフォームのバイナリを1パッケージに同梱するため
 #   展開後 119MB になる。aqua backend なら単一バイナリ（linux-x64 は静的リンクの musl 版）で済む。
-#   ブラウザは Debian の Chromium を使う（Dockerfile の AGENT_BROWSER_EXECUTABLE_PATH）。
+#   ブラウザは Google Chrome を使う（Dockerfile の AGENT_BROWSER_EXECUTABLE_PATH）。
 #   `agent-browser install` による Chrome for Testing のダウンロードは不要。
 "aqua:vercel-labs/agent-browser" = "0.38.1"
 
@@ -27,7 +27,7 @@
 #   npm でのみ配布されているため npm backend で入れる。mise lock が依存グラフを
 #   integrity 付きで .mise/locks/ のサイドカー（package.json / aube-lock.yaml）に書き出し、
 #   mise.lock にはその digest が記録される。サイドカーも mise.lock と一緒にコミットすること。
-#   ブラウザは Debian の Chromium を使う（Dockerfile の PLAYWRIGHT_MCP_EXECUTABLE_PATH）。
+#   ブラウザは Google Chrome を使う（Dockerfile の PLAYWRIGHT_MCP_EXECUTABLE_PATH）。
 "npm:@playwright/cli" = "0.1.22"
 
 # Context7 CLI（ライブラリの最新ドキュメントを引く CLI）
