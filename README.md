@@ -70,7 +70,7 @@ Playwright CLI・agent-browser の使い方スキルと、Context7 CLI（ctx7）
 
 **`user` コンテナ** — [docker-images/user/opt/mise/config.toml](docker-images/user/opt/mise/config.toml)
 
-Docker CLI、Renovate CLI、sudo、`ai` コンテナのデスクトップを開く `ai-desktop`（`aid`）
+Docker CLI、Renovate CLI、sudo、`ai` コンテナのデスクトップを開く `ai-desktop`（`aid`）、Google Chrome（デスクトップなし。VS Code の拡張機能がヘッドレスで使う）
 
 ## 必要なもの
 
@@ -201,6 +201,7 @@ flowchart LR
 | `ghcr.io/diiva-szk/devcontainer-env-core/vscode-terraform` | Terraform 開発用の拡張機能 |
 
 - 許可リストにない拡張機能は VS Code にインストールできません。`vscode-python` / `vscode-terraform` を使う場合も、許可リストを提供する `vscode-common` を必ず併用してください。
+- `vscode-common` は Markdown Preview Enhanced の `chromePath` に `user` コンテナの Google Chrome（`/usr/local/bin/google-chrome`）を設定します。PDF・PNG などのエクスポートで使われます。
 - `:1` と指定すると、メジャーバージョン 1 の最新版が使われます。
 
 ## ツールの追加・バージョンの上書き

@@ -34,13 +34,13 @@ Feature（`devcontainer-features/` 配下）には `Dockerfile` を含めず、�
 │   │   ├── etc/mise/             # mise の設定と lock（system スコープ）
 │   │   ├── etc/profile.d/        # ログインシェルで mise shims の PATH を復元
 │   │   ├── opt/python/           # Python パッケージ（requirements.in / requirements.txt）
-│   │   └── usr/local/bin/        # entrypoint.sh
+│   │   └── usr/local/bin/        # entrypoint.sh / google-chrome（共通の起動オプションを付けるラッパー。user 用）
 │   ├── ai/
 │   │   ├── opt/mise/             # mise の設定と lock（global スコープ）
 │   │   ├── opt/rulesync/         # AI ツールのスキルの取得と各ツールへの展開（rulesync.jsonc / rulesync.lock / find-docs.version / find-docs の vendoring）
 │   │   ├── opt/agent-browser-skills/ # agent-browser のスキル本体の取得（rulesync.jsonc / rulesync.lock）
 │   │   ├── etc/opt/chrome/policies/ # Google Chrome のポリシー（Antigravity のブラウザ拡張を入れる）
-│   │   ├── usr/local/bin/        # ai-entrypoint.sh / start-desktop（デスクトップの起動）/ sync-home-defaults / google-chrome（起動オプションを付けるラッパー）
+│   │   ├── usr/local/bin/        # ai-entrypoint.sh / start-desktop（デスクトップの起動）/ sync-home-defaults / google-chrome（ai 用のラッパー。dev-base のものを置き換える）
 │   │   ├── usr/share/icons/st/   # st のアイコン
 │   │   └── home-config/          # AI エージェントとデスクトップ（KasmVNC / Openbox / idesk）の設定ファイル
 │   └── user/
@@ -112,7 +112,7 @@ CLI ツールと言語ランタイム（Python / Node.js）は [mise](https://mi
 | ブラウザ操作 CLI のスキル（ai） | `docker-images/ai/opt/rulesync/` / `docker-images/ai/opt/agent-browser-skills/`（`rulesync.jsonc` と `rulesync.lock`） | `rulesync install --frozen` で取得し `rulesync generate --global` で各ツールへ展開 |
 | find-docs スキル（ai） | `docker-images/ai/opt/rulesync/.rulesync/skills/find-docs/SKILL.md`（vendoring） | `rulesync generate --global` で各ツールへ展開（取得は手動。[AI ツールのスキル](#ai-ツールのスキルai)を参照） |
 | デスクトップ（ai）、socat（user） | `docker-images/Dockerfile` | Debian のパッケージ（`apt-get`） |
-| Google Chrome（ai） | `docker-images/Dockerfile` | Google の apt リポジトリ（署名鍵の主鍵のフィンガープリントを `GOOGLE_LINUX_SIGNING_KEY_FPR` で照合）から `apt-get install` |
+| Google Chrome（ai / user） | `docker-images/Dockerfile` | Google の apt リポジトリ（署名鍵の主鍵のフィンガープリントを `GOOGLE_LINUX_SIGNING_KEY_FPR` で照合）から `apt-get install` |
 
 - Python パッケージを変更したら、`docker-images/dev-base/opt/python` で次を実行して `requirements.txt` を再生成します。オプションは Renovate がヘッダーから解釈できるよう `=` でつなぎます。
 
@@ -124,10 +124,10 @@ CLI ツールと言語ランタイム（Python / Node.js）は [mise](https://mi
 - Renovate CLI はインストールスクリプトを実行しないため、re2 のネイティブ拡張は入らず、標準の RegExp にフォールバックします。
 - KasmVNC は Renovate の更新対象外です（アーキテクチャごとの sha256 を合わせて更新する必要があるため）。更新するときは Dockerfile のコメントの手順で、`KASMVNC_VERSION` と amd64 / arm64 の sha256 を書き換えてください。
 - KasmVNC の TLS 証明書は、`ai` コンテナの起動時に `start-desktop` がコンテナごとに生成します。`ssl-cert` の証明書（snakeoil）はビルド時に作られ、公開しているビルドキャッシュを通じて全利用者で同じ秘密鍵になるため使いません。
-- ブラウザは Google Chrome を使います（2026年7月から Linux arm64 版も Google の apt リポジトリで提供されています。それまでは arm64 版が無かったため Debian の Chromium を使っていました）。
+- ブラウザは Google Chrome を使います。`dev-base` で入れるため `ai` と `user` の両方にあります（`ai` はデスクトップで AI エージェントが操作するブラウザ、`user` は VS Code の拡張機能（Markdown Preview Enhanced の `chromePath`）がヘッドレスで使うブラウザ）。日本語・絵文字のフォント（`fonts-noto-cjk` / `fonts-noto-color-emoji`）も同じ層で入れます（2026年7月から Linux arm64 版も Google の apt リポジトリで提供されています。それまでは arm64 版が無かったため Debian の Chromium を使っていました）。
 - Google Chrome は版を固定しません（Debian のパッケージと同じく、層を作り直したときの stable が入ります）。Google のリポジトリは古い版の `.deb` を残さないため、版と sha256 を固定すると新しい版が出た時点でビルドできなくなります。リポジトリの署名鍵は、Google が署名用のサブ鍵をほぼ毎年追加するため、リポジトリに置かずビルド時に取得し、主鍵のフィンガープリントだけを照合します。導入後は apt のソースと鍵（postinst が書き出す `/usr/share/keyrings/google-chrome.gpg` を含む）を消し、postinst が独自のソースを追加しないよう `/etc/default/google-chrome` に `repo_add_once="false"` を書きます。
-- Chrome には Debian の Chromium（`/etc/chromium.d/`）のような起動オプションの設定ファイルが無いため、ラッパー `/usr/local/bin/google-chrome`（`docker-images/ai/usr/local/bin/google-chrome`）でサンドボックスの無効化・リモートデバッグ用ポート・専用プロファイルなどを付けます。`/usr/bin/google-chrome-stable` は `dpkg-divert` で退避してラッパーを指すようにしているため、`google-chrome` / `x-www-browser` の alternatives やデスクトップファイル（`xdg-open`）から起動しても同じ設定になります。
-- `chrome-sandbox` の setuid ビットは外しています。コンテナ内では SUID のサンドボックスも使えず（`--no-sandbox` で起動します）、ai コンテナに root への権限昇格の経路になり得る SUID バイナリを置かないためです。
+- Chrome には Debian の Chromium（`/etc/chromium.d/`）のような起動オプションの設定ファイルが無いため、ラッパー `/usr/local/bin/google-chrome` で付けます。`dev-base` では共通のラッパー（`docker-images/dev-base/usr/local/bin/google-chrome`。サンドボックスの無効化など）を置き、`ai` ステージで、リモートデバッグ用ポート・専用プロファイルも付ける `ai` 用のラッパー（`docker-images/ai/usr/local/bin/google-chrome`）に置き換えます。共通の起動オプションを変えるときは両方を合わせてください。`/usr/bin/google-chrome-stable` は `dpkg-divert` で退避してラッパーを指すようにしているため、`google-chrome` / `x-www-browser` の alternatives やデスクトップファイル（`xdg-open`）から起動しても同じ設定になります。
+- `chrome-sandbox` の setuid ビットは外しています。コンテナ内では SUID のサンドボックスも使えず（`--no-sandbox` で起動します）、root への権限昇格の経路になり得る SUID バイナリを置かないためです。
 - Playwright CLI・agent-browser（ai）も、同梱のブラウザはダウンロードせず、Google Chrome を `PLAYWRIGHT_MCP_EXECUTABLE_PATH` / `AGENT_BROWSER_EXECUTABLE_PATH`（ともに `/opt/google/chrome/chrome`）で使います。ラッパーはリモートデバッグ用ポートやプロファイルを指定し、デスクトップの Chrome と衝突するため実体を指定しています。
 
 ### AI ツールのスキル（ai）

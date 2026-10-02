@@ -94,6 +94,82 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/*
 
 # -------------------------------------------------------------------
+# Google Chrome（Google の apt リポジトリから導入する。amd64 / arm64 とも提供されている）。
+#   ai はデスクトップで AI エージェントが操作するブラウザとして、user は VS Code の拡張機能
+#   （Markdown Preview Enhanced の PDF・PNG のエクスポートなど）がヘッドレスで使うブラウザとして使う。
+#   日本語・絵文字を表示できるよう、フォント（fonts-noto-cjk / fonts-noto-color-emoji）も入れる。
+#   版を固定せず更新されにくい層のため、mise install より前に置く。
+# -------------------------------------------------------------------
+#   リポジトリの署名鍵はビルド時に取得し、主鍵のフィンガープリントを照合してから使う。
+#   鍵ファイルをリポジトリに置かないのは、Google が署名用のサブ鍵をほぼ毎年追加するため
+#   （置いた鍵が古くなると、新しいサブ鍵で署名されたリポジトリを検証できずビルドが落ちる）。
+#   照合用の gpg はこの RUN の中でだけ入れて消す。gpg-agent は入れないため、鍵は取り込まず
+#   （--import は gpg-agent を起動しようとして失敗する）、--show-keys で中身を表示して照合し、
+#   取得した ASCII 形式の鍵（.asc）をそのまま apt の Signed-By に渡す。
+#   サブ鍵が主鍵に正しく結び付いているかは apt の署名検証（sqv）が確かめる。
+#   Debian のパッケージと同じく版は固定しない（この層を作り直したときの stable が入る）。
+#   Google のリポジトリは古い版の .deb を残さないため、版と sha256 を固定すると、
+#   新しい版が出た時点で固定した版を取得できなくなりビルドが落ちる。
+#
+#   起動オプションは Debian の Chromium（/etc/chromium.d/）のように設定ファイルで渡せないため、
+#   ラッパー（/usr/local/bin/google-chrome）で付ける。ラッパーは共通のもの（dev-base/usr/local/bin/）を
+#   ここで置き、ai ステージでリモートデバッグ等を付ける ai 用のもの（ai/usr/local/bin/）に置き換える。
+#   /usr/bin/google-chrome-stable を dpkg-divert で退避してラッパーを指すようにし、google-chrome / x-www-browser の
+#   alternatives やデスクトップファイル（xdg-open）から起動しても同じ設定になるようにする。
+#   postinst の update-alternatives は google-chrome-stable が存在しないと失敗するため、
+#   ラッパーとリンクはインストールより前に置く。
+#
+#   /etc/default/google-chrome の repo_add_once="false":
+#     postinst が独自の apt ソース（google-chrome.sources）を追加しないようにする。
+#     このイメージでは導入後にリポジトリ設定を残さない（コンテナ内の apt では更新せず、
+#     イメージを作り直して更新するため。ai には root も無い）。
+#     postinst は repo_add_once に関係なく /usr/share/keyrings/google-chrome.gpg を書き出すため、
+#     ビルド時に用意したソース・鍵とあわせて消す（dpkg の管理外のファイルで、purge 時に消されるだけ）。
+#   chrome-sandbox の setuid ビットを外す:
+#     コンテナ内では SUID のサンドボックスも使えず（--no-sandbox で起動する）、
+#     root への権限昇格の経路になり得る SUID バイナリを置かないため。
+COPY --chown=root:root dev-base/usr/local/bin/google-chrome /usr/local/bin/google-chrome
+ARG GOOGLE_LINUX_SIGNING_KEY_FPR="EB4C1BFD4F042F6DDDCCEC917721F63BD38B4796"
+RUN chmod 0755 /usr/local/bin/google-chrome && \
+    arch="$(dpkg --print-architecture)" && \
+    keyring="/usr/share/keyrings/google-linux-signing-key.asc" && \
+    sources="/etc/apt/sources.list.d/google-chrome-build.sources" && \
+    tmp_dir="$(mktemp -d)" && \
+    apt-get update && \
+    apt-get install -y --no-install-recommends gpg && \
+    curl --proto '=https' --tlsv1.2 -fsSL -o "${keyring}" \
+      https://dl.google.com/linux/linux_signing_key.pub && \
+    export GNUPGHOME="${tmp_dir}/gnupg" && \
+    install -d -m 0700 "${GNUPGHOME}" && \
+    fprs="$(gpg --batch --with-colons --show-keys "${keyring}" | awk -F: '$1 == "pub" { p = 1; next } p && $1 == "fpr" { print $10; p = 0 }')" && \
+    if [ "${fprs}" != "${GOOGLE_LINUX_SIGNING_KEY_FPR}" ]; then \
+      echo "Google の署名鍵のフィンガープリントが一致しません: ${fprs}" >&2; exit 1; \
+    fi && \
+    chmod 0644 "${keyring}" && \
+    printf '%s\n' \
+      'Types: deb' \
+      'URIs: https://dl.google.com/linux/chrome/deb/' \
+      'Suites: stable' \
+      'Components: main' \
+      "Architectures: ${arch}" \
+      "Signed-By: ${keyring}" >"${sources}" && \
+    echo 'repo_add_once="false"' >/etc/default/google-chrome && \
+    dpkg-divert --local --rename --divert /usr/bin/google-chrome-stable.real \
+      --add /usr/bin/google-chrome-stable && \
+    ln -s /usr/local/bin/google-chrome /usr/bin/google-chrome-stable && \
+    apt-get update && \
+    apt-get install -y --no-install-recommends \
+        google-chrome-stable \
+        fonts-noto-cjk \
+        fonts-noto-color-emoji && \
+    chmod 0755 /opt/google/chrome/chrome-sandbox && \
+    /opt/google/chrome/chrome --version && \
+    apt-get purge -y --auto-remove gpg && \
+    rm -f "${sources}" "${keyring}" /usr/share/keyrings/google-chrome.gpg && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/* "${tmp_dir}"
+
+# -------------------------------------------------------------------
 # mise 本体
 # -------------------------------------------------------------------
 # root 所有で配置し、ユーザ（特に ai）からは書き換えられないようにする。
@@ -178,8 +254,6 @@ RUN apt-get update && \
         python3-xdg \
         idesk \
         stterm \
-        fonts-noto-cjk \
-        fonts-noto-color-emoji \
         fcitx5 \
         fcitx5-mozc \
         fcitx5-frontend-gtk3 && \
@@ -211,72 +285,8 @@ RUN arch="$(dpkg --print-architecture)" && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/* "${tmp_dir}"
 
-# Google Chrome（Google の apt リポジトリから導入する。amd64 / arm64 とも提供されている）。
-#   リポジトリの署名鍵はビルド時に取得し、主鍵のフィンガープリントを照合してから使う。
-#   鍵ファイルをリポジトリに置かないのは、Google が署名用のサブ鍵をほぼ毎年追加するため
-#   （置いた鍵が古くなると、新しいサブ鍵で署名されたリポジトリを検証できずビルドが落ちる）。
-#   照合用の gpg はこの RUN の中でだけ入れて消す。gpg-agent は入れないため、鍵は取り込まず
-#   （--import は gpg-agent を起動しようとして失敗する）、--show-keys で中身を表示して照合し、
-#   取得した ASCII 形式の鍵（.asc）をそのまま apt の Signed-By に渡す。
-#   サブ鍵が主鍵に正しく結び付いているかは apt の署名検証（sqv）が確かめる。
-#   Debian のパッケージと同じく版は固定しない（この層を作り直したときの stable が入る）。
-#   Google のリポジトリは古い版の .deb を残さないため、版と sha256 を固定すると、
-#   新しい版が出た時点で固定した版を取得できなくなりビルドが落ちる。
-#
-#   起動オプションは Debian の Chromium（/etc/chromium.d/）のように設定ファイルで渡せないため、
-#   ラッパー（/usr/local/bin/google-chrome）で付ける。/usr/bin/google-chrome-stable を
-#   dpkg-divert で退避してラッパーを指すようにし、google-chrome / x-www-browser の
-#   alternatives やデスクトップファイル（xdg-open）から起動しても同じ設定になるようにする。
-#   postinst の update-alternatives は google-chrome-stable が存在しないと失敗するため、
-#   ラッパーとリンクはインストールより前に置く。
-#
-#   /etc/default/google-chrome の repo_add_once="false":
-#     postinst が独自の apt ソース（google-chrome.sources）を追加しないようにする。
-#     このイメージでは導入後にリポジトリ設定を残さない（ai には root が無く更新しないため）。
-#     postinst は repo_add_once に関係なく /usr/share/keyrings/google-chrome.gpg を書き出すため、
-#     ビルド時に用意したソース・鍵とあわせて消す（dpkg の管理外のファイルで、purge 時に消されるだけ）。
-#   chrome-sandbox の setuid ビットを外す:
-#     ai コンテナでは SUID のサンドボックスも使えず（--no-sandbox で起動する）、
-#     root への権限昇格の経路になり得る SUID バイナリを置かないため。
-COPY --chown=root:root ai/usr/local/bin/google-chrome /usr/local/bin/google-chrome
-ARG GOOGLE_LINUX_SIGNING_KEY_FPR="EB4C1BFD4F042F6DDDCCEC917721F63BD38B4796"
-RUN chmod 0755 /usr/local/bin/google-chrome && \
-    arch="$(dpkg --print-architecture)" && \
-    keyring="/usr/share/keyrings/google-linux-signing-key.asc" && \
-    sources="/etc/apt/sources.list.d/google-chrome-build.sources" && \
-    tmp_dir="$(mktemp -d)" && \
-    apt-get update && \
-    apt-get install -y --no-install-recommends gpg && \
-    curl --proto '=https' --tlsv1.2 -fsSL -o "${keyring}" \
-      https://dl.google.com/linux/linux_signing_key.pub && \
-    export GNUPGHOME="${tmp_dir}/gnupg" && \
-    install -d -m 0700 "${GNUPGHOME}" && \
-    fprs="$(gpg --batch --with-colons --show-keys "${keyring}" | awk -F: '$1 == "pub" { p = 1; next } p && $1 == "fpr" { print $10; p = 0 }')" && \
-    if [ "${fprs}" != "${GOOGLE_LINUX_SIGNING_KEY_FPR}" ]; then \
-      echo "Google の署名鍵のフィンガープリントが一致しません: ${fprs}" >&2; exit 1; \
-    fi && \
-    chmod 0644 "${keyring}" && \
-    printf '%s\n' \
-      'Types: deb' \
-      'URIs: https://dl.google.com/linux/chrome/deb/' \
-      'Suites: stable' \
-      'Components: main' \
-      "Architectures: ${arch}" \
-      "Signed-By: ${keyring}" >"${sources}" && \
-    echo 'repo_add_once="false"' >/etc/default/google-chrome && \
-    dpkg-divert --local --rename --divert /usr/bin/google-chrome-stable.real \
-      --add /usr/bin/google-chrome-stable && \
-    ln -s /usr/local/bin/google-chrome /usr/bin/google-chrome-stable && \
-    apt-get update && \
-    apt-get install -y --no-install-recommends google-chrome-stable && \
-    chmod 0755 /opt/google/chrome/chrome-sandbox && \
-    /opt/google/chrome/chrome --version && \
-    apt-get purge -y --auto-remove gpg && \
-    rm -f "${sources}" "${keyring}" /usr/share/keyrings/google-chrome.gpg && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/* "${tmp_dir}"
-
-# 拡張機能のポリシーと、デスクトップの起動スクリプト。
+# 拡張機能のポリシーと、デスクトップの起動スクリプト、ai 用の google-chrome（ラッパー）。
+#   google-chrome は dev-base で置いた共通のラッパーを、リモートデバッグ等を付ける ai 用のものに置き換える。
 #   拡張機能（Antigravity のブラウザ拡張）はポリシー（ExtensionSettings の normal_installed）で
 #   Chrome ウェブストアから入れる。
 COPY --chown=root:root ai/etc/opt/chrome/policies /etc/opt/chrome/policies
