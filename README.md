@@ -2,7 +2,7 @@
 
 プロジェクトに組み込んで使う、Dev Container の開発環境一式です。
 
-- **2つのコンテナで権限を分離:** 作業者用の `user` コンテナと、AI エージェント用の `ai` コンテナを分け、AI エージェントには sudo・Docker ソケット・クラウドの認証情報を渡しません。
+- **2つのコンテナで権限を分離:** 作業者用の `user` コンテナと、AI エージェント用の `ai` コンテナを分け、AI エージェントには sudo・Docker ソケット・クラウドの認証情報を渡しません。どちらのコンテナにも Docker ソケットは渡さず、`user` から `ai` へは ssh で入ります。
 - **検証済みのツールだけを導入:** CLI ツールや言語ランタイムは [mise](https://mise.jdx.dev/) の lockfile でバージョンとチェックサムを固定してインストールします。
 - **VS Code の拡張機能を許可リストで管理:** Dev Container Feature として、共通設定と拡張機能の許可リスト（`extensions.allowed`）を提供します。
 
@@ -32,7 +32,7 @@ flowchart LR
         ai["ai コンテナ<br/>AI エージェント用"]
         ws[("プロジェクトルート<br/>/home/dev/work")]
     end
-    user -->|"docker exec"| ai
+    user -->|"ssh（ai コマンド）"| ai
     user --- ws
     ai --- ws
 ```
@@ -42,7 +42,8 @@ flowchart LR
 | 用途 | 作業者が使う。VS Code がアタッチする | AI エージェント（Claude Code / Codex など）を動かす |
 | ワークスペース（プロジェクトルート） | 読み書き可 | 読み書き可 |
 | sudo | あり（パスワード必須） | なし |
-| Docker ソケット | あり（`ai` コンテナを操作するため） | なし |
+| Docker ソケット | なし（コンテナの操作はホストで行う） | なし |
+| 入り方 | VS Code がアタッチする | `user` から ssh（`ai` コマンド） |
 | ワークスペースの `mise.toml` | `mise trust` するまで読み込まない | そのまま読み込む |
 
 ## 同梱ツール
@@ -70,7 +71,7 @@ Playwright CLI・agent-browser の使い方スキルと、Context7 CLI（ctx7）
 
 **`user` コンテナ** — [docker-images/user/opt/mise/config.toml](docker-images/user/opt/mise/config.toml)
 
-Docker CLI、Renovate CLI、sudo、`ai` コンテナのデスクトップを開く `ai-desktop`（`aid`）、Google Chrome（デスクトップなし。VS Code の拡張機能がヘッドレスで使う）
+Renovate CLI、sudo、`ai` コンテナに ssh で入る `ai`、`ai` コンテナのデスクトップを開く `ai-desktop`（`aid`）、Google Chrome（デスクトップなし。VS Code の拡張機能がヘッドレスで使う）
 
 ## 必要なもの
 
@@ -87,15 +88,14 @@ Docker CLI、Renovate CLI、sudo、`ai` コンテナのデスクトップを開�
 git submodule add https://github.com/Diiva-Szk/devcontainer-env-core.git .devcontainer/devcontainer-env-core
 ```
 
-### 2. `.env` を生成する
+### 2. `.env` を作成する
 
-ホスト側で次のスクリプトを実行します。Docker ソケットのグループ ID などを検出し、`compose.yml` と同じディレクトリに `.env` を書き出します。
+`compose.yml` と同じディレクトリに `.env` を作成し、設定を書きます（[設定項目](#設定項目)）。省略すると既定値で動きますが、`user` コンテナの `sudo` のパスワード（`USER_PASS`、既定: `dev`）は変更してください。既定値のままでは、`user` コンテナで動いた悪意あるスクリプトが、既知のパスワードで root になれます。
 
 ```sh
-bash .devcontainer/devcontainer-env-core/setup-docker-env.sh
+# .devcontainer/devcontainer-env-core/.env
+USER_PASS=<任意のパスワード>
 ```
-
-`sudo` のパスワードなども `.env` で変更できます（[設定項目](#設定項目)）。
 
 ### 3. `devcontainer.json` を作成する
 
@@ -127,7 +127,7 @@ my-project/
 │   ├── devcontainer.json
 │   └── devcontainer-env-core/   # このリポジトリ
 │       ├── compose.yml
-│       └── .env                 # 手順 2 で生成
+│       └── .env                 # 手順 2 で作成
 └── ...
 ```
 
@@ -139,7 +139,7 @@ VS Code でプロジェクトを開き、コマンドパレットから **Dev Co
 
 ### 5. AI エージェントを使う
 
-`user` コンテナのターミナルで `ai` コマンドを実行すると、このプロジェクトの `ai` コンテナに入れます。どのディレクトリからでも実行でき、**`ai` コンテナでも同じディレクトリで起動します**（例: `~/work/src` で実行すると、`ai` コンテナの `~/work/src` で起動します）。
+`user` コンテナのターミナルで `ai` コマンドを実行すると、このプロジェクトの `ai` コンテナに ssh で入れます。どのディレクトリからでも実行でき、**`ai` コンテナでも同じディレクトリで起動します**（例: `~/work/src` で実行すると、`ai` コンテナの `~/work/src` で起動します）。
 
 ```sh
 ai               # ai コンテナで bash を起動する
@@ -161,6 +161,8 @@ ctx7            # ライブラリの最新ドキュメントを引く（Context7
 - 各ツールのログイン（認証）は、初回に `ai` コンテナ内で行ってください。**ログイン情報と会話履歴は、コンテナを作り直しても残ります**（[AI ツールの状態の保存](#ai-ツールの状態の保存)）。
 - `ctx7` は認証なしでも使えますが、レート制限が厳しくなります。`ctx7 login`（OAuth）か `CONTEXT7_API_KEY` 環境変数で認証してください（`ctx7 setup` は実行しないでください。各ツールのグローバル設定はこのイメージが管理しているため）。
 - `ai` コンテナと共有していないディレクトリ（`~` など）で実行した場合は、`ai` コンテナの `~/work` で起動します。
+- `ai` コマンドは、`ai` コンテナの ssh サーバー（`ai:2222`、ホストには公開していません）へ公開鍵で接続します。鍵は初回に `user` コンテナの `~/.ssh/ai_ed25519` に作られ、公開鍵とホスト鍵は volume で受け渡されます。手作業の設定は要りません。
+- 接続できない場合は、`ai` コンテナの ssh サーバーが止まっている可能性があります。ホストから `ai` コンテナに入って `start-sshd` を実行すると起動し直せます（ログは `ai` コンテナの `~/.local/state/ai-sshd/`）。ホストから入る方法は [Docker の操作はホストで行う](#docker-の操作はホストで行う)を参照してください。
 - mise のタスクとしても実行できます（`mise run ai`、`mise run ai claude`）。ただし、trust していない `mise.toml` があるディレクトリでは mise がエラーになるため、`ai` コマンドを直接実行してください（[`mise trust` が必要](#user-コンテナでは-mise-trust-が必要)）。
 
 ### 6. `ai` コンテナのデスクトップを見る
@@ -229,7 +231,7 @@ node = "22"
 
 `user` コンテナは、ワークスペースの `mise.toml` を **`mise trust` するまで読み込みません**。trust するまでは、その配下で mise のツール（`node`、`python` など）が使えません。
 
-ワークスペースは `ai` コンテナと共有しているため、AI エージェントが `mise.toml` を書き換える可能性があります。sudo と Docker ソケットを持つ `user` コンテナで、確認していない設定が黙って読み込まれないようにしています。
+ワークスペースは `ai` コンテナと共有しているため、AI エージェントが `mise.toml` を書き換える可能性があります。sudo と AWS の認証情報を持つ `user` コンテナで、確認していない設定が黙って読み込まれないようにしています。
 
 ```sh
 mise trust --show     # 内容を確認する
@@ -266,8 +268,6 @@ mise trust mise.toml  # 確認してから trust する
 | 変数 | 既定値 | 内容 |
 | --- | --- | --- |
 | `USER_PASS` | `dev` | `user` コンテナの `sudo` のパスワード。**変更を推奨します**（イメージの最後の層で設定するため、変更してもビルドキャッシュは使われます） |
-| `DOCKER_GID` | `988` | Docker ソケットのグループ ID。コンテナの起動時に付与する（`setup-docker-env.sh` が設定） |
-| `DOCKER_SOCK_PATH` | `/var/run/docker.sock` | ホストの Docker ソケットのパス（`setup-docker-env.sh` が設定） |
 | `AWS_REGION` | `ap-northeast-1` | `user` コンテナの AWS リージョン |
 | `KASMVNC_PASSWORD` | `dev` | `ai` コンテナのデスクトップ（KasmVNC）のログインパスワード。コンテナの起動時に反映する |
 | `UID` / `GID` | `1000` | コンテナ内ユーザーの UID / GID。**通常は変更しないでください**（下記） |
@@ -348,6 +348,20 @@ docker volume rm <プロジェクト名>_devcontainer_ai-claude
   > 切り替えると、それまでの保存方式で作ったイメージとコンテナは表示されなくなります（ディスク上には残り、元に戻すと再び表示されます）。
 
 ## 注意事項
+
+### Docker の操作はホストで行う
+
+`user` コンテナにも `ai` コンテナにも Docker ソケットを渡していないため、コンテナの中から Docker は使えません。`user` コンテナで動いたスクリプト（ビルドや依存パッケージのインストールなど）に、ホストの Docker を操作させないためです（Docker ソケットを使えると、ホストの root と同じことができてしまいます）。
+
+コンテナの操作（イメージのビルド、プロジェクトのアプリの `docker compose up` など）は、ホストのターミナルで行ってください。`ai` コマンドが使えないときは、ホストから `ai` コンテナに直接入れます。
+
+```sh
+# ホストで実行する
+docker ps --filter label=com.docker.compose.service=ai   # ai コンテナの名前を調べる
+docker exec -it <ai コンテナの名前> bash
+```
+
+### その他
 
 - **AI エージェントは確認なしで動作します。** `ai` コンテナの Claude Code・Codex などは、コマンド実行やファイル編集の確認プロンプトを出さない設定です。sudo・Docker ソケット・クラウドの認証情報を持たないことを前提にしているため、この設定を `user` コンテナやホストへ持ち出さないでください。
 - **ワークスペースの内容は AI エージェントから読み書きできます。** API キーなどの秘密情報を、プロジェクトルート配下に置かないでください。

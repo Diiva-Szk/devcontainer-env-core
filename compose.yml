@@ -8,7 +8,9 @@
 services:
   ###########################################################################
   # user: ユーザ環境。VS Code がアタッチする側。
-  #   docker.sock マウント（ai コンテナ操作用）。
+  #   ai コンテナへは ssh（ai コマンド）で入る。
+  #   docker.sock はマウントしない（ビルドなどで悪意あるスクリプトが動いても、
+  #   ホストの Docker を操作させないため）。コンテナの操作はホストで行う。
   ###########################################################################
   user:
     build:
@@ -24,20 +26,17 @@ services:
       cache_from:
         - type=registry,ref=ghcr.io/diiva-szk/devcontainer-env-core/build-cache:user-amd64
         - type=registry,ref=ghcr.io/diiva-szk/devcontainer-env-core/build-cache:user-arm64
-    # docker.sock へのアクセス用に、ホストの Docker ソケットのグループを起動時に付与する
-    # （イメージに焼き込まないため、ホストごとにビルドし直す必要が無い）。
-    # DOCKER_GID は setup-docker-env.sh が .env に書き出す。
-    group_add:
-      - "${DOCKER_GID:-988}"
     environment:
       NODE_OPTIONS: "--max-old-space-size=4096"
       AWS_REGION: ${AWS_REGION:-ap-northeast-1}
     volumes:
       # プロジェクトの中にdev-envを置く場合、../../ はプロジェクトルートになるので、VS Codeのワークスペースとして使える。
       - ../../:/home/${USER_NAME:-dev}/work:delegated
-      # docker.sock: user だけにマウント（ai には絶対に渡さない）
-      # ソケットの場所は setup-docker-env.sh が .env の DOCKER_SOCK_PATH に書き出す
-      - ${DOCKER_SOCK_PATH:-/var/run/docker.sock}:/var/run/docker.sock
+      # ai コンテナへ ssh で入るための鍵の受け渡し（ai コマンドと ai の start-sshd が使う）。
+      #   client: user が書き出すクライアントの公開鍵（ai は読み取り専用）
+      #   host:   ai が書き出すホスト鍵の公開鍵（user は読み取り専用）
+      - ai-ssh-client:/var/lib/ai-ssh/client
+      - ai-ssh-host:/var/lib/ai-ssh/host:ro
     working_dir: /home/${USER_NAME:-dev}/work
     # ENTRYPOINT(entrypoint.sh) + この command が exec される
     command:
@@ -48,6 +47,7 @@ services:
   # ai: AIエージェント環境。
   #   sudo なし / AWS 認証情報なし / docker.sock なし。
   #   AI エージェントが操作するブラウザ用のデスクトップ（KasmVNC）を持つ。
+  #   user コンテナからの入り口として ssh サーバー（root を使わずに動かす）を持つ。
   ###########################################################################
   ai:
     build:
@@ -71,11 +71,13 @@ services:
       # Chrome のサンドボックスが起動できない（agent-browser は既定で --no-sandbox を付けるため対象外）。
       # playwright-cli 用に既定で無効化しておく。
       PLAYWRIGHT_MCP_SANDBOX: "false"
-    # デスクトップ（KasmVNC）のポート。ホストには公開せず（ports は書かない）、
+    # デスクトップ（KasmVNC）と ssh サーバーのポート。ホストには公開せず（ports は書かない）、
     # 同じネットワークの user コンテナからだけ接続させる。
-    # ホストからは user コンテナの ai-desktop（aid）が VS Code のポート転送経由で開く。
+    #   8444: デスクトップ。ホストからは user コンテナの ai-desktop（aid）が VS Code のポート転送経由で開く。
+    #   2222: ssh サーバー。user コンテナの ai コマンドが接続する。
     expose:
       - "8444"
+      - "2222"
     volumes:
       - ../../:/home/${USER_NAME:-dev}/work:delegated
       # 各 AI ツールの認証情報と会話履歴を、コンテナを作り直しても残す。
@@ -94,6 +96,9 @@ services:
       - ai-kiro-data:/home/${USER_NAME:-dev}/.local/share/kiro-cli
       # Context7 CLI（ctx7）の認証情報（ctx7 login で作られる credentials.json）
       - ai-context7:/home/${USER_NAME:-dev}/.config/context7
+      # ssh の鍵の受け渡し（user コンテナの volumes を参照。ai からはクライアントの鍵を書き換えられない）
+      - ai-ssh-client:/var/lib/ai-ssh/client:ro
+      - ai-ssh-host:/var/lib/ai-ssh/host
       # docker.sock は渡さない
     working_dir: /home/${USER_NAME:-dev}/work
     command:
@@ -113,3 +118,6 @@ volumes:
   ai-kiro-data:
   ai-gemini:
   ai-context7:
+  # ai コンテナへ ssh で入るための鍵の受け渡し（中身は公開鍵だけ。消しても起動時に作り直される）
+  ai-ssh-client:
+  ai-ssh-host:

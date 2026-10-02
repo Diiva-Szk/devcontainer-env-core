@@ -2,7 +2,7 @@
 # mise.lock のプラットフォームエントリのうち、checksum が無いものを補完する。
 #
 # mise lock は、配布元（aqua レジストリ等）がチェックサムを提供しない成果物について
-# checksum を記録しない（例: aws-cli, docker/cli, google-cloud-sdk, claude-code）。
+# checksum を記録しない（例: aws-cli, google-cloud-sdk, claude-code）。
 # mise は checksum が lock にあればインストール時に検証するが、無ければ検証しない。
 # aqua の require_checksum と同等の保証を得るため、成果物を実際にダウンロードして
 # sha256 を計算し、lock へ書き込む（aqua の update-checksum と同じ考え方）。

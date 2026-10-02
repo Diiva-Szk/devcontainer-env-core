@@ -27,7 +27,6 @@ Feature（`devcontainer-features/` 配下）には `Dockerfile` を含めず、�
 ```text
 .
 ├── compose.yml                   # user / ai コンテナの定義
-├── setup-docker-env.sh           # 利用者が実行する .env 生成スクリプト
 ├── docker-images/
 │   ├── Dockerfile                # base → dev-base → ai / user のマルチステージ
 │   ├── dev-base/                 # ai / user 共通
@@ -39,13 +38,13 @@ Feature（`devcontainer-features/` 配下）には `Dockerfile` を含めず、�
 │   │   ├── opt/mise/             # mise の設定と lock（global スコープ）
 │   │   ├── opt/rulesync/         # AI ツールのスキルの取得と各ツールへの展開（rulesync.jsonc / rulesync.lock / find-docs.version / find-docs の vendoring）
 │   │   ├── opt/agent-browser-skills/ # agent-browser のスキル本体の取得（rulesync.jsonc / rulesync.lock）
-│   │   ├── usr/local/bin/        # ai-entrypoint.sh / start-desktop（デスクトップの起動）/ sync-home-defaults / google-chrome（ai 用のラッパー。dev-base のものを置き換える）
+│   │   ├── usr/local/bin/        # ai-entrypoint.sh / start-desktop（デスクトップの起動）/ start-sshd（ssh サーバーの起動）/ sync-home-defaults / google-chrome（ai 用のラッパー。dev-base のものを置き換える）
 │   │   ├── usr/share/icons/st/   # st のアイコン
 │   │   └── home-config/          # AI エージェントとデスクトップ（KasmVNC / Openbox / idesk）の設定ファイル
 │   └── user/
 │       ├── opt/mise/             # mise の設定と lock（global スコープ）
 │       ├── opt/renovate/         # ローカル確認用の Renovate CLI（package-lock.json）
-│       └── usr/local/bin/        # ai（ai コンテナに入るコマンド）/ ai-desktop（aid）
+│       └── usr/local/bin/        # ai（ai コンテナに ssh で入るコマンド）/ ai-desktop（aid）
 ├── devcontainer-features/        # vscode-common / vscode-python / vscode-terraform
 ├── scripts/                      # lock 更新・検査・Feature の version 更新
 ├── renovate.json5
@@ -94,7 +93,7 @@ CLI ツールと言語ランタイム（Python / Node.js）は [mise](https://mi
 `scripts/update-mise-locks.sh` は次を行います。
 
 - lock をゼロから生成する（古いエントリが残らないようにするため）。
-- 配布元がチェックサムを提供しない成果物（aws-cli, docker/cli, google-cloud-sdk, claude-code など）は `mise lock` がチェックサムを記録しないため、`scripts/fill-mise-lock-checksums.sh` で成果物をダウンロードして sha256 を補完する。URL が変わっていなければ旧 lock の値を再利用する。
+- 配布元がチェックサムを提供しない成果物（aws-cli, google-cloud-sdk, claude-code など）は `mise lock` がチェックサムを記録しないため、`scripts/fill-mise-lock-checksums.sh` で成果物をダウンロードして sha256 を補完する。URL が変わっていなければ旧 lock の値を再利用する。
 - 解決できなかったエントリ（skipped）や、linux-arm64 に x86_64 向けの成果物が記録されたエントリがあれば失敗する。npm backend のツールはプラットフォーム別の成果物を持たず、常にプラットフォーム数ぶん skipped になるため、その数だけは許容する（代わりに依存グラフ（`aube`）の記録があることを確認する）。
 - npm backend のサイドカー（`.mise/locks/`）は消さずに残し、`mise lock` に再利用・整理させる（参照されなくなった版のディレクトリは `mise lock` が消す）。
 - エントリの並び順だけが変わった場合は旧 lock を残す（mise lock は複数エントリの並び順が実行ごとに揺れるため）。
@@ -200,7 +199,7 @@ bash scripts/update-rulesync-locks.sh
 キャッシュが利用者に効くかどうかは、Dockerfile の書き方で決まります。
 
 - **利用者ごとに値が変わるビルド引数は、ステージの最後で宣言・使用する。** `ARG` は宣言以降のすべての `RUN` のキャッシュキーに含まれるため、途中で宣言すると、値を変えた利用者はそれ以降の層をキャッシュから取得できません（`USER_PASS` を user ステージの最後に置いているのはこのため）。
-- **ホストごとに変わる値は、できるだけビルドせず起動時に渡す。** Docker ソケットのグループは `compose.yml` の `group_add`、ユーザーの UID / GID は Dev Containers の `updateRemoteUserUID` で起動時に合わせています。
+- **ホストごとに変わる値は、できるだけビルドせず起動時に渡す。** ユーザーの UID / GID は Dev Containers の `updateRemoteUserUID` で起動時に合わせています。
 - `base` ステージの `UID` / `GID` / `USER_NAME` / `TZ` は全層に影響します。既定値を変えると、利用者のキャッシュがすべて外れます。
 - `compose.yml` と `publish-build-cache.yml` は同じ compose ファイル（同じビルド引数の既定値）でビルドし、キャッシュキーを一致させています。ビルド引数を追加・変更したときは両方で一致していることを確認してください。
 
@@ -312,6 +311,14 @@ Action の SHA 固定だけでは、Action が実行時に取得するものま�
 ## セキュリティ上の設計
 
 - **user / ai の権限分離:** ai コンテナには sudo・Docker ソケット・クラウドの認証情報を渡しません。そのうえで AI エージェントは確認プロンプトなしで動作する設定にしています（`docker-images/ai/home-config/`）。この前提を崩す変更（ai への Docker ソケットのマウント等）をしないでください。
+- **Docker ソケットはどのコンテナにも渡さない:** user コンテナでは、ビルドや依存パッケージのインストールで第三者のスクリプトが動きます。Docker ソケットを使えるとホストの root と同じことができるため、user にも渡さず、コンテナの操作はホストで行います。user のパスワード付き sudo も、ソケットを通れば意味を失います。
+- **user から ai へは ssh で入る:** ai コンテナの `start-sshd` が、root を使わずに（コンテナのユーザーのまま）sshd を `2222` で動かします。ポートは KasmVNC と同じく `expose` だけで、ホストへは公開しません。
+  - 鍵の受け渡しは 2 つの volume で行い、それぞれ片方のコンテナだけが書き込めます。`ai-ssh-client`（user の `ai` コマンドが書くクライアントの公開鍵。ai では読み取り専用）と `ai-ssh-host`（ai が書くホスト鍵の公開鍵。user では読み取り専用）です。AI エージェントは、ログインできる鍵を足すことも、user が信頼するホスト鍵を別の場所に向けることもできません。
+  - 鍵はどちらもコンテナで作ります（イメージに入れると、公開しているビルドキャッシュを通じて全利用者で同じ秘密鍵になるため）。`openssh-server` の導入時に作られる `/etc/ssh/ssh_host_*` も消しています。
+  - エージェント・ポート・X11 の転送とトンネルは、sshd と `ai` コマンドの両方で禁止しています。ai から user 側へさかのぼる経路を作らないためです。user に sshd は置かないため、ai から user へは入れません。
+  - user が乗っ取られた場合、ai には入れます（ワークスペースはもともと共有しているため、新たに届くのは主に ai の volume にある AI ツールの認証情報です）。ホストの Docker を操作されるよりも被害の範囲はずっと小さくなります。
+  - volume のマウント先（`/var/lib/ai-ssh/{client,host}`）は、両方のイメージで `0777` にしています。volume は最初にマウントしたときにイメージのディレクトリの権限を引き継ぎます。また、Dev Containers が user のユーザーの UID をホストに合わせて変えることがあるため、所有者では書き込みを許せません。sticky ビット（`1777`）は付けません。付けると、UID が変わった後に前の UID が書いた鍵のファイルを置き換えられなくなります（どちらの volume も書き込めるのは片方のコンテナだけなので、sticky ビットで守る相手はいません）。そのため sshd は `StrictModes no` で動かしています（書き込めるのは rw でマウントした片方のコンテナだけです）。
+  - sshd はセッションの環境変数を作り直すため、`start-sshd` が起動時の環境変数を `~/.ssh/environment` に書き出し、`PermitUserEnvironment` で引き継いでいます（`docker exec` で入っていたときと同じ PATH・`DISPLAY` などにするため）。`start-sshd` の `umask 077` は鍵を作る部分（サブシェル）に限っています。sshd に引き継ぐと、ssh のセッションで作るファイルまで `600` になるためです。
 - **ai のデスクトップはホストに公開しない:** KasmVNC のポート（8444）は `compose.yml` の `expose` で同じネットワークの user コンテナにだけ見せ、`ports` でホストへは公開しません。ホストからは user コンテナの `ai-desktop`（`aid`）が `127.0.0.1` で待ち受けて転送し、VS Code のポート転送経由で開きます。
 - **App トークンの権限の最小化:** `create-github-app-token` は `permission-*` を指定しないと App installation の全権限を継承するため、ワークフローごとに必要な権限だけを指定しています。
   - renovate: Contents / Issues / Pull requests / Checks / Commit statuses / Workflows（write）、Dependabot alerts（read。`vulnerabilityAlerts` 用）
