@@ -100,20 +100,6 @@ backend = "github:openai/codex"
 specifiers = ["0.160.0"]
 
 [tools."github:openai/codex".options]
-asset_pattern = "codex-package-x86_64-unknown-linux-musl.tar.gz"
-version_prefix = "rust-v"
-
-[tools."github:openai/codex"."platforms.linux-x64"]
-checksum = "sha256:4fcc47ab57f52ff75363951a8761146cd10c8288bd86fed45487dbb204a16b71"
-url = "https://github.com/openai/codex/releases/download/rust-v0.160.0/codex-package-x86_64-unknown-linux-musl.tar.gz"
-url_api = "https://api.github.com/repos/openai/codex/releases/assets/604048102"
-
-[[tools."github:openai/codex"]]
-version = "0.160.0"
-backend = "github:openai/codex"
-specifiers = ["0.160.0"]
-
-[tools."github:openai/codex".options]
 asset_pattern = "codex-package-aarch64-unknown-linux-musl.tar.gz"
 version_prefix = "rust-v"
 
@@ -122,21 +108,35 @@ checksum = "sha256:7f0fe42ff22ecfa3a47bc4a34f5b22c4218b431a4ec0aba51c7d98299f079
 url = "https://github.com/openai/codex/releases/download/rust-v0.160.0/codex-package-aarch64-unknown-linux-musl.tar.gz"
 url_api = "https://api.github.com/repos/openai/codex/releases/assets/604056302"
 
+[[tools."github:openai/codex"]]
+version = "0.160.0"
+backend = "github:openai/codex"
+specifiers = ["0.160.0"]
+
+[tools."github:openai/codex".options]
+asset_pattern = "codex-package-x86_64-unknown-linux-musl.tar.gz"
+version_prefix = "rust-v"
+
+[tools."github:openai/codex"."platforms.linux-x64"]
+checksum = "sha256:4fcc47ab57f52ff75363951a8761146cd10c8288bd86fed45487dbb204a16b71"
+url = "https://github.com/openai/codex/releases/download/rust-v0.160.0/codex-package-x86_64-unknown-linux-musl.tar.gz"
+url_api = "https://api.github.com/repos/openai/codex/releases/assets/604048102"
+
 [[tools."http:kiro-cli"]]
-version = "2.27.0"
+version = "2.27.1"
 backend = "http:kiro-cli"
-specifiers = ["2.27.0"]
+specifiers = ["2.27.1"]
 
 [tools."http:kiro-cli".options]
 strip_components = "1"
 
 [tools."http:kiro-cli"."platforms.linux-arm64"]
-checksum = "sha256:5b803010e322ebf160a388b2ba4ec30e1e9f45e781e4abc8401b4d0e938b8fa7"
-url = "https://desktop-release.q.us-east-1.amazonaws.com/2.27.0/kirocli-aarch64-linux.tar.gz"
+checksum = "sha256:33ad5462c3111ba4ef527f1d58bda08a9d1997e0ae73841a7c2ca734ebcba2d0"
+url = "https://desktop-release.q.us-east-1.amazonaws.com/2.27.1/kirocli-aarch64-linux.tar.gz"
 
 [tools."http:kiro-cli"."platforms.linux-x64"]
-checksum = "sha256:6ed34dd5d8981c7660e6724f467331c6db648c63f78a6574b0fdb03e6d092a19"
-url = "https://desktop-release.q.us-east-1.amazonaws.com/2.27.0/kirocli-x86_64-linux.tar.gz"
+checksum = "sha256:3c0d7268a4bfb73f8e827822049978fa578e020b271afc1021c7532602d45d99"
+url = "https://desktop-release.q.us-east-1.amazonaws.com/2.27.1/kirocli-x86_64-linux.tar.gz"
 
 [[tools."npm:@playwright/cli"]]
 version = "0.1.22"
