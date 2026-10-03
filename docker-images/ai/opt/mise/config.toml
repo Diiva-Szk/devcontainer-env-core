@@ -9,10 +9,10 @@
 
 [tools]
 # ai tools
-"aqua:anthropics/claude-code" = "2.1.286"
-"aqua:github/copilot-cli" = "1.0.90"
+"aqua:anthropics/claude-code" = "2.1.288"
+"aqua:github/copilot-cli" = "1.0.91"
 "aqua:github/copilot-language-server-release" = "1.551.2"
-"aqua:google-antigravity/antigravity-cli" = "1.2.14"
+"aqua:google-antigravity/antigravity-cli" = "1.2.15"
 # AI エージェント向けのルール・設定を各ツールの形式で生成する CLI
 "aqua:dyoshikawa/rulesync" = "24.0.0"
 
@@ -21,7 +21,7 @@
 #   展開後 119MB になる。aqua backend なら単一バイナリ（linux-x64 は静的リンクの musl 版）で済む。
 #   ブラウザは Google Chrome を使う（Dockerfile の AGENT_BROWSER_EXECUTABLE_PATH）。
 #   `agent-browser install` による Chrome for Testing のダウンロードは不要。
-"aqua:vercel-labs/agent-browser" = "0.38.1"
+"aqua:vercel-labs/agent-browser" = "0.38.2"
 
 # Playwright CLI（コーディングエージェント向けのブラウザ操作 CLI）
 #   npm でのみ配布されているため npm backend で入れる。mise lock が依存グラフを
@@ -49,7 +49,7 @@
 #   asset_pattern に {{ arch() }} を使うと mise lock を実行したマシンのアーキテクチャで展開され、
 #   全プラットフォームに同じ成果物が記録されてしまうため、プラットフォームごとに指定する。
 [tools."github:openai/codex"]
-version = "0.159.3"
+version = "0.160.0"
 version_prefix = "rust-v"
 bin_path = "bin"
 
@@ -64,7 +64,7 @@ linux-arm64 = { asset_pattern = "codex-package-aarch64-unknown-linux-musl.tar.gz
 #   載っていない（latest が先に進んだ）場合、mise lock は成果物を実際にダウンロードして計算する。
 [tools."http:kiro-cli"]
 # renovate: datasource=custom.kiro-cli depName=kiro-cli
-version = "2.27.0"
+version = "2.27.1"
 url = 'https://desktop-release.q.us-east-1.amazonaws.com/{{ version }}/kirocli-{{ arch(x64="x86_64", arm64="aarch64") }}-linux.tar.gz'
 checksum_url = "https://desktop-release.q.us-east-1.amazonaws.com/latest/manifest.json"
 checksum_expr = '"sha256:" + filter(fromJSON(body).packages, { "https://desktop-release.q.us-east-1.amazonaws.com/" + #.download == url })[0].sha256'

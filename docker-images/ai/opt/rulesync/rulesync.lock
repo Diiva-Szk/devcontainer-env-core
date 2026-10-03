@@ -2,9 +2,9 @@
   "lockfileVersion": 1,
   "sources": {
     "vercel-labs/agent-browser": {
-      "requestedRef": "v0.38.1",
-      "resolvedRef": "09c0984798c75db63cf52030cdd39e10ca4bd334",
-      "resolvedAt": "2026-09-21T08:24:58.951Z",
+      "requestedRef": "v0.38.2",
+      "resolvedRef": "84d120dec1173544e6c68a0dc895e8eb8878aa13",
+      "resolvedAt": "2026-10-03T22:07:39.952Z",
       "skills": {
         "agent-browser": {
           "integrity": "sha256-80161e6836b3b40f4e83730a290deb40ac14d877d38c97ad5f6d71be37ce74c3"
