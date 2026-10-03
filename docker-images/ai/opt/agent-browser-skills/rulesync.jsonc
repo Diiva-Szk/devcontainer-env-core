@@ -9,7 +9,7 @@
     {
       "source": "https://github.com/vercel-labs/agent-browser",
       "transport": "git",
-      "ref": "v0.38.1",
+      "ref": "v0.38.2",
       "path": "skill-data",
       "skills": ["*"]
     }
