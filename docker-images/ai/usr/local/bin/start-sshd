@@ -1,0 +1,135 @@
+#!/bin/bash
+###########################################################################
+# start-sshd
+#   user コンテナの ai コマンドが接続する ssh サーバー（sshd）を起動する。
+#   ai-entrypoint.sh がコンテナの起動時に呼ぶ。止まってしまった場合は手動で再実行できる。
+#
+#   ai コンテナには root が無いため、sshd はこのコンテナのユーザーのまま動かす。
+#   root 以外で動く sshd は、動かしているユーザー（dev）としてのログインだけを受け付ける。
+#   ポート 2222 で待ち受け、compose.yml ではホストへ公開しない（user コンテナからだけ接続できる）。
+#
+#   鍵の受け渡し（compose.yml の volume。どちらも書き込めるのは片方のコンテナだけ）:
+#     /var/lib/ai-ssh/client/authorized_keys
+#       user コンテナの ai コマンドが書き出すクライアントの公開鍵。ai からは読み取り専用で、
+#       AI エージェントがログインできる鍵を足したり差し替えたりはできない。
+#     /var/lib/ai-ssh/host/known_hosts
+#       ここで書き出すホスト鍵の公開鍵。user の ai コマンドが接続先の確認に使う。
+#   ホスト鍵はコンテナごとに生成する（ビルド時に作ると、公開しているビルドキャッシュを通じて
+#   全利用者で同じ秘密鍵になってしまうため。KasmVNC の証明書と同じ考え方）。
+###########################################################################
+set -euo pipefail
+
+port=2222
+user="$(id -un)"
+state_dir="${HOME}/.local/state/ai-sshd"
+host_key="${state_dir}/ssh_host_ed25519_key"
+config="${state_dir}/sshd_config"
+pid_file="${state_dir}/sshd.pid"
+log_file="${state_dir}/sshd.log"
+client_keys="/var/lib/ai-ssh/client/authorized_keys"
+known_hosts="/var/lib/ai-ssh/host/known_hosts"
+
+# 鍵などを作る部分だけ umask 077 にする（サブシェル）。
+#   umask は子プロセスに引き継がれるため、スクリプト全体で変えると sshd と ssh のセッションにまで及び、
+#   AI エージェントが作るファイルが 600 になってしまう（docker exec で入っていたときはコンテナの既定の 022）。
+(
+  umask 077
+  mkdir -p "$state_dir" "${HOME}/.ssh"
+  if [[ ! -s "$host_key" || ! -s "${host_key}.pub" ]]; then
+    rm -f "$host_key" "${host_key}.pub"
+    ssh-keygen -q -t ed25519 -N '' -C "ai" -f "$host_key"
+  fi
+)
+
+# コンテナの環境変数（Dockerfile の ENV と compose.yml の environment）を ssh のセッションへ引き継ぐ。
+#   sshd はセッションの環境変数を作り直すため、そのままでは PATH（mise の shims）や DISPLAY、
+#   CLAUDE_CONFIG_DIR などが消える。docker exec で入っていたときと同じ環境にするため、
+#   起動時の環境変数を ~/.ssh/environment に書き出し、PermitUserEnvironment で読み込ませる。
+#   セッションごとに決まる変数と、値に改行を含む変数（ファイルの形式で表せない）は除く。
+#   mktemp は 600 でファイルを作る（KASMVNC_PASSWORD なども含むため、他のユーザーに読ませない）。
+tmp="$(mktemp "${HOME}/.ssh/environment.XXXXXX")"
+while IFS= read -r -d '' kv; do
+  case "${kv%%=*}" in
+    HOME | USER | LOGNAME | SHELL | MAIL | PWD | OLDPWD | SHLVL | _ | HOSTNAME | TERM) continue ;;
+  esac
+  [[ "$kv" == *$'\n'* ]] && continue
+  printf '%s\n' "$kv"
+done < <(env -0) >"$tmp"
+mv -f "$tmp" "${HOME}/.ssh/environment"
+
+# sshd の設定。
+#   StrictModes no: authorized_keys は volume にあり、user コンテナのユーザー（Dev Containers が
+#     ホストに合わせて UID を変えることがある）が書くため、所有者やディレクトリ（0777）の権限の検査を通らない。
+#     書き込めるのは user コンテナだけ（ai では読み取り専用でマウント）のため、検査を外しても
+#     AI エージェントが鍵を差し替えることはできない。
+#   UsePAM no: root 以外で動く sshd では PAM を使えない。認証は公開鍵だけにする。
+#   転送（エージェント・ポート・X11・トンネル）はすべて禁止する。ai から user 側へ
+#   さかのぼる経路を作らないため。
+cat >"$config" <<EOF
+Port ${port}
+AddressFamily inet
+ListenAddress 0.0.0.0
+HostKey ${host_key}
+PidFile ${pid_file}
+AuthorizedKeysFile ${client_keys}
+AllowUsers ${user}
+PubkeyAuthentication yes
+PasswordAuthentication no
+KbdInteractiveAuthentication no
+UsePAM no
+PermitRootLogin no
+StrictModes no
+PermitUserEnvironment yes
+AcceptEnv COLORTERM
+AllowAgentForwarding no
+AllowTcpForwarding no
+AllowStreamLocalForwarding no
+X11Forwarding no
+PermitTunnel no
+GatewayPorts no
+PrintMotd no
+PrintLastLog no
+EOF
+
+/usr/sbin/sshd -t -f "$config"
+
+# 前回の sshd が残っていれば止める（手動で再実行した場合）。
+#   コンテナを再起動すると PID ファイルだけが残り、同じ番号を別のプロセスが使っていることが
+#   あるため、sshd であることを確かめてから止める。
+old_pid="$(cat "$pid_file" 2>/dev/null || true)"
+if [[ "$old_pid" =~ ^[0-9]+$ && "$(cat "/proc/${old_pid}/comm" 2>/dev/null)" == "sshd" ]]; then
+  kill "$old_pid"
+  for _ in {1..50}; do
+    kill -0 "$old_pid" 2>/dev/null || break
+    sleep 0.1
+  done
+fi
+rm -f "$pid_file"
+
+# sshd は絶対パスで起動する必要がある（接続ごとに自身を実行し直すため）。
+/usr/sbin/sshd -f "$config" -E "$log_file"
+
+# sshd はバックグラウンドに移ってからポートを確保するため、確保に失敗しても終了コードは 0 になる。
+# PID ファイルは待ち受けを始めてから書かれるため、それを待って起動を確かめる。
+started=false
+for _ in {1..50}; do
+  pid="$(cat "$pid_file" 2>/dev/null || true)"
+  if [[ "$pid" =~ ^[0-9]+$ ]] && kill -0 "$pid" 2>/dev/null; then
+    started=true
+    break
+  fi
+  sleep 0.1
+done
+if ! "$started"; then
+  echo "start-sshd: sshd を起動できませんでした（${log_file}）:" >&2
+  tail -n 5 "$log_file" >&2 || true
+  exit 1
+fi
+
+# ホスト鍵の公開鍵を user コンテナへ渡す（user は ai:2222 へ接続する）。
+#   起動に成功してから書き出す（失敗したときに、動いている sshd と合わない鍵を渡さないため）。
+#   書きかけのファイルを読ませないよう、一時ファイルに書いてから置き換える。
+tmp="$(mktemp "${known_hosts}.XXXXXX")"
+printf '[ai]:%s %s\n' "$port" "$(cut -d ' ' -f 1,2 "${host_key}.pub")" >"$tmp"
+chmod 0644 "$tmp"
+mv -f "$tmp" "$known_hosts"

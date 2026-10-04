@@ -229,6 +229,7 @@ ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 #   AIエージェント環境。Claude Code / Codex / Copilot / Kiro CLI / Antigravity CLI を持つ。
 #   AI エージェントが操作するブラウザ用のデスクトップ（KasmVNC）も持つ。
 #   sudo なし / AWS認証情報なし / docker.sock なし（意図的に権限を絞る）。
+#   user コンテナからは ssh（ai コマンド）で入る。ssh サーバーは root を使わずに動かす。
 ###########################################################################
 FROM dev-base AS ai
 
@@ -285,16 +286,36 @@ RUN arch="$(dpkg --print-architecture)" && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/* "${tmp_dir}"
 
-# デスクトップの起動スクリプトと、ai 用の google-chrome（ラッパー）。
+# ssh サーバー（user コンテナの ai コマンドの接続先）。
+#   sshd は root を使わず、コンテナのユーザーのまま start-sshd が起動する（ai には root が無いため）。
+#   パッケージの導入時に作られるホスト鍵（/etc/ssh/ssh_host_*）は消す。使わないうえ、
+#   公開しているビルドキャッシュを通じて全利用者で同じ秘密鍵になるため。
+#   ホスト鍵は start-sshd がコンテナごとに作る。
+#   /var/lib/ai-ssh/{client,host} は鍵を受け渡す volume のマウント先（compose.yml）。
+#     volume は最初にマウントしたときにイメージのディレクトリの権限を引き継ぐ。user コンテナの
+#     ユーザーは Dev Containers がホストに合わせて UID を変えることがあり、所有者では書き込みを
+#     許せないため、0777 にする。sticky ビット（1777）は付けない。付けると、UID が変わった後に
+#     前の UID が書いた鍵のファイルを置き換えられなくなる。どちらの volume も、書き込める
+#     （rw でマウントする）のは片方のコンテナだけのため、sticky ビットで守る相手はいない。
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends openssh-server && \
+    rm -f /etc/ssh/ssh_host_* && \
+    install -d -m 0755 /var/lib/ai-ssh && \
+    install -d -m 0777 /var/lib/ai-ssh/client /var/lib/ai-ssh/host && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
+# デスクトップと ssh サーバーの起動スクリプトと、ai 用の google-chrome（ラッパー）。
 #   google-chrome は dev-base で置いた共通のラッパーを、リモートデバッグ等を付ける ai 用のものに置き換える。
 COPY --chown=root:root ai/usr/share/icons/st /usr/share/icons/st
 COPY --chown=root:root ai/usr/local/bin /usr/local/bin
 
 RUN chmod -R u=rwX,go=rX /usr/share/icons/st && \
-    chmod 0755 /usr/local/bin/start-desktop /usr/local/bin/ai-entrypoint.sh \
+    chmod 0755 /usr/local/bin/start-desktop /usr/local/bin/start-sshd /usr/local/bin/ai-entrypoint.sh \
                /usr/local/bin/sync-home-defaults /usr/local/bin/google-chrome
 
-# docker exec で入ったシェルから起動した GUI アプリもデスクトップに表示する。
+# ssh（user コンテナの ai コマンド）や docker exec で入ったシェルから起動した GUI アプリもデスクトップに表示する
+# （ssh のセッションには start-sshd が ~/.ssh/environment で引き継ぐ）。
 ENV DISPLAY=:1 \
     GTK_IM_MODULE=fcitx \
     QT_IM_MODULE=fcitx \
@@ -316,7 +337,7 @@ ENV AGENT_BROWSER_EXECUTABLE_PATH=/opt/google/chrome/chrome \
     NO_UPDATE_NOTIFIER=1 \
     CTX7_TELEMETRY_DISABLED=1
 
-# デスクトップを起動してから共通の entrypoint.sh に処理を渡す。
+# デスクトップと ssh サーバーを起動してから共通の entrypoint.sh に処理を渡す。
 ENTRYPOINT ["/usr/local/bin/ai-entrypoint.sh"]
 
 # ai 専用のツール定義（global スコープ）。dev-base の system 設定と合成される。
@@ -480,8 +501,10 @@ CMD ["sleep", "infinity"]
 
 ###########################################################################
 # user:
-#   作業者(あなた)の環境。sudo(パスワード関門) と docker CLI を持ち、
-#   docker.sock 経由で ai コンテナを操作する。AWS認証情報を扱う側。
+#   作業者(あなた)の環境。sudo(パスワード関門) を持ち、AWS認証情報を扱う側。
+#   ai コンテナへは ssh（ai コマンド）で入る。docker.sock は持たない
+#   （ビルドなどで悪意あるスクリプトが動いても、ホストの Docker を操作させないため。
+#     コンテナの操作はホストで行う）。
 #   ai コンテナのデスクトップをホストへ転送する ai-desktop（aid）も持つ。
 ###########################################################################
 FROM dev-base AS user
@@ -491,7 +514,6 @@ SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 #   利用者ごとに値が変わり得るビルド引数（USER_PASS）は、ステージの最後で宣言・使用する。
 #   ARG は宣言以降のすべての RUN のキャッシュキーに含まれるため、途中で宣言すると
 #   値を変えた利用者は以降の層（mise install / npm ci など）を CI のキャッシュから取得できない。
-#   Docker ソケットのグループはビルドせず、compose.yml の group_add で起動時に付与する。
 ARG USER_NAME=dev
 
 # sudo はこの user ステージにのみ導入（攻撃面を ai から排除）
@@ -525,7 +547,7 @@ RUN chmod -R u=rwX,go=rX /opt/mise /opt/renovate && \
 USER ${USER_NAME}
 
 # -------------------------------------------------------------------
-# user 専用ツール（docker CLI 等）と renovate (ローカル確認用。本番運用は GitHub Actions 側)
+# user 専用ツール（opt/mise/config.toml）と renovate (ローカル確認用。本番運用は GitHub Actions 側)
 #   renovate は package-lock.json の integrity で依存を含めて固定し、npm ci で導入する。
 #   インストールスクリプトは実行しない（re2 のネイティブ拡張は入らず、Renovate は
 #   標準の RegExp にフォールバックする）。
@@ -535,18 +557,23 @@ RUN mise install && \
 
 USER root
 
-# ai コンテナに入るコマンド（ai）。どのディレクトリからでも実行でき、
-# カレントディレクトリに対応する ai コンテナ側のディレクトリで起動する。
+# ai コンテナに ssh で入るコマンド（ai）。どのディレクトリからでも実行でき、
+# カレントディレクトリと同じ ai コンテナ側のディレクトリで起動する。
 COPY --chown=root:root user/usr/local/bin/ai /usr/local/bin/ai
 
 # ai コンテナのデスクトップ（KasmVNC）をホストのブラウザで開くコマンド（ai-desktop / aid）。
 COPY --chown=root:root user/usr/local/bin/ai-desktop /usr/local/bin/ai-desktop
 
+# /var/lib/ai-ssh/{client,host} は ai コマンドが ssh の鍵を受け渡す volume のマウント先
+# （compose.yml。権限を 0777 にする理由は ai ステージの ssh サーバーの説明を参照）。
+
 RUN chown -R root:root /opt/renovate && \
     chmod -R u=rwX,go=rX /opt/renovate && \
     chmod 0755 /usr/local/bin/ai /usr/local/bin/ai-desktop && \
     ln -s ai-desktop /usr/local/bin/aid && \
-    ln -s /opt/renovate/node_modules/.bin/renovate /usr/local/bin/renovate
+    ln -s /opt/renovate/node_modules/.bin/renovate /usr/local/bin/renovate && \
+    install -d -m 0755 /var/lib/ai-ssh && \
+    install -d -m 0777 /var/lib/ai-ssh/client /var/lib/ai-ssh/host
 
 # user 用の home 初期ファイル
 COPY --chown=${USER_NAME}:${USER_NAME} user/home-config/ "/home/${USER_NAME}"

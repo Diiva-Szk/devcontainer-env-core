@@ -2,16 +2,18 @@
 ###########################################################################
 # ai-entrypoint.sh
 #   ai コンテナの起動スクリプト。イメージが管理する設定のうち、まだ無いものを
-#   配り、デスクトップ（KasmVNC）を起動してから、
+#   配り、デスクトップ（KasmVNC）と ssh サーバー（user コンテナの ai コマンドの接続先）を
+#   起動してから、
 #   ai / user 共通の entrypoint.sh に処理を渡す。
 #
 #   設定は --seed で「まだ無いものだけ」作る。既にあるファイルは書き換えない
 #   （イメージ側の更新を取り込むタイミングは利用者が決める。
 #     ai コンテナで sync-home-defaults --check / sync-home-defaults を実行する）。
 #
-#   設定の配布やデスクトップの起動に失敗しても、AI エージェントは
+#   設定の配布やデスクトップ・ssh サーバーの起動に失敗しても、AI エージェントは
 #   使えるようにコンテナは起動させる
-#   （デスクトップのログは ~/.vnc/ にある。直したら start-desktop で起動し直せる）。
+#   （デスクトップのログは ~/.vnc/ にある。直したら start-desktop で起動し直せる。
+#     ssh サーバーのログは ~/.local/state/ai-sshd/ にある。start-sshd で起動し直せる）。
 ###########################################################################
 set -uo pipefail
 
@@ -21,6 +23,10 @@ fi
 
 if ! /usr/local/bin/start-desktop; then
   echo "ai-entrypoint: デスクトップ（KasmVNC）を起動できませんでした。ログ: ~/.vnc/" >&2
+fi
+
+if ! /usr/local/bin/start-sshd; then
+  echo "ai-entrypoint: ssh サーバーを起動できませんでした。ログ: ~/.local/state/ai-sshd/" >&2
 fi
 
 exec /usr/local/bin/entrypoint.sh "$@"

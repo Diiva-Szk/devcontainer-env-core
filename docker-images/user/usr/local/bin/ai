@@ -1,9 +1,15 @@
 #!/bin/bash
 ###########################################################################
 # ai
-#   user コンテナから、同じ Compose プロジェクトの ai コンテナに入る。
-#   user コンテナのカレントディレクトリに対応する ai コンテナ側のディレクトリで起動する
-#   （両コンテナで同じホストのディレクトリをマウントしている場所を探して対応付ける）。
+#   user コンテナから、同じ Compose プロジェクトの ai コンテナに ssh で入る。
+#   user コンテナのカレントディレクトリと同じディレクトリで起動する
+#   （両コンテナともプロジェクトルートを ~/work にマウントしている）。
+#
+#   ai コンテナの ssh サーバー（start-sshd）へ、compose のネットワークで接続する（ai:2222）。
+#   鍵の受け渡しは compose.yml の volume で行う:
+#     /var/lib/ai-ssh/client/authorized_keys  ここで作るクライアントの公開鍵を書き出す（ai では読み取り専用）
+#     /var/lib/ai-ssh/host/known_hosts        ai のホスト鍵の公開鍵（ai が書き出す。ここでは読み取り専用）
+#   クライアントの鍵は初回に ~/.ssh/ai_ed25519 に作る（パスフレーズなし）。
 #
 #   使い方:
 #     ai                  # ai コンテナで bash を起動する
@@ -16,7 +22,7 @@ usage() {
   cat <<'EOF'
 usage: ai [command [args...]]
 
-user コンテナのカレントディレクトリに対応するディレクトリで、ai コンテナのコマンドを実行します。
+user コンテナのカレントディレクトリと同じディレクトリで、ai コンテナのコマンドを実行します。
 command を省略すると bash を起動します。
 
   ai              # ai コンテナで bash を起動する
@@ -34,93 +40,109 @@ if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
   exit 0
 fi
 
-# docker CLI は mise の shim。user コンテナは paranoid モードのため、カレントディレクトリに
-# trust していない mise.toml があると shim がエラーになる。docker は常に / で実行する。
-docker_() {
-  (cd / && docker "$@")
+ai_host="ai"
+ai_port=2222
+key="${HOME}/.ssh/ai_ed25519"
+client_keys="/var/lib/ai-ssh/client/authorized_keys"
+known_hosts="/var/lib/ai-ssh/host/known_hosts"
+workspace="${HOME}/work"
+
+# -------------------------------------------------------------------
+# クライアントの鍵を用意し、公開鍵を ai コンテナへ渡す
+#   コンテナを作り直すと鍵も作り直しになるため、毎回 volume の内容と比べて書き直す。
+#   ai を同時に実行しても秘密鍵と公開鍵が別々の処理で書かれないよう、確認・生成・配置をロックで守る。
+#   鍵はファイルの有無ではなく、秘密鍵から導いた公開鍵と .pub が一致するかで確かめ、
+#   一致しなければ作り直す（途中で中断されて組み合わせが崩れた鍵も直す）。
+# -------------------------------------------------------------------
+client_dir="$(dirname "$client_keys")"
+[[ -d "$client_dir" && -w "$client_dir" ]] ||
+  die "${client_dir} に書き込めません。compose.yml の volume（ai-ssh-client）を確認してください。"
+
+key_pair_ok() {
+  [[ -s "$key" && -s "${key}.pub" ]] || return 1
+  local derived
+  derived="$(ssh-keygen -y -P '' -f "$key" 2>/dev/null)" || return 1
+  [[ "$(cut -d ' ' -f 1,2 <<<"$derived")" == "$(cut -d ' ' -f 1,2 "${key}.pub")" ]]
 }
 
-# コンテナのマウントを「Type<TAB>Source<TAB>Destination」の行で出力する
-mounts_of() {
-  docker_ inspect -f '{{ range .Mounts }}{{ .Type }}{{ "\t" }}{{ .Source }}{{ "\t" }}{{ .Destination }}{{ "\n" }}{{ end }}' "$1"
-}
+(umask 077 && mkdir -p "$(dirname "$key")")
+exec {lock_fd}>"${key}.lock"
+flock -w 30 "$lock_fd" || die "鍵のロック（${key}.lock）を取得できません。"
 
-# -------------------------------------------------------------------
-# 自分（user コンテナ）と ai コンテナを特定する
-#   コンテナのホスト名は既定でコンテナ ID（先頭 12 桁）になる。
-# -------------------------------------------------------------------
-self="${HOSTNAME:-}"
-[[ -n "$self" ]] || die "HOSTNAME が空のため、自身のコンテナを特定できません。"
+if ! key_pair_ok; then
+  (
+    umask 077
+    rm -f "$key" "${key}.pub"
+    ssh-keygen -q -t ed25519 -N '' -C "user@${HOSTNAME:-user}" -f "$key"
+  )
+fi
 
-project="$(docker_ inspect -f '{{ index .Config.Labels "com.docker.compose.project" }}' "$self" 2>/dev/null)" ||
-  die "自身のコンテナ（${self}）を docker inspect できません。user コンテナ内で実行してください。"
-[[ -n "$project" && "$project" != "<no value>" ]] ||
-  die "自身のコンテナに Compose のプロジェクト名のラベルがありません。"
-
-ai_container="$(docker_ ps -q \
-  --filter "label=com.docker.compose.project=${project}" \
-  --filter "label=com.docker.compose.service=ai" | head -n 1)"
-[[ -n "$ai_container" ]] ||
-  die "ai コンテナが起動していません（Compose プロジェクト: ${project}）。"
-
-# -------------------------------------------------------------------
-# カレントディレクトリを ai コンテナ側のパスに変換する
-#   1. user コンテナのマウントのうち、カレントディレクトリを含む最も深いものを探す
-#   2. ai コンテナで同じ Source をマウントしている Destination に付け替える
-#   3. Source が一致しなければ、同じ Destination の bind マウントを、ディレクトリのデバイス番号と
-#      inode が一致する場合に限って使う（inode 番号はファイルシステムをまたいで重複するため、
-#      デバイス番号もあわせて比べる）。Docker Desktop の WSL 連携では、同じホストのディレクトリでも
-#      コンテナによって Source が /run/desktop/mnt/host/wsl/docker-desktop-bind-mounts/... に
-#      変換されて記録され、文字列では突き合わせられないことがあるため。
-#   対応するマウントが無ければ、ai コンテナの作業ディレクトリ（compose.yml の working_dir）を使う。
-# -------------------------------------------------------------------
-cwd="$(pwd -P)"
-user_src="" user_dst=""
-while IFS=$'\t' read -r _ src dst; do
-  [[ -n "$dst" ]] || continue
-  if [[ "$cwd" == "$dst" || "$cwd" == "$dst"/* ]] && ((${#dst} > ${#user_dst})); then
-    user_src="$src"
-    user_dst="$dst"
-  fi
-done < <(mounts_of "$self")
-
-workdir=""
-if [[ -n "$user_dst" ]]; then
-  ai_mounts="$(mounts_of "$ai_container")"
-  while IFS=$'\t' read -r _ src dst; do
-    if [[ -n "$dst" && "$src" == "$user_src" ]]; then
-      workdir="${dst}${cwd#"$user_dst"}"
-      break
-    fi
-  done <<<"$ai_mounts"
-
-  if [[ -z "$workdir" ]] && user_devino="$(stat -c %d:%i -- "$user_dst" 2>/dev/null)"; then
-    while IFS=$'\t' read -r type _ dst; do
-      [[ "$type" == "bind" && "$dst" == "$user_dst" ]] || continue
-      ai_devino="$(docker_ exec "$ai_container" stat -c %d:%i -- "$dst" 2>/dev/null)" || continue
-      if [[ "$ai_devino" == "$user_devino" ]]; then
-        workdir="${dst}${cwd#"$user_dst"}"
-        break
-      fi
-    done <<<"$ai_mounts"
+pub="$(cat "${key}.pub")"
+if [[ "$(cat "$client_keys" 2>/dev/null || true)" != "$pub" ]]; then
+  tmp="$(mktemp "${client_keys}.XXXXXX")"
+  printf '%s\n' "$pub" >"$tmp"
+  chmod 0644 "$tmp"
+  if ! mv -f "$tmp" "$client_keys"; then
+    rm -f "$tmp"
+    die "${client_keys} を置き換えられません。ホストで ai-ssh-client の volume を削除してから、コンテナを作り直してください。"
   fi
 fi
 
-if [[ -z "$workdir" ]]; then
-  workdir="$(docker_ inspect -f '{{ .Config.WorkingDir }}' "$ai_container")"
-  echo "ai: ${cwd} は ai コンテナと共有していないため、${workdir:-/} で起動します。" >&2
+# ロックは ssh の接続中まで持ち越さない（exec した ssh に引き継ぐと、他の ai が待たされる）。
+exec {lock_fd}>&-
+
+[[ -s "$known_hosts" ]] ||
+  die "ai コンテナのホスト鍵（${known_hosts}）がありません。ai コンテナが起動しているか確認してください（ai コンテナの start-sshd で ssh サーバーを起動し直せます）。"
+
+# -------------------------------------------------------------------
+# カレントディレクトリを決める
+#   プロジェクトルートは両コンテナとも ~/work にマウントしているため、同じパスを使う。
+#   共有していないディレクトリでは、ai コンテナの ~/work で起動する。
+# -------------------------------------------------------------------
+cwd="$(pwd -P)"
+if [[ "$cwd" == "$workspace" || "$cwd" == "$workspace"/* ]]; then
+  workdir="$cwd"
+else
+  workdir="$workspace"
+  echo "ai: ${cwd} は ai コンテナと共有していないため、${workdir} で起動します。" >&2
 fi
 
 # -------------------------------------------------------------------
 # ai コンテナでコマンドを実行する
+#   -F /dev/null: ~/.ssh/config の設定（エージェントの転送など）を持ち込まない。
+#   BatchMode: 鍵で認証できないときにパスワードを尋ねず失敗させる。
+#   StrictHostKeyChecking=yes: volume で受け取ったホスト鍵と一致しない相手には接続しない。
+#   転送はすべて無効にする（ai から user 側へさかのぼる経路を作らない。sshd 側でも禁止している）。
 # -------------------------------------------------------------------
-exec_opts=(-i)
-[[ -t 0 && -t 1 ]] && exec_opts+=(-t)
-[[ -n "$workdir" ]] && exec_opts+=(-w "$workdir")
-[[ -n "${TERM:-}" ]] && exec_opts+=(-e "TERM=${TERM}")
-[[ -n "${COLORTERM:-}" ]] && exec_opts+=(-e "COLORTERM=${COLORTERM}")
+ssh_opts=(
+  -F /dev/null
+  -p "$ai_port"
+  -i "$key"
+  -o IdentitiesOnly=yes
+  -o IdentityAgent=none
+  -o BatchMode=yes
+  -o ConnectTimeout=10
+  -o StrictHostKeyChecking=yes
+  -o UserKnownHostsFile="$known_hosts"
+  -o GlobalKnownHostsFile=/dev/null
+  -o UpdateHostKeys=no
+  -o ForwardAgent=no
+  -o ForwardX11=no
+  -o ClearAllForwardings=yes
+  -o PermitLocalCommand=no
+  -o SendEnv=COLORTERM
+  -o LogLevel=ERROR
+  -l "$(id -un)"
+)
+if [[ -t 0 && -t 1 ]]; then
+  ssh_opts+=(-t)
+else
+  ssh_opts+=(-T)
+fi
 
 (($#)) || set -- bash
 
-cd /
-exec docker exec "${exec_opts[@]}" "$ai_container" "$@"
+# ssh はコマンドを ai コンテナのログインシェル（bash）に文字列で渡すため、引数をクォートしてつなぐ。
+remote_cmd="cd -- $(printf '%q' "$workdir") && exec$(printf ' %q' "$@")"
+
+exec ssh "${ssh_opts[@]}" "$ai_host" "$remote_cmd"
