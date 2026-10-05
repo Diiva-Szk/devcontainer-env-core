@@ -63,11 +63,11 @@ flowchart LR
 
 **`ai` コンテナ** — [docker-images/ai/opt/mise/config.toml](docker-images/ai/opt/mise/config.toml)
 
-Claude Code、OpenAI Codex CLI、GitHub Copilot CLI、GitHub Copilot Language Server、Amazon Kiro CLI、Google Antigravity CLI、rulesync、Playwright CLI・agent-browser（ブラウザは Google Chrome を使う）、Context7 CLI（ctx7）
+Claude Code、OpenAI Codex CLI、GitHub Copilot CLI、GitHub Copilot Language Server、Amazon Kiro CLI、Google Antigravity CLI、rulesync、Playwright CLI・agent-browser（ブラウザは Google Chrome を使う）、Context7 CLI（ctx7）、drawio-png-cli（dip。`.drawio.png` の図面の抽出・検証・更新。描画には Google Chrome を使う）
 
 デスクトップ: KasmVNC、Openbox、Google Chrome、st（ターミナル）、fcitx5-mozc（日本語入力）
 
-Playwright CLI・agent-browser の使い方スキルと、Context7 CLI（ctx7）のドキュメント検索スキル（find-docs）は、各 CLI・公式リポジトリが配布しているものをビルド時に取得し、rulesync で Claude Code・Codex・Copilot・Kiro・Antigravity のグローバル設定へ展開しています。
+Playwright CLI・agent-browser の使い方スキル、Context7 CLI（ctx7）のドキュメント検索スキル（find-docs）、dip の `.drawio.png` 編集スキル（drawio-png）は、各 CLI・公式リポジトリが配布しているものをビルド時に取得し、rulesync で Claude Code・Codex・Copilot・Kiro・Antigravity のグローバル設定へ展開しています。
 
 **`user` コンテナ** — [docker-images/user/opt/mise/config.toml](docker-images/user/opt/mise/config.toml)
 
@@ -156,6 +156,7 @@ sync-home-defaults  # イメージが管理する設定をイメージ側の内�
 playwright-cli  # ブラウザ操作（Playwright CLI）
 agent-browser   # ブラウザ操作（agent-browser）
 ctx7            # ライブラリの最新ドキュメントを引く（Context7 CLI）
+dip             # .drawio.png の図面の抽出・検証・更新（drawio-png-cli）
 ```
 
 - 各ツールのログイン（認証）は、初回に `ai` コンテナ内で行ってください。**ログイン情報と会話履歴は、コンテナを作り直しても残ります**（[AI ツールの状態の保存](#ai-ツールの状態の保存)）。

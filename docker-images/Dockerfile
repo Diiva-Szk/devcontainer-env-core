@@ -332,10 +332,18 @@ ENV DISPLAY=:1 \
 #   CTX7_TELEMETRY_DISABLED: ctx7（Context7 CLI）が ctx7.com へ送るテレメトリを止める。
 #     NO_UPDATE_NOTIFIER と同じ考え方。ctx7 の更新通知（npm レジストリへの問い合わせ）は
 #     環境変数では止められない（対話端末のときだけ動くため、エージェントの実行では通常出ない）。
+#   DIP_CHROME_PATH / DIP_CHROME_ARGS: dip（drawio-png-cli）が .drawio.png を描画する Chrome。
+#     dip は PATH の google-chrome（ラッパー）を先に見つけるが、ラッパーの --remote-debugging-port や
+#     --user-data-dir はデスクトップの Chrome と衝突するため、ほかと同じく実体を直接指定する。
+#     実体を直接起動するとラッパーの起動オプションが付かないため、コンテナで必要なものを渡す
+#     （--no-sandbox が無いと SUID サンドボックスの検査で起動直後に落ちる）。
+#     dip は自前でヘッドレス・専用プロファイル・ループバック限定のデバッグポートを付ける。
 ENV AGENT_BROWSER_EXECUTABLE_PATH=/opt/google/chrome/chrome \
     PLAYWRIGHT_MCP_EXECUTABLE_PATH=/opt/google/chrome/chrome \
     NO_UPDATE_NOTIFIER=1 \
-    CTX7_TELEMETRY_DISABLED=1
+    CTX7_TELEMETRY_DISABLED=1 \
+    DIP_CHROME_PATH=/opt/google/chrome/chrome \
+    DIP_CHROME_ARGS="--no-sandbox --disable-dev-shm-usage --disable-gpu"
 
 # デスクトップと ssh サーバーを起動してから共通の entrypoint.sh に処理を渡す。
 ENTRYPOINT ["/usr/local/bin/ai-entrypoint.sh"]
@@ -350,7 +358,7 @@ RUN chmod -R u=rwX,go=rX /opt/mise
 USER ${USER_NAME}
 
 # ai 専用ツールをインストール（Kiro CLI / Antigravity CLI / rulesync / Playwright CLI /
-# Context7 CLI を含む）
+# Context7 CLI / drawio-png-cli（dip）を含む）
 #   バイナリの取得・検証は mise が行う。各 CLI の付属のセットアップコマンドは実行しない。
 #
 # Kiro CLI: `kiro-cli setup` は実行しない（シェル統合を入れない）。
@@ -370,7 +378,8 @@ RUN mise install && \
     agy --version && \
     rulesync --version && \
     playwright-cli --version && \
-    ctx7 --version
+    ctx7 --version && \
+    dip --version
 
 # ai 用の home 初期ファイル（AI ツールの設定と、デスクトップ（Openbox / idesk / KasmVNC）の設定）
 #   【注意】このうち AI ツールの設定（.claude / .codex / .kiro / .gemini 配下）は、
@@ -405,6 +414,11 @@ RUN chmod 0755 "/home/${USER_NAME}/.vnc/xstartup"
 #     コピーしてしまう）、下の RUN で ctx7 --version と照合する。ずれていれば
 #     ビルドを落とす（CLI の版だけが Renovate で上がり、スキルが古いまま残って
 #     気づけない事態を防ぐ）。
+#   drawio-png（dip）: find-docs と同じく、リリースタグ（v<版>）が注釈付きタグのため
+#     rulesync で取得できず、ai/opt/rulesync/.rulesync/skills/drawio-png/ に SKILL.md と
+#     LICENSE（MIT）を vendoring している。SKILL.md は案内だけで、手順の本文は
+#     `dip skill` がインストール済みの dip から出力する（版によって変わらない作り）。
+#     そのため版の照合はせず、下の RUN で `dip skill` が使えることだけを確かめる。
 #
 #   取得は rulesync の宣言的ソースで行い、rulesync.lock がコミット SHA と
 #   成果物ごとのハッシュを固定する。--frozen により lock とズレたらビルドを落とす。
@@ -447,6 +461,9 @@ RUN set -eu; \
     test -f "/home/${USER_NAME}/.claude/skills/agent-browser/SKILL.md"; \
     test -f "/home/${USER_NAME}/.claude/skills/playwright-cli/SKILL.md"; \
     test -f "/home/${USER_NAME}/.claude/skills/find-docs/SKILL.md"; \
+    test -f "/home/${USER_NAME}/.claude/skills/drawio-png/SKILL.md"; \
+    dip skill > /dev/null; \
+    dip skill --full > /dev/null; \
     if grep -qE 'npx ctx7|ctx7@latest|npm install -g' "/home/${USER_NAME}/.claude/skills/find-docs/SKILL.md"; then \
       echo "find-docs/SKILL.md に npx ctx7 / ctx7@latest / npm install -g が残っています（置換漏れ）。" >&2; \
       exit 1; \
