@@ -37,6 +37,7 @@
                     // Renovate対象外: ghリリースなし
                     "zhengxiaoyao0716.intelligence-change-case": ["1.2.0"],
                     // Renovate対象外: ghタグはv1.9.260717021形式でMarketplace版と体系が異なる
+                    // 版を変えるときは、ai の dip 用の draw.io 資材（Dockerfile の DRAWIO_WEBAPP_COMMIT）も見直す（docs/MAINTAINING.md）
                     "hediet.vscode-drawio": ["1.9.0"],
                     // renovate: datasource=github-releases depName=ExiaSR/vscode-hadolint
                     "exiasr.hadolint": ["1.1.2"],
@@ -120,6 +121,7 @@
                 // Renovate対象外: ghリリースなし
                 "zhengxiaoyao0716.intelligence-change-case@1.2.0",
                 // Renovate対象外: ghタグはv1.9.260717021形式でMarketplace版と体系が異なる
+                // 版を変えるときは、ai の dip 用の draw.io 資材（Dockerfile の DRAWIO_WEBAPP_COMMIT）も見直す（docs/MAINTAINING.md）
                 "hediet.vscode-drawio@1.9.0",
                 // renovate: datasource=github-releases depName=ExiaSR/vscode-hadolint
                 "exiasr.hadolint@1.1.2",

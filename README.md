@@ -67,6 +67,13 @@ Claude Code、OpenAI Codex CLI、GitHub Copilot CLI、GitHub Copilot Language Se
 
 dip のライブラリ（`dip library` / `dip insert` で図に入れる図形・アイコン）として、[Simple Icons の draw.io ライブラリ](https://github.com/mondeja/simple-icons-drawio)（`simple-icons`）を `/opt/drawio-libraries` に入れ、`DIP_LIBRARY_PATH` で指しています。ブランドのロゴの利用は、各ブランドの商標の条件に従ってください。
 
+AWS・Google Cloud・Azure などの draw.io 標準の図形（`shape=mxgraph.aws4.*` や `image=img/lib/azure2/...` など）も描画できるよう、draw.io の Web 資材を `/opt/drawio-webapp` に入れ、`DIP_DRAWIO_WEB_PATH` で指しています。dip の既定の描画方式（`vscode` モード）用の資材のため、`--chromium-mode raw` / `desktop` ではこれらの図形は描けません。
+
+VS Code の draw.io 拡張（`hediet.vscode-drawio`）で編集した `.drawio.png` を `ai` コンテナの AI エージェントに修正してもらう使い方を想定しています。資材は拡張（1.9.0）に入っている draw.io と同じ版で、拡張の図形パレットの図形は `ai` 側の dip でも描画できます。ただし次の点に注意してください。
+
+- Web フォント（Google Fonts など）を指定した文字や、URL で参照している画像を含む図は、dip が外部への通信を既定で止めているため描画に失敗します（`--allow-network` が必要というエラーになります）。`dip embed` に `--allow-network` を付けると描画できます。拡張で挿入した画像（貼り付け・ファイルから）や Simple Icons は図に埋め込まれるため、そのまま描画できます。
+- 拡張の画像はホスト側の VS Code が描くため、ホストとコンテナのフォントの違いによる細かな画素の差は残ります。
+
 デスクトップ: KasmVNC、Openbox、Google Chrome、st（ターミナル）、fcitx5-mozc（日本語入力）
 
 Playwright CLI・agent-browser の使い方スキル、Context7 CLI（ctx7）のドキュメント検索スキル（find-docs）、dip の `.drawio.png` 編集スキル（drawio-png）は、各 CLI・公式リポジトリが配布しているものをビルド時に取得し、rulesync で Claude Code・Codex・Copilot・Kiro・Antigravity のグローバル設定へ展開しています。

@@ -305,6 +305,33 @@ RUN apt-get update && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
+# draw.io の Web 資材（dip が AWS・Google Cloud・Azure などの draw.io 図形を描くのに使う。DIP_DRAWIO_WEB_PATH）
+#   dip の同梱資材は基本図形だけで、draw.io の図形（mxgraph.*）や画像で描く図形（image=img/lib/...）は
+#   draw.io 本体の資材が無いと描けない。jgraph/drawio の webapp 全体は 100MB を超えるため、
+#   dip の vscode モード（既定）での描画に必要なパス（約29MB）だけを取得する。
+#   取得するパスは ai/opt/drawio-webapp/sparse-checkout に書き、git の sparse checkout と
+#   partial clone（--filter=blob:none）で固定したコミットの該当ファイルだけを取り出す。
+#   中身はコミット SHA で固定され、git がオブジェクトのハッシュを検証する。取得後に HEAD が
+#   DRAWIO_WEBAPP_COMMIT と一致することも確かめる。
+#   DRAWIO_WEBAPP_COMMIT は dip の vscode モードが互換性を確認した上流コミット（draw.io 26.0.2。
+#   VS Code の draw.io 拡張 1.9.0 と同じ）。dip の README の記載に合わせて手で更新する
+#   （Renovate の対象外。パスを選んだ経緯・更新手順・raw / desktop モードでの制限は docs/MAINTAINING.md）。
+#   版の固定された資材で、更新の早い AI ツール（mise install）より前に置く。
+ARG DRAWIO_WEBAPP_COMMIT="96a916a337d13fc8bf622c8a67d422bd284eabe5"
+COPY --chown=root:root ai/opt/drawio-webapp/sparse-checkout /tmp/drawio-webapp.sparse-checkout
+RUN tmp_dir="$(mktemp -d)" && \
+    git -C "${tmp_dir}" init -q && \
+    git -C "${tmp_dir}" remote add origin https://github.com/jgraph/drawio.git && \
+    git -C "${tmp_dir}" sparse-checkout set --no-cone --stdin < /tmp/drawio-webapp.sparse-checkout && \
+    git -C "${tmp_dir}" fetch -q --depth 1 --filter=blob:none origin "${DRAWIO_WEBAPP_COMMIT}" && \
+    git -C "${tmp_dir}" -c advice.detachedHead=false checkout -q FETCH_HEAD && \
+    test "$(git -C "${tmp_dir}" rev-parse HEAD)" = "${DRAWIO_WEBAPP_COMMIT}" && \
+    mv "${tmp_dir}/src/main/webapp" /opt/drawio-webapp && \
+    mv "${tmp_dir}/LICENSE" /opt/drawio-webapp/LICENSE && \
+    chown -R root:root /opt/drawio-webapp && \
+    chmod -R u=rwX,go=rX /opt/drawio-webapp && \
+    rm -rf "${tmp_dir}" /tmp/drawio-webapp.sparse-checkout
+
 # デスクトップと ssh サーバーの起動スクリプトと、ai 用の google-chrome（ラッパー）。
 #   google-chrome は dev-base で置いた共通のラッパーを、リモートデバッグ等を付ける ai 用のものに置き換える。
 COPY --chown=root:root ai/usr/share/icons/st /usr/share/icons/st
@@ -338,12 +365,15 @@ ENV DISPLAY=:1 \
 #     実体を直接起動するとラッパーの起動オプションが付かないため、コンテナで必要なものを渡す
 #     （--no-sandbox が無いと SUID サンドボックスの検査で起動直後に落ちる）。
 #     dip は自前でヘッドレス・専用プロファイル・ループバック限定のデバッグポートを付ける。
+#   DIP_DRAWIO_WEB_PATH: dip が描画に使う draw.io の Web 資材（上で配置した /opt/drawio-webapp）。
+#     vscode モード（既定）用の資材のため、--chromium-mode raw / desktop では AWS などの図形を描けない。
 ENV AGENT_BROWSER_EXECUTABLE_PATH=/opt/google/chrome/chrome \
     PLAYWRIGHT_MCP_EXECUTABLE_PATH=/opt/google/chrome/chrome \
     NO_UPDATE_NOTIFIER=1 \
     CTX7_TELEMETRY_DISABLED=1 \
     DIP_CHROME_PATH=/opt/google/chrome/chrome \
-    DIP_CHROME_ARGS="--no-sandbox --disable-dev-shm-usage --disable-gpu"
+    DIP_CHROME_ARGS="--no-sandbox --disable-dev-shm-usage --disable-gpu" \
+    DIP_DRAWIO_WEB_PATH=/opt/drawio-webapp
 
 # デスクトップと ssh サーバーを起動してから共通の entrypoint.sh に処理を渡す。
 ENTRYPOINT ["/usr/local/bin/ai-entrypoint.sh"]
@@ -388,6 +418,8 @@ RUN mise install && \
 #   取得元はライセンス表記のファイルをリリースに含めないため、リポジトリの LICENSE を
 #   ai/opt/drawio-libraries/ に置いて一緒に配置する（*.xml ではないので dip は読まない）。
 #   配置中だけ一般ユーザーに書き込みを許可し、スキルの配置後に root 所有・読み取り専用へ戻す。
+#   あわせて、AWS の図形（Lambda）と Azure のアイコン（img/lib の画像）の図を Chrome で描き、
+#   draw.io の Web 資材（/opt/drawio-webapp）で足りることを確かめる（資材が欠けていると dip が失敗する）。
 ENV DIP_LIBRARY_PATH="/opt/drawio-libraries"
 
 USER root
@@ -398,7 +430,11 @@ COPY --chown=${USER_NAME}:${USER_NAME} ai/opt/drawio-libraries /opt/drawio-libra
 RUN set -eu; \
     install -m 0644 "$(mise where github:mondeja/simple-icons-drawio)/simple-icons.xml" \
       "${DIP_LIBRARY_PATH}/simple-icons.xml"; \
-    dip library list | grep -q '^simple-icons[[:space:]]'
+    dip library list | grep -q '^simple-icons[[:space:]]'; \
+    check_dir="$(mktemp -d)"; \
+    printf '%s' '<mxfile><diagram id="p" name="p"><mxGraphModel><root><mxCell id="0"/><mxCell id="1" parent="0"/><mxCell id="2" style="shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.lambda;" vertex="1" parent="1"><mxGeometry width="60" height="60" as="geometry"/></mxCell><mxCell id="3" style="image;html=1;image=img/lib/azure2/compute/Function_Apps.svg;" vertex="1" parent="1"><mxGeometry x="80" width="64" height="56" as="geometry"/></mxCell></root></mxGraphModel></diagram></mxfile>' \
+      | dip embed --renderer chromium -o "${check_dir}/check.drawio.png" > /dev/null; \
+    rm -rf "${check_dir}"
 
 # ai 用の home 初期ファイル（AI ツールの設定と、デスクトップ（Openbox / idesk / KasmVNC）の設定）
 #   【注意】このうち AI ツールの設定（.claude / .codex / .kiro / .gemini 配下）は、
