@@ -94,6 +94,24 @@ checksum = "sha256:993d462f4dcfc19860d93a6521a452eba4502bfc449fe0120303c2ccb998e
 url = "https://github.com/vercel-labs/agent-browser/releases/download/v0.38.2/agent-browser-linux-musl-x64"
 url_api = "https://api.github.com/repos/vercel-labs/agent-browser/releases/assets/604194744"
 
+[[tools."github:mondeja/simple-icons-drawio"]]
+version = "16.34.0"
+backend = "github:mondeja/simple-icons-drawio"
+specifiers = ["16.34.0"]
+
+[tools."github:mondeja/simple-icons-drawio".options]
+asset_pattern = "simple-icons.xml"
+
+[tools."github:mondeja/simple-icons-drawio"."platforms.linux-arm64"]
+checksum = "sha256:e5e7df91046c7e320874d321f9ae8a78280a9cf40141d3b870b3145b40065fdd"
+url = "https://github.com/mondeja/simple-icons-drawio/releases/download/16.34.0/simple-icons.xml"
+url_api = "https://api.github.com/repos/mondeja/simple-icons-drawio/releases/assets/610168725"
+
+[tools."github:mondeja/simple-icons-drawio"."platforms.linux-x64"]
+checksum = "sha256:e5e7df91046c7e320874d321f9ae8a78280a9cf40141d3b870b3145b40065fdd"
+url = "https://github.com/mondeja/simple-icons-drawio/releases/download/16.34.0/simple-icons.xml"
+url_api = "https://api.github.com/repos/mondeja/simple-icons-drawio/releases/assets/610168725"
+
 [[tools."github:openai/codex"]]
 version = "0.160.0"
 backend = "github:openai/codex"

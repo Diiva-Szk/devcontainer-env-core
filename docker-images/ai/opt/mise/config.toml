@@ -54,6 +54,18 @@ version = "0.1.0"
 linux-x64 = { asset_pattern = "dip-*-x86_64-unknown-linux-musl.tar.gz" }
 linux-arm64 = { asset_pattern = "dip-*-aarch64-unknown-linux-musl.tar.gz" }
 
+# Simple Icons の draw.io カスタムライブラリ（dip の DIP_LIBRARY_PATH で読ませる）
+#   ツールではなくデータ（<mxlibrary> 形式の XML、1ファイル）だが、lock によるチェックサムの固定と
+#   Renovate の追従（github-releases）を他のツールと同じ仕組みで行うため mise で取得する。
+#   リリースの全アイコン版（simple-icons.xml）を使う。プラットフォームに依存しない。
+#   mise の github backend は単体ファイルを実行ファイルとして扱うため、shim（simple-icons.xml）が
+#   PATH に1つできる（実行しても何も起きず無害）。
+#   dip は mise の配置先（版ごとに変わる）ではなく、Dockerfile で /opt/drawio-libraries へ
+#   root 所有でコピーしたものを読む。
+[tools."github:mondeja/simple-icons-drawio"]
+version = "16.34.0"
+asset_pattern = "simple-icons.xml"
+
 # OpenAI Codex CLI
 #   aqua backend では linux 向け成果物を解決できず lock が生成されなかったため、github backend で取得する。
 #   タグは rust-v0.120.0 形式。静的リンクの musl 版を使う。

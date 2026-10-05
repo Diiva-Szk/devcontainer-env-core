@@ -38,6 +38,7 @@ Feature（`devcontainer-features/` 配下）には `Dockerfile` を含めず、�
 │   │   ├── opt/mise/             # mise の設定と lock（global スコープ）
 │   │   ├── opt/rulesync/         # AI ツールのスキルの取得と各ツールへの展開（rulesync.jsonc / rulesync.lock / find-docs.version / find-docs・drawio-png の vendoring）
 │   │   ├── opt/agent-browser-skills/ # agent-browser のスキル本体の取得（rulesync.jsonc / rulesync.lock）
+│   │   ├── opt/drawio-libraries/ # dip のライブラリと一緒に配置するライセンス表記（ライブラリの XML 自体は mise で取得）
 │   │   ├── usr/local/bin/        # ai-entrypoint.sh / start-desktop（デスクトップの起動）/ start-sshd（ssh サーバーの起動）/ sync-home-defaults / google-chrome（ai 用のラッパー。dev-base のものを置き換える）
 │   │   ├── usr/share/icons/st/   # st のアイコン
 │   │   └── home-config/          # AI エージェントとデスクトップ（KasmVNC / Openbox / idesk）の設定ファイル
@@ -109,6 +110,7 @@ CLI ツールと言語ランタイム（Python / Node.js）は [mise](https://mi
 | KasmVNC（ai） | `docker-images/Dockerfile` の `KASMVNC_VERSION` / `KASMVNC_SHA256_*` | GitHub リリースの `.deb` を sha256 で検証して `apt-get install` |
 | ブラウザ操作 CLI のスキル（ai） | `docker-images/ai/opt/rulesync/` / `docker-images/ai/opt/agent-browser-skills/`（`rulesync.jsonc` と `rulesync.lock`） | `rulesync install --frozen` で取得し `rulesync generate --global` で各ツールへ展開 |
 | find-docs スキル（ai） | `docker-images/ai/opt/rulesync/.rulesync/skills/find-docs/SKILL.md`（vendoring） | `rulesync generate --global` で各ツールへ展開（取得は手動。[AI ツールのスキル](#ai-ツールのスキルai)を参照） |
+| dip のライブラリ（ai。Simple Icons） | `docker-images/ai/opt/mise/config.toml`（`github:mondeja/simple-icons-drawio`）と `mise.lock` | mise で取得し、Dockerfile で `/opt/drawio-libraries` へコピーして `DIP_LIBRARY_PATH` で指す（[dip のライブラリ](#dip-のライブラリai)を参照） |
 | drawio-png スキル（ai） | `docker-images/ai/opt/rulesync/.rulesync/skills/drawio-png/SKILL.md`（vendoring） | `rulesync generate --global` で各ツールへ展開（取得は手動。[drawio-png の vendoring](#drawio-png-の-vendoring)を参照） |
 | デスクトップ（ai）、socat（user） | `docker-images/Dockerfile` | Debian のパッケージ（`apt-get`） |
 | Google Chrome（ai / user） | `docker-images/Dockerfile` | Google の apt リポジトリ（署名鍵の主鍵のフィンガープリントを `GOOGLE_LINUX_SIGNING_KEY_FPR` で照合）から `apt-get install` |
@@ -192,6 +194,16 @@ bash scripts/update-rulesync-locks.sh
 **版の照合をしない理由:** このスキルは案内だけで、手順の本文はインストールされている dip が `dip skill` / `dip skill --full` で出力します（上流が「版によって変わらない」作りにしています）。そのため `find-docs.version` のような版の照合は置かず、Renovate が `github:szk302/drawio-png-cli` の版を上げても通常はスキルを取り直す必要はありません。代わりに Dockerfile のビルドステップで `dip skill` / `dip skill --full` が動くことを確かめます。
 
 **取り直すとき:** 上流の `skills/drawio-png/SKILL.md` が変わった場合は、そのリリースタグから `skills/drawio-png/SKILL.md` と `LICENSE`（リポジトリルート）を取得し、同じディレクトリに上書きしてください（例: `git clone --depth 1 --branch v<版> https://github.com/szk302/drawio-png-cli.git`）。上流のタグが軽量タグになるか、rulesync が注釈付きタグに対応したら、agent-browser と同じ git transport の `sources` へ移行してください（`LICENSE` を付け足す処理が必要な点は `find-docs` と同じです）。
+
+### dip のライブラリ（ai）
+
+dip の `library` / `insert` で使う draw.io のカスタムライブラリ（`<mxlibrary>` 形式の XML）として、[mondeja/simple-icons-drawio](https://github.com/mondeja/simple-icons-drawio) のリリースの `simple-icons.xml`（全アイコン版）を入れています。dip はライブラリを同梱・取得しないため、イメージ側で用意します。
+
+- **取得:** ツールではなくデータですが、lock によるチェックサムの固定と Renovate の追従（github-releases。ai の mise ツールと同じグループ・周期）を他のツールと同じ仕組みで行うため、ai の mise 設定に `github:mondeja/simple-icons-drawio` として書いています。プラットフォームに依存しないため、`asset_pattern` は1つです。
+- **shim:** mise の github backend は単体ファイルを実行ファイルとして扱うため、`simple-icons.xml` という shim が PATH に1つできます（`bin_path` を指定しても避けられないことを確認済み）。実行しても何も起きず無害なため、そのままにしています。避けるには取得専用の mise 設定を別に置く必要があり、`update-mise-locks.sh`・`update-mise-lock.yml`・`build-images.yml` の対象を広げる改修が要るためです。
+- **配置:** mise の配置先は版ごとに変わるため、Dockerfile で `/opt/drawio-libraries/simple-icons.xml` へコピーし、`DIP_LIBRARY_PATH=/opt/drawio-libraries` で指します。ほかの `/opt` 配下と同じく root 所有・読み取り専用です。ビルドでは `dip library list` に `simple-icons` が出ることを確かめます。
+- **ライセンス:** 取得元のリポジトリは BSD 3-Clause（Copyright (c) 2022, Álvaro Mondéjar Rubio）です。リリースにはライセンス表記のファイルが無いため、リポジトリの `LICENSE.md` を `docker-images/ai/opt/drawio-libraries/LICENSE-simple-icons-drawio.md` に置き、ライブラリと同じディレクトリへ配置しています（`*.xml` ではないので dip は読みません）。アイコン自体は Simple Icons（CC0 1.0）由来で、ブランドのロゴの利用には各ブランドの商標の条件が別にかかります。
+- **ライブラリを追加するとき:** `<名前>.xml` を `/opt/drawio-libraries` に置けば、ファイル名（`.xml` を除く）がライブラリ名になります。取得方法は上と同じく mise と lock で固定し、ライセンス表記も同じディレクトリに置いてください。
 
 ## ビルドキャッシュ
 
@@ -294,6 +306,7 @@ flowchart TD
 | Kiro CLI（http backend） | `customManagers` の正規表現 + `customDatasources`（latest マニフェスト） |
 | mise の npm backend のツール（Playwright CLI、ctx7） | Renovate の mise マネージャ（npm データソース）。依存グラフのサイドカー（`.mise/locks/`）は Renovate の対象外にし、`update-mise-lock.yml` が作り直す |
 | rulesync の取得元の `ref`（agent-browser のスキル） | `customManagers` の正規表現（`// renovate:` コメント）。lock は `update-rulesync-lock.yml` が作り直す |
+| dip のライブラリ（Simple Icons） | Renovate の mise マネージャ（github-releases）。lock は `update-mise-lock.yml` が作り直す |
 | drawio-png スキル（dip、vendoring） | Renovate の対象外。スキルは版によって変わらない案内のため通常は取り直さない（[drawio-png の vendoring](#drawio-png-の-vendoring)） |
 | find-docs スキル（ctx7、vendoring） | Renovate の対象外。ctx7 の版を更新するたびに手動で取り直す（[find-docs の vendoring](#find-docs-の-vendoring)）。rulesync の git transport が注釈付きタグに対応したら、agent-browser と同じ `customManagers` の正規表現に移行する |
 | Renovate 本体のコンテナ / BuildKit | `customManagers` の正規表現（`CLI_IMAGE_TAG` / `BUILDKIT_IMAGE_TAG` のバージョン + digest） |

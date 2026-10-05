@@ -381,6 +381,25 @@ RUN mise install && \
     ctx7 --version && \
     dip --version
 
+# draw.io のカスタムライブラリ（dip library / dip insert で使う図形・アイコン）
+#   ライブラリの XML は mise で取得し（ai/opt/mise/config.toml。lock がチェックサムを固定する）、
+#   版に依存しない場所（/opt/drawio-libraries）へコピーして DIP_LIBRARY_PATH で指す。
+#   dip はこのディレクトリ直下の *.xml を読み、ファイル名（.xml を除く）がライブラリ名になる。
+#   取得元はライセンス表記のファイルをリリースに含めないため、リポジトリの LICENSE を
+#   ai/opt/drawio-libraries/ に置いて一緒に配置する（*.xml ではないので dip は読まない）。
+#   配置中だけ一般ユーザーに書き込みを許可し、スキルの配置後に root 所有・読み取り専用へ戻す。
+ENV DIP_LIBRARY_PATH="/opt/drawio-libraries"
+
+USER root
+RUN install -d -m 0755 -o "${USER_NAME}" -g "${USER_NAME}" "${DIP_LIBRARY_PATH}"
+USER ${USER_NAME}
+
+COPY --chown=${USER_NAME}:${USER_NAME} ai/opt/drawio-libraries /opt/drawio-libraries
+RUN set -eu; \
+    install -m 0644 "$(mise where github:mondeja/simple-icons-drawio)/simple-icons.xml" \
+      "${DIP_LIBRARY_PATH}/simple-icons.xml"; \
+    dip library list | grep -q '^simple-icons[[:space:]]'
+
 # ai 用の home 初期ファイル（AI ツールの設定と、デスクトップ（Openbox / idesk / KasmVNC）の設定）
 #   【注意】このうち AI ツールの設定（.claude / .codex / .kiro / .gemini 配下）は、
 #   ステージの最後で rulesync が生成したスキルとともに /opt/ai-home-defaults へ原本として
@@ -474,8 +493,8 @@ WORKDIR "/home/${USER_NAME}"
 
 # 生成が済んだら、他の /opt 配下と同じく root 所有・読み取り専用にする。
 USER root
-RUN chown -R root:root /opt/rulesync /opt/agent-browser-skills /opt/agent-browser && \
-    chmod -R u=rwX,go=rX /opt/rulesync /opt/agent-browser-skills /opt/agent-browser
+RUN chown -R root:root /opt/rulesync /opt/agent-browser-skills /opt/agent-browser /opt/drawio-libraries && \
+    chmod -R u=rwX,go=rX /opt/rulesync /opt/agent-browser-skills /opt/agent-browser /opt/drawio-libraries
 
 # イメージが管理するホーム配下の設定の「原本」。
 #   各 AI ツールのディレクトリは compose.yml で volume にしており、認証情報や
