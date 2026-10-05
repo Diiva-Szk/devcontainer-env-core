@@ -308,7 +308,7 @@ RUN apt-get update && \
 # draw.io の Web 資材（dip が AWS・Google Cloud・Azure などの draw.io 図形を描くのに使う。DIP_DRAWIO_WEB_PATH）
 #   dip の同梱資材は基本図形だけで、draw.io の図形（mxgraph.*）や画像で描く図形（image=img/lib/...）は
 #   draw.io 本体の資材が無いと描けない。jgraph/drawio の webapp 全体は 100MB を超えるため、
-#   dip の vscode モード（既定）での描画に必要なパス（約29MB）だけを取得する。
+#   dip の vscode モード（既定）での描画に必要なパス（約31MB）だけを取得する。
 #   取得するパスは ai/opt/drawio-webapp/sparse-checkout に書き、git の sparse checkout と
 #   partial clone（--filter=blob:none）で固定したコミットの該当ファイルだけを取り出す。
 #   中身はコミット SHA で固定され、git がオブジェクトのハッシュを検証する。取得後に HEAD が
@@ -418,8 +418,9 @@ RUN mise install && \
 #   取得元はライセンス表記のファイルをリリースに含めないため、リポジトリの LICENSE を
 #   ai/opt/drawio-libraries/ に置いて一緒に配置する（*.xml ではないので dip は読まない）。
 #   配置中だけ一般ユーザーに書き込みを許可し、スキルの配置後に root 所有・読み取り専用へ戻す。
-#   あわせて、AWS の図形（Lambda）と Azure のアイコン（img/lib の画像）の図を Chrome で描き、
-#   draw.io の Web 資材（/opt/drawio-webapp）で足りることを確かめる（資材が欠けていると dip が失敗する）。
+#   あわせて、AWS の図形（Lambda）、Azure のアイコン（img/lib の画像）、MathJax の拡張を遅延ロードする
+#   数式（\color）を含む図を Chrome で描き、draw.io の Web 資材（/opt/drawio-webapp）で足りることを
+#   確かめる（資材が欠けていると dip が 404 を検出して失敗する）。
 ENV DIP_LIBRARY_PATH="/opt/drawio-libraries"
 
 USER root
@@ -432,7 +433,7 @@ RUN set -eu; \
       "${DIP_LIBRARY_PATH}/simple-icons.xml"; \
     dip library list | grep -q '^simple-icons[[:space:]]'; \
     check_dir="$(mktemp -d)"; \
-    printf '%s' '<mxfile><diagram id="p" name="p"><mxGraphModel><root><mxCell id="0"/><mxCell id="1" parent="0"/><mxCell id="2" style="shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.lambda;" vertex="1" parent="1"><mxGeometry width="60" height="60" as="geometry"/></mxCell><mxCell id="3" style="image;html=1;image=img/lib/azure2/compute/Function_Apps.svg;" vertex="1" parent="1"><mxGeometry x="80" width="64" height="56" as="geometry"/></mxCell></root></mxGraphModel></diagram></mxfile>' \
+    printf '%s' '<mxfile><diagram id="p" name="p"><mxGraphModel math="1"><root><mxCell id="0"/><mxCell id="1" parent="0"/><mxCell id="2" style="shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.lambda;" vertex="1" parent="1"><mxGeometry width="60" height="60" as="geometry"/></mxCell><mxCell id="3" style="image;html=1;image=img/lib/azure2/compute/Function_Apps.svg;" vertex="1" parent="1"><mxGeometry x="80" width="64" height="56" as="geometry"/></mxCell><mxCell id="4" value="$$\color{red}{x+y}$$" style="text;html=1;" vertex="1" parent="1"><mxGeometry x="160" width="80" height="40" as="geometry"/></mxCell></root></mxGraphModel></diagram></mxfile>' \
       | dip embed --renderer chromium -o "${check_dir}/check.drawio.png" > /dev/null; \
     rm -rf "${check_dir}"
 
