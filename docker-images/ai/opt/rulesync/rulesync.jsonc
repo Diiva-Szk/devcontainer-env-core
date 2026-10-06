@@ -13,6 +13,8 @@
   // コミット SHA と一致しない）。
   // rulesync が直ったら git transport の source へ移行し、この vendoring は削除する。
   // 詳細・ctx7 更新時の追従手順は docs/MAINTAINING.md を参照。
+  // drawio-png（dip のスキル）も同じ理由で .rulesync/skills/drawio-png/ に vendoring している
+  // （szk302/drawio-png-cli のリリースタグ v<版> が注釈付きタグのため）。
   "sources": [
     // agent-browser の discovery stub。本体は AGENT_BROWSER_SKILLS_DIR 側にあり、
     // この stub が `agent-browser skills get core` で読ませる。

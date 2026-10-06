@@ -36,8 +36,10 @@ Feature（`devcontainer-features/` 配下）には `Dockerfile` を含めず、�
 │   │   └── usr/local/bin/        # entrypoint.sh / google-chrome（共通の起動オプションを付けるラッパー。user 用）
 │   ├── ai/
 │   │   ├── opt/mise/             # mise の設定と lock（global スコープ）
-│   │   ├── opt/rulesync/         # AI ツールのスキルの取得と各ツールへの展開（rulesync.jsonc / rulesync.lock / find-docs.version / find-docs の vendoring）
+│   │   ├── opt/rulesync/         # AI ツールのスキルの取得と各ツールへの展開（rulesync.jsonc / rulesync.lock / find-docs.version / find-docs・drawio-png の vendoring）
 │   │   ├── opt/agent-browser-skills/ # agent-browser のスキル本体の取得（rulesync.jsonc / rulesync.lock）
+│   │   ├── opt/drawio-webapp/    # dip に渡す draw.io の Web 資材の取得対象のパス（sparse-checkout）
+│   │   ├── opt/drawio-libraries/ # dip のライブラリと一緒に配置するライセンス表記（ライブラリの XML 自体は mise で取得）
 │   │   ├── usr/local/bin/        # ai-entrypoint.sh / start-desktop（デスクトップの起動）/ start-sshd（ssh サーバーの起動）/ sync-home-defaults / google-chrome（ai 用のラッパー。dev-base のものを置き換える）
 │   │   ├── usr/share/icons/st/   # st のアイコン
 │   │   └── home-config/          # AI エージェントとデスクトップ（KasmVNC / Openbox / idesk）の設定ファイル
@@ -106,9 +108,12 @@ CLI ツールと言語ランタイム（Python / Node.js）は [mise](https://mi
 | --- | --- | --- |
 | Python パッケージ | `docker-images/dev-base/opt/python/requirements.in`（直接依存） / `requirements.txt`（推移的依存とハッシュ） | `uv pip install --system --require-hashes` |
 | Renovate CLI（user） | `docker-images/user/opt/renovate/package.json` / `package-lock.json` | `npm ci --ignore-scripts` |
+| draw.io の Web 資材（ai） | `docker-images/Dockerfile` の `DRAWIO_WEBAPP_COMMIT` と `docker-images/ai/opt/drawio-webapp/sparse-checkout` | 固定したコミットから git の sparse checkout で必要なパスだけを取得し、`/opt/drawio-webapp` に配置（[draw.io の Web 資材](#drawio-の-web-資材ai)を参照） |
 | KasmVNC（ai） | `docker-images/Dockerfile` の `KASMVNC_VERSION` / `KASMVNC_SHA256_*` | GitHub リリースの `.deb` を sha256 で検証して `apt-get install` |
 | ブラウザ操作 CLI のスキル（ai） | `docker-images/ai/opt/rulesync/` / `docker-images/ai/opt/agent-browser-skills/`（`rulesync.jsonc` と `rulesync.lock`） | `rulesync install --frozen` で取得し `rulesync generate --global` で各ツールへ展開 |
 | find-docs スキル（ai） | `docker-images/ai/opt/rulesync/.rulesync/skills/find-docs/SKILL.md`（vendoring） | `rulesync generate --global` で各ツールへ展開（取得は手動。[AI ツールのスキル](#ai-ツールのスキルai)を参照） |
+| dip のライブラリ（ai。Simple Icons） | `docker-images/ai/opt/mise/config.toml`（`github:mondeja/simple-icons-drawio`）と `mise.lock` | mise で取得し、Dockerfile で `/opt/drawio-libraries` へコピーして `DIP_LIBRARY_PATH` で指す（[dip のライブラリ](#dip-のライブラリai)を参照） |
+| drawio-png スキル（ai） | `docker-images/ai/opt/rulesync/.rulesync/skills/drawio-png/SKILL.md`（vendoring） | `rulesync generate --global` で各ツールへ展開（取得は手動。[drawio-png の vendoring](#drawio-png-の-vendoring)を参照） |
 | デスクトップ（ai）、socat（user） | `docker-images/Dockerfile` | Debian のパッケージ（`apt-get`） |
 | Google Chrome（ai / user） | `docker-images/Dockerfile` | Google の apt リポジトリ（署名鍵の主鍵のフィンガープリントを `GOOGLE_LINUX_SIGNING_KEY_FPR` で照合）から `apt-get install` |
 
@@ -127,6 +132,7 @@ CLI ツールと言語ランタイム（Python / Node.js）は [mise](https://mi
 - Chrome には Debian の Chromium（`/etc/chromium.d/`）のような起動オプションの設定ファイルが無いため、ラッパー `/usr/local/bin/google-chrome` で付けます。`dev-base` では共通のラッパー（`docker-images/dev-base/usr/local/bin/google-chrome`。サンドボックスの無効化など）を置き、`ai` ステージで、リモートデバッグ用ポート・専用プロファイルも付ける `ai` 用のラッパー（`docker-images/ai/usr/local/bin/google-chrome`）に置き換えます。共通の起動オプションを変えるときは両方を合わせてください。`/usr/bin/google-chrome-stable` は `dpkg-divert` で退避してラッパーを指すようにしているため、`google-chrome` / `x-www-browser` の alternatives やデスクトップファイル（`xdg-open`）から起動しても同じ設定になります。
 - `chrome-sandbox` の setuid ビットは外しています。コンテナ内では SUID のサンドボックスも使えず（`--no-sandbox` で起動します）、root への権限昇格の経路になり得る SUID バイナリを置かないためです。
 - Playwright CLI・agent-browser（ai）も、同梱のブラウザはダウンロードせず、Google Chrome を `PLAYWRIGHT_MCP_EXECUTABLE_PATH` / `AGENT_BROWSER_EXECUTABLE_PATH`（ともに `/opt/google/chrome/chrome`）で使います。ラッパーはリモートデバッグ用ポートやプロファイルを指定し、デスクトップの Chrome と衝突するため実体を指定しています。
+- dip（drawio-png-cli、ai）も同じ理由で `DIP_CHROME_PATH=/opt/google/chrome/chrome` を指定します（指定しないと PATH のラッパーを先に見つけます）。実体を直接起動するとラッパーの起動オプションが付かないため、`DIP_CHROME_ARGS` で `--no-sandbox --disable-dev-shm-usage --disable-gpu` を渡します（`--no-sandbox` が無いと、setuid ビットを外した `chrome-sandbox` の検査で起動直後に落ちます）。ヘッドレス・専用プロファイル・ループバック限定のデバッグポートは dip が自分で付けます。
 
 ### AI ツールのスキル（ai）
 
@@ -137,6 +143,7 @@ CLI ツールと言語ランタイム（Python / Node.js）は [mise](https://mi
   - `skills/` … 各ツールへ渡す discovery stub（frontmatter に `hidden: true`）
   - `skill-data/` … stub が `agent-browser skills get core` で読ませる本体。`AGENT_BROWSER_SKILLS_DIR` から CLI が配る
 - **find-docs（Context7 CLI / ctx7）** — 下記「find-docs の vendoring」を参照。
+- **drawio-png（dip）** — 下記「drawio-png の vendoring」を参照。
 
 取得は rulesync の宣言的ソースで行い、`rulesync.lock` がコミット SHA と成果物ごとのハッシュを固定します。ビルドは `rulesync install --frozen` なので、lock とズレていれば失敗します。GitHub API は匿名だと 60回/時で制限されビルドが落ちるため、**git transport** を使います。
 
@@ -179,6 +186,50 @@ bash scripts/update-rulesync-locks.sh
 
 - `.rulesync/skills/find-docs/` の手動配置、`find-docs.version` と版の照合チェックは削除します（lock がコミット SHA を固定するため不要になります）。`rulesync` の `sources` は `path: "skills"` で `skills/find-docs/` 配下だけを取得し、そこには `SKILL.md` しかありません（`LICENSE` はリポジトリルートにしかなく、`ctx7@0.5.12` で確認済み）。そのため移行後も `LICENSE` は取得対象に含まれず、取得後にリポジトリルートの `LICENSE` を付け足す処理を残す必要があります。
 - `npx ctx7@latest` の置換自体は引き続き必要です。ビルドで取得したあとに `patch-find-docs.py` を呼ぶ処理を Dockerfile に追加してください（取得元が変わるだけで、置換そのものは今と同じ理由で必要です）。
+
+#### drawio-png の vendoring
+
+`drawio-png`（dip で `.drawio.png` を扱うスキル）も、`find-docs` と同じ理由で `rulesync.jsonc` の `sources` に無く、`docker-images/ai/opt/rulesync/.rulesync/skills/drawio-png/` へ直接コミットしています。取得元の `szk302/drawio-png-cli` のリリースタグ（`v0.1.0` など）が注釈付きタグのため、rulesync 24.0.0 の git transport では `GitClientError: Checked out commit ..., expected locked commit ...` で失敗します（`v0.1.0` で確認済み）。
+
+**改変元とライセンス表記:** `SKILL.md` は `szk302/drawio-png-cli` の `v0.1.0` タグの `skills/drawio-png/SKILL.md` を無改変で置いています。上流は MIT ライセンス（Copyright (c) 2026 Szk302）で、`skills/` 配下に個別のライセンスファイルが無いため、リポジトリルートの `LICENSE` を同じディレクトリに置いています（`find-docs` と同じ扱い）。
+
+**版の照合をしない理由:** このスキルは案内だけで、手順の本文はインストールされている dip が `dip skill` / `dip skill --full` で出力します（上流が「版によって変わらない」作りにしています）。そのため `find-docs.version` のような版の照合は置かず、Renovate が `github:szk302/drawio-png-cli` の版を上げても通常はスキルを取り直す必要はありません。代わりに Dockerfile のビルドステップで `dip skill` / `dip skill --full` が動くことを確かめます。
+
+**取り直すとき:** 上流の `skills/drawio-png/SKILL.md` が変わった場合は、そのリリースタグから `skills/drawio-png/SKILL.md` と `LICENSE`（リポジトリルート）を取得し、同じディレクトリに上書きしてください（例: `git clone --depth 1 --branch v<版> https://github.com/szk302/drawio-png-cli.git`）。上流のタグが軽量タグになるか、rulesync が注釈付きタグに対応したら、agent-browser と同じ git transport の `sources` へ移行してください（`LICENSE` を付け足す処理が必要な点は `find-docs` と同じです）。
+
+### dip のライブラリ（ai）
+
+dip の `library` / `insert` で使う draw.io のカスタムライブラリ（`<mxlibrary>` 形式の XML）として、[mondeja/simple-icons-drawio](https://github.com/mondeja/simple-icons-drawio) のリリースの `simple-icons.xml`（全アイコン版）を入れています。dip はライブラリを同梱・取得しないため、イメージ側で用意します。
+
+- **取得:** ツールではなくデータですが、lock によるチェックサムの固定と Renovate の追従（github-releases。ai の mise ツールと同じグループ・周期）を他のツールと同じ仕組みで行うため、ai の mise 設定に `github:mondeja/simple-icons-drawio` として書いています。プラットフォームに依存しないため、`asset_pattern` は1つです。
+- **shim:** mise の github backend は単体ファイルを実行ファイルとして扱うため、`simple-icons.xml` という shim が PATH に1つできます（`bin_path` を指定しても避けられないことを確認済み）。実行しても何も起きず無害なため、そのままにしています。避けるには取得専用の mise 設定を別に置く必要があり、`update-mise-locks.sh`・`update-mise-lock.yml`・`build-images.yml` の対象を広げる改修が要るためです。
+- **配置:** mise の配置先は版ごとに変わるため、Dockerfile で `/opt/drawio-libraries/simple-icons.xml` へコピーし、`DIP_LIBRARY_PATH=/opt/drawio-libraries` で指します。ほかの `/opt` 配下と同じく root 所有・読み取り専用です。ビルドでは `dip library list` に `simple-icons` が出ることを確かめます。
+- **ライセンス:** 取得元のリポジトリは BSD 3-Clause（Copyright (c) 2022, Álvaro Mondéjar Rubio）です。リリースにはライセンス表記のファイルが無いため、リポジトリの `LICENSE.md` を `docker-images/ai/opt/drawio-libraries/LICENSE-simple-icons-drawio.md` に置き、ライブラリと同じディレクトリへ配置しています（`*.xml` ではないので dip は読みません）。アイコン自体は Simple Icons（CC0 1.0）由来で、ブランドのロゴの利用には各ブランドの商標の条件が別にかかります。
+- **ライブラリを追加するとき:** `<名前>.xml` を `/opt/drawio-libraries` に置けば、ファイル名（`.xml` を除く）がライブラリ名になります。取得方法は上と同じく mise と lock で固定し、ライセンス表記も同じディレクトリに置いてください。
+
+### draw.io の Web 資材（ai）
+
+dip の同梱資材は基本図形だけで、AWS・Google Cloud・Azure などの draw.io 標準の図形は描けません（`Unsupported shape: ...; provide assets with DIP_DRAWIO_WEB_PATH` や `resource failed (404)` で失敗します）。draw.io 本体の Web 資材（`jgraph/drawio` の `src/main/webapp`）のうち必要なパスだけを `/opt/drawio-webapp` に置き、`DIP_DRAWIO_WEB_PATH` で渡しています。
+
+- **版:** `DRAWIO_WEBAPP_COMMIT`（Dockerfile）は、dip の `vscode` モード（既定）が互換性を確認した上流コミット `96a916a337d13fc8bf622c8a67d422bd284eabe5`（draw.io 26.0.2。VS Code の draw.io 拡張 1.9.0 と同じ）です。dip の README の「互換性を確認した上流コミット」に合わせて手で更新します（Renovate の対象外）。
+- **取得方法:** 取得するパスを `docker-images/ai/opt/drawio-webapp/sparse-checkout`（git の sparse-checkout のパターン。non-cone）に書き、ビルドで git の sparse checkout と partial clone（`--depth 1 --filter=blob:none`）を使って、固定したコミットの該当ファイルだけを取り出します（約5秒）。中身はコミット SHA で固定され、git がオブジェクトのハッシュを検証します。取得後に `HEAD` が `DRAWIO_WEBAPP_COMMIT` と一致することも確かめます。ファイルごとに sha256 を記録する方式は、`img/lib` が1,800ファイルを超えるため採りませんでした。
+- **取得するパスを絞った理由と方法:** webapp 全体は約111MB ありますが、描画で読まれるのは一部です（取得するのは約31MB・1,874ファイル）。全体を置いた状態で図を描き、読まれたファイル（アクセス時刻で確認）を調べて選んでいます。試した図は、AWS（グループ・resourceIcon・productIcon・単体の図形・接続線）、数式（MathJax の拡張を使う `\color`・`\cancel`・`\ce` など20種類を1式ずつ）、Google Cloud（`mxgraph.gcp2.*`）、Azure（`img/lib/azure2`・`img/lib/mscae` の画像と `mxgraph.azure.*`）です。この構成で描いた PNG は、全体を置いた場合とバイト単位で一致することを確認済みです。
+  - `export3.html`・`js/app.min.js` など: 描画の本体です。
+  - `js/shapes-14-6-5.min.js`・`js/stencils.min.js`: AWS・Google Cloud・旧 Azure などの図形の定義です。dip の `vscode` モードは、これらがあれば描画前に読み込みます。Google Cloud のアイコンはこの定義か、図に埋め込まれた `data:` の画像で描かれるため、追加の資材は要りません。
+  - `math/es5/` の一部: 数式を使わない図でも毎回読まれ、無いと `resource failed (404): .../math/es5/startup.js` で失敗します。数式の入力側（`math/es5/input/`。約1.6MB）はディレクトリごと入れています。MathJax は `\color`・`\bbox`・`\cancel`・`\ce` などを使う数式で `input/tex/extensions/` 配下を必要なときだけ読み込み（遅延ロード）、無いと図全体の描画が `resource failed (404): .../math/es5/input/tex/extensions/color.js` などで失敗するためです。単純な数式では読まれないため、読まれたファイルを調べる際は拡張を使う数式を1式ずつ別の図で試してください（1枚の図にまとめると、MathJax が途中の数式で止まり、後続の拡張が読まれないことがあります）。出力は SVG だけを使うため、`output/` は `svg.js` と `svg/fonts/tex.js` だけです。
+  - `img/lib/`（約11MB）: 画像で描く図形（Azure の `azure2`・`mscae`、IBM、SAP、Atlassian など）の画像です。アイコンごとに個別の SVG を読むため、ディレクトリごと入れています。draw.io のサイドバーの図形が参照する画像は、すべて `img/lib` 配下です。
+  - 含めていないもの: `shapes/`、`templates/`、`resources/`、`images/`（エディターの UI 用）など。図形の描画で `resource failed (404)` が出た場合は、そのパスを `sparse-checkout` に足してください。
+- **VS Code 拡張との関係:** VS Code の draw.io 拡張（`hediet.vscode-drawio`。`devcontainer-features/vscode-common/` で 1.9.0 に固定）で編集した図を、`ai` 側の dip で読み書きする使い方を想定しています。拡張 1.9.0 が同梱する draw.io は `DRAWIO_WEBAPP_COMMIT` と同じ 26.0.2 です。拡張の図形パレットにある図形のスタイル3,882種類を draw.io 本体（`js/app.min.js`）から抜き出して描画し、断片的なスタイル36種類（全資材でも描けないもの）を除く3,846種類で、この構成の PNG が全資材の場合とバイト単位で一致することを確認済みです。拡張の版を変えるときは、拡張が同梱する draw.io の版と dip の互換コミットを確認し、`DRAWIO_WEBAPP_COMMIT` と `sparse-checkout` も見直してください（拡張の版は Renovate の対象外のため、手で揃えます）。
+- **外部の資材:** Web フォント（`fontSource` に指定した Google Fonts など）や URL で参照する画像は資材に含まれず、dip は外部への通信を既定で止めているため、描画に失敗します（`--allow-network` が必要というエラーになり、付ければ描画できます）。拡張で挿入した画像や dip のライブラリの図形は `data:` URL で埋め込まれるため影響しません。
+- **raw / desktop モード:** この資材は `vscode` モード用です。`--chromium-mode raw` / `desktop` は別の版（draw.io 31.4.5）の資材を前提にしており、AWS などの図形は描けません（基本図形だけの図は描けます）。
+- **検証:** dip の配置後に、AWS の図形（Lambda）、Azure のアイコン（`img/lib` の画像）、MathJax の拡張を遅延ロードする数式（`\color`）を含む図を Chrome で描き、資材が足りていることを確かめます。
+- **ライセンス:** draw.io は Apache-2.0 です。リポジトリルートの `LICENSE` も同じコミットから取得し、`/opt/drawio-webapp/LICENSE` に置いています。`math/` は MathJax（Apache-2.0）ですが、このコミットの `math/` にはライセンスファイルがありません（`math/package.json` に記載があります）。`img/lib` の各社のアイコンの利用には、各社の商標・利用条件が別にかかります。
+
+**更新するとき（dip の互換コミットが変わったとき）:**
+
+1. Dockerfile の `DRAWIO_WEBAPP_COMMIT` を新しいコミットに書き換えます。VS Code の draw.io 拡張の版も、同梱する draw.io がそのコミットと揃うよう合わせて見直します（`devcontainer-features/vscode-common/devcontainer-feature.json`）。
+2. ファイルの構成が変わっていないか確認し、変わっていれば上と同じ方法（全体を置いて描画し、読まれたファイルを調べる）で `sparse-checkout` を見直します。
+3. `docker compose build ai` で、取得と図形の描画の確認が通ることを確かめます。
 
 ## ビルドキャッシュ
 
@@ -281,6 +332,9 @@ flowchart TD
 | Kiro CLI（http backend） | `customManagers` の正規表現 + `customDatasources`（latest マニフェスト） |
 | mise の npm backend のツール（Playwright CLI、ctx7） | Renovate の mise マネージャ（npm データソース）。依存グラフのサイドカー（`.mise/locks/`）は Renovate の対象外にし、`update-mise-lock.yml` が作り直す |
 | rulesync の取得元の `ref`（agent-browser のスキル） | `customManagers` の正規表現（`// renovate:` コメント）。lock は `update-rulesync-lock.yml` が作り直す |
+| draw.io の Web 資材（dip 用） | Renovate の対象外。dip の互換コミットに合わせて手で更新する（[draw.io の Web 資材](#drawio-の-web-資材ai)） |
+| dip のライブラリ（Simple Icons） | Renovate の mise マネージャ（github-releases）。lock は `update-mise-lock.yml` が作り直す |
+| drawio-png スキル（dip、vendoring） | Renovate の対象外。スキルは版によって変わらない案内のため通常は取り直さない（[drawio-png の vendoring](#drawio-png-の-vendoring)） |
 | find-docs スキル（ctx7、vendoring） | Renovate の対象外。ctx7 の版を更新するたびに手動で取り直す（[find-docs の vendoring](#find-docs-の-vendoring)）。rulesync の git transport が注釈付きタグに対応したら、agent-browser と同じ `customManagers` の正規表現に移行する |
 | Renovate 本体のコンテナ / BuildKit | `customManagers` の正規表現（`CLI_IMAGE_TAG` / `BUILDKIT_IMAGE_TAG` のバージョン + digest） |
 | Python パッケージ | pip-compile マネージャ（`requirements.txt` のヘッダーのコマンドで再生成） |

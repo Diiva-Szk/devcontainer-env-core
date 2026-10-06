@@ -38,6 +38,34 @@
 #   版を変えるときは SKILL.md も同じタグから取り直すこと。
 "npm:ctx7" = "0.5.12"
 
+# drawio-png-cli（dip。.drawio.png に埋め込まれた draw.io の XML を抽出・検証・更新する CLI）
+#   aqua レジストリに無いため github backend で取得する。静的リンクの musl 版を使う。
+#   アーカイブは直下に dip・LICENSE・assets/（ライセンス通知）を持つため、先頭ディレクトリの
+#   自動除去は働かず、dip は展開先の直下に置かれる（bin_path・strip_components は不要）。
+#   asset_pattern をプラットフォームごとに指定する理由は codex と同じ。
+#   描画には Google Chrome を使う（Dockerfile の DIP_CHROME_PATH / DIP_CHROME_ARGS）。
+#   スキル（drawio-png）は opt/rulesync/.rulesync/skills/drawio-png/SKILL.md に vendoring している
+#   （リリースタグが注釈付きタグで、find-docs と同じく rulesync が解決できないため）。
+#   スキルは案内だけで本文は `dip skill` が出力するため、版を上げてもスキルの取り直しは通常不要。
+[tools."github:szk302/drawio-png-cli"]
+version = "0.1.0"
+
+[tools."github:szk302/drawio-png-cli".platforms]
+linux-x64 = { asset_pattern = "dip-*-x86_64-unknown-linux-musl.tar.gz" }
+linux-arm64 = { asset_pattern = "dip-*-aarch64-unknown-linux-musl.tar.gz" }
+
+# Simple Icons の draw.io カスタムライブラリ（dip の DIP_LIBRARY_PATH で読ませる）
+#   ツールではなくデータ（<mxlibrary> 形式の XML、1ファイル）だが、lock によるチェックサムの固定と
+#   Renovate の追従（github-releases）を他のツールと同じ仕組みで行うため mise で取得する。
+#   リリースの全アイコン版（simple-icons.xml）を使う。プラットフォームに依存しない。
+#   mise の github backend は単体ファイルを実行ファイルとして扱うため、shim（simple-icons.xml）が
+#   PATH に1つできる（実行しても何も起きず無害）。
+#   dip は mise の配置先（版ごとに変わる）ではなく、Dockerfile で /opt/drawio-libraries へ
+#   root 所有でコピーしたものを読む。
+[tools."github:mondeja/simple-icons-drawio"]
+version = "16.34.0"
+asset_pattern = "simple-icons.xml"
+
 # OpenAI Codex CLI
 #   aqua backend では linux 向け成果物を解決できず lock が生成されなかったため、github backend で取得する。
 #   タグは rust-v0.120.0 形式。静的リンクの musl 版を使う。

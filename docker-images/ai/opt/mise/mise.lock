@@ -94,6 +94,24 @@ checksum = "sha256:993d462f4dcfc19860d93a6521a452eba4502bfc449fe0120303c2ccb998e
 url = "https://github.com/vercel-labs/agent-browser/releases/download/v0.38.2/agent-browser-linux-musl-x64"
 url_api = "https://api.github.com/repos/vercel-labs/agent-browser/releases/assets/604194744"
 
+[[tools."github:mondeja/simple-icons-drawio"]]
+version = "16.34.0"
+backend = "github:mondeja/simple-icons-drawio"
+specifiers = ["16.34.0"]
+
+[tools."github:mondeja/simple-icons-drawio".options]
+asset_pattern = "simple-icons.xml"
+
+[tools."github:mondeja/simple-icons-drawio"."platforms.linux-arm64"]
+checksum = "sha256:e5e7df91046c7e320874d321f9ae8a78280a9cf40141d3b870b3145b40065fdd"
+url = "https://github.com/mondeja/simple-icons-drawio/releases/download/16.34.0/simple-icons.xml"
+url_api = "https://api.github.com/repos/mondeja/simple-icons-drawio/releases/assets/610168725"
+
+[tools."github:mondeja/simple-icons-drawio"."platforms.linux-x64"]
+checksum = "sha256:e5e7df91046c7e320874d321f9ae8a78280a9cf40141d3b870b3145b40065fdd"
+url = "https://github.com/mondeja/simple-icons-drawio/releases/download/16.34.0/simple-icons.xml"
+url_api = "https://api.github.com/repos/mondeja/simple-icons-drawio/releases/assets/610168725"
+
 [[tools."github:openai/codex"]]
 version = "0.160.0"
 backend = "github:openai/codex"
@@ -122,6 +140,34 @@ checksum = "sha256:4fcc47ab57f52ff75363951a8761146cd10c8288bd86fed45487dbb204a16
 url = "https://github.com/openai/codex/releases/download/rust-v0.160.0/codex-package-x86_64-unknown-linux-musl.tar.gz"
 url_api = "https://api.github.com/repos/openai/codex/releases/assets/604048102"
 
+[[tools."github:szk302/drawio-png-cli"]]
+version = "0.1.0"
+backend = "github:szk302/drawio-png-cli"
+specifiers = ["0.1.0"]
+
+[tools."github:szk302/drawio-png-cli".options]
+asset_pattern = "dip-*-x86_64-unknown-linux-musl.tar.gz"
+
+[tools."github:szk302/drawio-png-cli"."platforms.linux-x64"]
+checksum = "sha256:24e28578175dbe5a038afdfd6ace5cb71eb867891f4b29a1566d28dd20103543"
+url = "https://github.com/szk302/drawio-png-cli/releases/download/v0.1.0/dip-0.1.0-x86_64-unknown-linux-musl.tar.gz"
+url_api = "https://api.github.com/repos/szk302/drawio-png-cli/releases/assets/610979624"
+provenance = "github-attestations"
+
+[[tools."github:szk302/drawio-png-cli"]]
+version = "0.1.0"
+backend = "github:szk302/drawio-png-cli"
+specifiers = ["0.1.0"]
+
+[tools."github:szk302/drawio-png-cli".options]
+asset_pattern = "dip-*-aarch64-unknown-linux-musl.tar.gz"
+
+[tools."github:szk302/drawio-png-cli"."platforms.linux-arm64"]
+checksum = "sha256:0ff21201559ace0f3513f7d6101cf9919806b188e684e76d6aedf2f1d2e31283"
+url = "https://github.com/szk302/drawio-png-cli/releases/download/v0.1.0/dip-0.1.0-aarch64-unknown-linux-musl.tar.gz"
+url_api = "https://api.github.com/repos/szk302/drawio-png-cli/releases/assets/610979601"
+provenance = "github-attestations"
+
 [[tools."http:kiro-cli"]]
 version = "2.27.1"
 backend = "http:kiro-cli"
@@ -146,6 +192,6 @@ specifiers = ["0.1.22"]
 
 [[tools."npm:ctx7"]]
 version = "0.5.12"
-aube = { path = ".mise/locks/npm-ctx7/0.5.12", digest = "sha256:fb640f1e9fbff853512b04dc589d39611a931b30cb95caade6ae367a021d1a83" }
+aube = { path = ".mise/locks/npm-ctx7/0.5.12", digest = "sha256:d9a39733997a7d2eb69751c57368004c7f00003e144f59eb4d200709854ea62a" }
 backend = "npm:ctx7"
 specifiers = ["0.5.12"]
