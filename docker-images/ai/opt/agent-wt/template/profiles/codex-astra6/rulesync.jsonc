@@ -1,0 +1,6 @@
+{
+  "$schema": "https://github.com/dyoshikawa/rulesync/releases/latest/download/config-schema.json",
+  // この profile で生成するツールと機能（Codex の commands はグローバルにしか置けないため含めない）
+  "targets": ["codexcli"],
+  "features": ["rules", "subagents", "skills", "mcp", "permissions"]
+}

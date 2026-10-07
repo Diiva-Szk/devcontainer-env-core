@@ -1,0 +1,31 @@
+# agent-wt-init
+#   agent-wt-create が読む設定（<REPO>/.agent-wt/）の雛形をプロジェクトに作る。
+#   既にある場合は何もしない（上書きしない）。
+#
+#   使い方（ai コンテナ内のどこからでも可）:
+#     dagu start agent-wt-init
+description: agent-wt の設定（.agent-wt/）の雛形をプロジェクトに作る
+type: graph
+shell: ["bash", "-euo", "pipefail"]
+working_dir: ${REPO}
+
+params:
+  - name: REPO
+    type: string
+    default: /home/dev/work
+    pattern: '^/[A-Za-z0-9._/-]*$'
+    description: 対象のリポジトリ（ai コンテナではプロジェクトルートが /home/dev/work）
+
+steps:
+  - id: init
+    run: |
+      repo="$(git rev-parse --show-toplevel)"
+      dest="${repo}/.agent-wt"
+      if [ -e "${dest}" ]; then
+        echo "既にあります: ${dest}" >&2
+        exit 1
+      fi
+      # 雛形は root 所有・読み取り専用で置いているため、権限は引き継がない
+      cp -r --no-preserve=mode,ownership /opt/agent-wt/template "${dest}"
+      echo "作成しました: ${dest}"
+      find "${dest}" -type f | sort

@@ -1,0 +1,19 @@
+# agent-wt の worktree の定義
+#   dagu start agent-wt-create -- NAME=<キー>   で作る
+#   dagu start agent-wt-remove -- NAME=<キー>   で消す
+#
+#   role:    roles/<role>/ を使う（必須）
+#   profile: profiles/<profile>/ を使う（必須）
+#   branch:  ブランチ（省略時は agent/<キー>。無ければ base から作る）
+#   base:    ブランチを新しく作るときの起点（省略時は HEAD）
+worktrees:
+  login-coder:
+    role: coder
+    profile: claude-opus5.5
+    branch: feat/login
+    base: main
+  login-reviewer:
+    role: reviewer
+    profile: codex-astra6
+    branch: feat/login-review
+    base: feat/login

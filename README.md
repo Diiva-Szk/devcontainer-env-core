@@ -64,7 +64,7 @@ flowchart LR
 
 **`ai` コンテナ** — [docker-images/ai/opt/mise/config.toml](docker-images/ai/opt/mise/config.toml)
 
-Claude Code、OpenAI Codex CLI、GitHub Copilot CLI、GitHub Copilot Language Server、Amazon Kiro CLI、Google Antigravity CLI、rulesync、Playwright CLI・agent-browser（ブラウザは Google Chrome を使う）、Context7 CLI（ctx7）、drawio-png-cli（dip。`.drawio.png` の図面の抽出・検証・更新。描画には Google Chrome を使う）
+Claude Code、OpenAI Codex CLI、GitHub Copilot CLI、GitHub Copilot Language Server、Amazon Kiro CLI、Google Antigravity CLI、rulesync、Dagu（`dagu`。agent-wt の DAG を動かす）、Playwright CLI・agent-browser（ブラウザは Google Chrome を使う）、Context7 CLI（ctx7）、drawio-png-cli（dip。`.drawio.png` の図面の抽出・検証・更新。描画には Google Chrome を使う）
 
 dip のライブラリ（`dip library` / `dip insert` で図に入れる図形・アイコン）として、[Simple Icons の draw.io ライブラリ](https://github.com/mondeja/simple-icons-drawio)（`simple-icons`）を `/opt/drawio-libraries` に入れ、`DIP_LIBRARY_PATH` で指しています。ブランドのロゴの利用は、各ブランドの商標の条件に従ってください。
 
@@ -167,6 +167,7 @@ playwright-cli  # ブラウザ操作（Playwright CLI）
 agent-browser   # ブラウザ操作（agent-browser）
 ctx7            # ライブラリの最新ドキュメントを引く（Context7 CLI）
 dip             # .drawio.png の図面の抽出・検証・更新（drawio-png-cli）
+dagu            # YAML で定義したワークフロー（DAG）の実行（agent-wt で使う）
 ```
 
 - 各ツールのログイン（認証）は、初回に `ai` コンテナ内で行ってください。**ログイン情報と会話履歴は、コンテナを作り直しても残ります**（[AI ツールの状態の保存](#ai-ツールの状態の保存)）。
@@ -175,6 +176,46 @@ dip             # .drawio.png の図面の抽出・検証・更新（drawio-png-
 - `ai` コマンドは、`ai` コンテナの ssh サーバー（`ai:2222`、ホストには公開していません）へ公開鍵で接続します。鍵は初回に `user` コンテナの `~/.ssh/ai_ed25519` に作られ、公開鍵とホスト鍵は volume で受け渡されます。手作業の設定は要りません。
 - 接続できない場合は、`ai` コンテナの ssh サーバーが止まっている可能性があります。ホストから `ai` コンテナに入って `start-sshd` を実行すると起動し直せます（ログは `ai` コンテナの `~/.local/state/ai-sshd/`）。ホストから入る方法は [Docker の操作はホストで行う](#docker-の操作はホストで行う)を参照してください。
 - mise のタスクとしても実行できます（`mise run ai`、`mise run ai claude`）。ただし、trust していない `mise.toml` があるディレクトリでは mise がエラーになるため、`ai` コマンドを直接実行してください（[`mise trust` が必要](#user-コンテナでは-mise-trust-が必要)）。
+
+#### role・profile ごとの worktree（agent-wt）
+
+`ai` コンテナには、git worktree を作り、指定した role（coder・reviewer・designer など）と profile（Claude Code の Opus 5.5、Codex など）の AI エージェントの設定を rulesync で配置する dagu の DAG が入っています。role・profile ごとの設定はプロジェクトの `.agent-wt/` に置きます。
+
+```sh
+# ai コンテナ内で（どのディレクトリからでも可。対象は ~/work のリポジトリ）
+dagu start agent-wt-init                              # .agent-wt/ の雛形を作る（初回のみ）
+dagu start agent-wt-create -- NAME=login-coder        # .worktrees/login-coder を作り、設定を配置する
+dagu start agent-wt-remove -- NAME=login-coder        # worktree を設定ファイルごと削除する
+dagu start agent-wt-remove -- NAME=login-coder DELETE_BRANCH=true  # ブランチも削除する
+```
+
+```text
+.agent-wt/
+├── worktrees.yaml          # worktree ごとの role・profile・branch・base（NAME がキー）
+├── common/                 # 全 role 共通の rulesync のソース（任意）
+├── roles/<role>/           # role ごとの rulesync のソース（rules/ skills/ subagents/ など）
+└── profiles/<profile>/
+    ├── rulesync.jsonc      # 生成するツール（targets）と機能（features）
+    ├── permissions.jsonc   # 権限など（任意。claudecode.model で Claude Code のモデルを指定できる）
+    └── seed/               # rulesync の前に worktree へそのままコピーするファイル（任意）
+```
+
+```yaml
+# .agent-wt/worktrees.yaml
+worktrees:
+  login-coder:
+    role: coder
+    profile: claude-opus5.5
+    branch: feat/login   # 省略時は agent/<NAME>。無ければ base から作る
+    base: main           # 省略時は HEAD
+```
+
+- rulesync は `common` → `role` → `profile` の順にソースを重ねて生成します（同じ相対パスのファイルは後ろが勝ちます。中身はマージされません）。
+- `ROLE=` `PROFILE=` `BRANCH=` `BASE=` を渡すと `worktrees.yaml` の値より優先します（`worktrees.yaml` に無い NAME でも作れます）。
+- rulesync は Codex のモデル（`model`）を管理しないため、Codex の profile では `seed/.codex/config.toml` に書きます。rulesync はこのファイルの中身を残したまま権限などをマージします。Codex がプロジェクトの `.codex/config.toml` を読むのは、そのディレクトリを信頼したときだけです。
+- 生成したファイルは worktree の `git status` に出ないようにします（追跡済みのファイルは `git update-index --skip-worktree`、未追跡のファイルは `.git/info/exclude` に worktree ごとのブロックで追記。`.worktrees/` 自体も `.git/info/exclude` で無視します）。git は worktree ごとの `info/exclude` を読まないため、同じパスは本体の作業ツリーでも無視されます。ブロックは削除時に消えます。
+- 生成したファイル以外の未コミットの変更が残っていると、削除は失敗して何も消しません。捨ててよい場合は `FORCE=true` を渡してください。作成の途中で失敗した場合は、その実行で作った worktree とブランチを削除します。
+- 実行のログは `dagu status <DAG 名>` や `~/.local/share/dagu/logs/` で確認できます。
 
 ### 6. `ai` コンテナのデスクトップを見る
 

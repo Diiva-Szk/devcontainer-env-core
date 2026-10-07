@@ -388,7 +388,7 @@ RUN chmod -R u=rwX,go=rX /opt/mise
 USER ${USER_NAME}
 
 # ai 専用ツールをインストール（Kiro CLI / Antigravity CLI / rulesync / Playwright CLI /
-# Context7 CLI / drawio-png-cli（dip）を含む）
+# Context7 CLI / drawio-png-cli（dip）/ Dagu を含む）
 #   バイナリの取得・検証は mise が行う。各 CLI の付属のセットアップコマンドは実行しない。
 #
 # Kiro CLI: `kiro-cli setup` は実行しない（シェル統合を入れない）。
@@ -409,7 +409,28 @@ RUN mise install && \
     rulesync --version && \
     playwright-cli --version && \
     ctx7 --version && \
-    dip --version
+    dip --version && \
+    dagu version
+
+# agent-wt（role・profile ごとの git worktree を作り、rulesync で設定を配置する dagu の DAG）
+#   DAG と、プロジェクトの .agent-wt/ の雛形（agent-wt-init がコピーする）を /opt/agent-wt に置く。
+#   DAG は dagu の既定の DAG ディレクトリ（~/.config/dagu/dags）にコピーし、
+#   `dagu start agent-wt-create -- NAME=...` のように名前で起動できるようにする。
+#   シンボリックリンクにしないのは、dagu ls や Web UI がリンクを一覧に出さないため。
+#   DAGU_DAGS_DIR で /opt/agent-wt/dags を直接指さないのは、利用者が自分の DAG を
+#   ~/.config/dagu/dags に置けるようにするため（~/.config は volume ではないので、
+#   コピーはイメージの更新に追従する）。
+#   DAGU_SKIP_EXAMPLES: 初回起動時に DAG ディレクトリへサンプルの DAG を書き出させない。
+ENV DAGU_SKIP_EXAMPLES=true
+COPY --chown=root:root ai/opt/agent-wt /opt/agent-wt
+USER root
+RUN chmod -R u=rwX,go=rX /opt/agent-wt
+USER ${USER_NAME}
+RUN set -eu; \
+    dags_dir="${HOME}/.config/dagu/dags"; \
+    mkdir -p "${dags_dir}"; \
+    install -m 0644 /opt/agent-wt/dags/*.yaml "${dags_dir}/"; \
+    dagu ls 2>/dev/null | grep -q agent-wt-create
 
 # draw.io のカスタムライブラリ（dip library / dip insert で使う図形・アイコン）
 #   ライブラリの XML は mise で取得し（ai/opt/mise/config.toml。lock がチェックサムを固定する）、

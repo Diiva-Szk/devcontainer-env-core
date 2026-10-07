@@ -1,0 +1,223 @@
+# agent-wt-create
+#   git worktree を作り、指定した role・profile の AI エージェントの設定を rulesync で配置する。
+#
+#   使い方（ai コンテナ内のどこからでも可）:
+#     dagu start agent-wt-create -- NAME=login-coder
+#   NAME は <REPO>/.agent-wt/worktrees.yaml の worktrees のキー。
+#   ROLE・PROFILE・BRANCH・BASE を渡すと worktrees.yaml の値より優先する
+#   （worktrees.yaml に NAME が無くても、ROLE と PROFILE を渡せば作れる）。
+#
+#   配置するもの（<REPO>/.agent-wt/ 配下。雛形は agent-wt-init で作れる）:
+#     common/            全 role 共通の rulesync のソース（任意）
+#     roles/<ROLE>/      role ごとの rulesync のソース（rules/ skills/ subagents/ など）
+#     profiles/<PROFILE>/
+#       rulesync.jsonc   targets・features（どのツール向けに何を生成するか）
+#       permissions.json などの rulesync のソース（任意。claudecode.model でモデルを指定できる）
+#       seed/            rulesync の前にそのまま worktree へコピーするファイル（任意）
+#                        rulesync が管理しない設定（Codex の model など）を置く。
+#                        .codex/config.toml は rulesync が中身を残したままマージする。
+#   rulesync の --input-roots は common → role → profile の順で重ねる
+#   （同じ相対パスのファイルは後ろが勝つ。ファイル単位で置き換わり、中身はマージされない）。
+#
+#   生成したファイルは worktree の git status に出ないようにする（AI エージェントが
+#   誤ってコミットしないため）。
+#     追跡済みのファイル（CLAUDE.md など）: git update-index --skip-worktree
+#     未追跡のファイル: 共通の .git/info/exclude に worktree ごとのブロックで書く
+#       （git は worktree ごとの info/exclude を読まないため。同じパスは本体の
+#        worktree でも無視される点に注意。ブロックは agent-wt-remove で消す）
+#   <REPO>/.worktrees/ 自体も .git/info/exclude で無視する（.gitignore は変更しない）。
+description: git worktree を作り、role・profile の設定を rulesync で配置する
+type: graph
+shell: ["bash", "-euo", "pipefail"]
+working_dir: ${REPO}
+max_active_runs: 1
+
+params:
+  - name: NAME
+    type: string
+    required: true
+    pattern: '^[A-Za-z0-9][A-Za-z0-9._-]*$'
+    description: worktree の名前（.agent-wt/worktrees.yaml のキー。<REPO>/.worktrees/<NAME> に作る）
+  - name: ROLE
+    type: string
+    default: ""
+    pattern: '^([A-Za-z0-9][A-Za-z0-9._-]*)?$'
+    description: role（省略時は worktrees.yaml の値）
+  - name: PROFILE
+    type: string
+    default: ""
+    pattern: '^([A-Za-z0-9][A-Za-z0-9._-]*)?$'
+    description: profile（省略時は worktrees.yaml の値）
+  - name: BRANCH
+    type: string
+    default: ""
+    pattern: '^([A-Za-z0-9][A-Za-z0-9._/-]*)?$'
+    description: ブランチ（省略時は worktrees.yaml の値、それも無ければ agent/<NAME>。無ければ BASE から作る）
+  - name: BASE
+    type: string
+    default: ""
+    pattern: '^([A-Za-z0-9][A-Za-z0-9._/~^-]*)?$'
+    description: ブランチを新しく作るときの起点（省略時は worktrees.yaml の値、それも無ければ HEAD）
+  - name: REPO
+    type: string
+    default: /home/dev/work
+    pattern: '^/[A-Za-z0-9._/-]*$'
+    description: 対象のリポジトリ（ai コンテナではプロジェクトルートが /home/dev/work）
+
+steps:
+  - id: resolve
+    description: worktrees.yaml と引数から role・profile・ブランチを決め、存在を確かめる
+    run: |
+      repo="$(git rev-parse --show-toplevel)"
+      config_dir="${repo}/.agent-wt"
+      spec="${config_dir}/worktrees.yaml"
+
+      # worktrees.yaml の値を読む（無ければ空）。引数が優先する
+      from_spec() {
+        [ -f "${spec}" ] || return 0
+        KEY="$1" NAME="${NAME}" yq -r '.worktrees[strenv(NAME)][strenv(KEY)] // ""' "${spec}"
+      }
+      role="${ROLE:-$(from_spec role)}"
+      profile="${PROFILE:-$(from_spec profile)}"
+      branch="${BRANCH:-$(from_spec branch)}"
+      branch="${branch:-agent/${NAME}}"
+      base="${BASE:-$(from_spec base)}"
+      base="${base:-HEAD}"
+
+      if [ -z "${role}" ] || [ -z "${profile}" ]; then
+        echo "role と profile が決まりません。${spec} の worktrees.${NAME} に書くか、ROLE と PROFILE を渡してください" >&2
+        exit 1
+      fi
+      # worktrees.yaml の値は params の pattern で検査されないため、ここで検査する
+      for v in "${role}" "${profile}"; do
+        [[ "${v}" =~ ^[A-Za-z0-9][A-Za-z0-9._-]*$ ]] || { echo "role・profile に使えない文字があります: ${v}" >&2; exit 1; }
+      done
+      git check-ref-format --branch "${branch}" >/dev/null
+
+      role_dir="${config_dir}/roles/${role}"
+      profile_dir="${config_dir}/profiles/${profile}"
+      [ -d "${role_dir}" ] || { echo "role がありません: ${role_dir}" >&2; exit 1; }
+      [ -f "${profile_dir}/rulesync.jsonc" ] || { echo "profile がありません（rulesync.jsonc が必要）: ${profile_dir}" >&2; exit 1; }
+
+      wt="${repo}/.worktrees/${NAME}"
+      [ ! -e "${wt}" ] || { echo "既にあります: ${wt}" >&2; exit 1; }
+
+      # 後続のステップに渡す
+      {
+        printf 'repo=%q\n' "${repo}"
+        printf 'config_dir=%q\n' "${config_dir}"
+        printf 'role=%q\nprofile=%q\n' "${role}" "${profile}"
+        printf 'role_dir=%q\nprofile_dir=%q\n' "${role_dir}" "${profile_dir}"
+        printf 'branch=%q\nbase=%q\n' "${branch}" "${base}"
+        printf 'wt=%q\n' "${wt}"
+      } > "${DAG_RUN_WORK_DIR}/vars.sh"
+
+      echo "worktree: ${wt}"
+      echo "role:     ${role}"
+      echo "profile:  ${profile}"
+      echo "branch:   ${branch}"
+
+  - id: worktree
+    description: git worktree を作る（ブランチが無ければ BASE から作る）
+    depends: [resolve]
+    run: |
+      source "${DAG_RUN_WORK_DIR}/vars.sh"
+
+      # .worktrees/ を本体の worktree の git status に出さない
+      exclude="$(git rev-parse --path-format=absolute --git-common-dir)/info/exclude"
+      mkdir -p "$(dirname "${exclude}")"
+      touch "${exclude}"
+      grep -qxF '/.worktrees/' "${exclude}" || printf '%s\n' '/.worktrees/' >> "${exclude}"
+
+      if git show-ref --verify --quiet "refs/heads/${branch}"; then
+        git worktree add "${wt}" "${branch}"
+        created_branch=false
+      else
+        git worktree add -b "${branch}" "${wt}" "${base}"
+        created_branch=true
+      fi
+      printf 'created_branch=%q\n' "${created_branch}" >> "${DAG_RUN_WORK_DIR}/vars.sh"
+
+  - id: generate
+    description: profile の seed をコピーし、rulesync で common・role・profile の設定を生成する
+    depends: [worktree]
+    run: |
+      source "${DAG_RUN_WORK_DIR}/vars.sh"
+
+      if [ -d "${profile_dir}/seed" ]; then
+        cp -a "${profile_dir}/seed/." "${wt}/"
+      fi
+
+      input_roots=()
+      [ -d "${config_dir}/common" ] && input_roots+=("${config_dir}/common")
+      input_roots+=("${role_dir}" "${profile_dir}")
+
+      rulesync generate \
+        --config "${profile_dir}/rulesync.jsonc" \
+        --input-roots "${input_roots[@]}" \
+        --output-roots "${wt}"
+
+  - id: hide
+    description: 生成したファイルを worktree の git status に出さないようにし、作成時の情報を残す
+    depends: [generate]
+    run: |
+      source "${DAG_RUN_WORK_DIR}/vars.sh"
+
+      untracked=()
+      while IFS= read -r -d '' entry; do
+        status="${entry:0:2}"
+        path="${entry:3}"
+        if [ "${status}" = "??" ]; then
+          untracked+=("${path}")
+        else
+          git -C "${wt}" update-index --skip-worktree -- "${path}"
+          echo "skip-worktree: ${path}"
+        fi
+      done < <(git -C "${wt}" status --porcelain=v1 -z --untracked-files=all --no-renames)
+
+      exclude="$(git rev-parse --path-format=absolute --git-common-dir)/info/exclude"
+      if [ "${#untracked[@]}" -gt 0 ]; then
+        {
+          printf '# >>> agent-wt:%s\n' "${NAME}"
+          for path in "${untracked[@]}"; do
+            # 先頭の / でルート直下に固定する。gitignore で特別な意味を持つ文字はエスケープする
+            printf '/%s\n' "$(printf '%s' "${path}" | sed 's/[][*?!#\\]/\\&/g')"
+            echo "exclude: ${path}" >&2
+          done
+          printf '# <<< agent-wt:%s\n' "${NAME}"
+        } >> "${exclude}"
+      fi
+
+      # agent-wt-remove が使う。worktree の管理ディレクトリ（.git/worktrees/<id>/）に置くので
+      # worktree を消すと一緒に消える
+      git_dir="$(git -C "${wt}" rev-parse --path-format=absolute --git-dir)"
+      {
+        printf 'role=%q\nprofile=%q\n' "${role}" "${profile}"
+        printf 'branch=%q\n' "${branch}"
+        grep '^created_branch=' "${DAG_RUN_WORK_DIR}/vars.sh"
+      } > "${git_dir}/agent-wt.env"
+
+      if [ -n "$(git -C "${wt}" status --porcelain)" ]; then
+        echo "生成したファイルのうち git status に残るものがあります" >&2
+        git -C "${wt}" status --short >&2
+        exit 1
+      fi
+      echo "作成しました: ${wt}"
+
+handler_on:
+  failure:
+    # 途中で失敗したら、この実行で作ったものを片付ける（既にあった worktree・ブランチは触らない）
+    run: |
+      vars="${DAG_RUN_WORK_DIR}/vars.sh"
+      [ -f "${vars}" ] || exit 0
+      source "${vars}"
+      [ -n "${created_branch:-}" ] || exit 0
+      exclude="$(git rev-parse --path-format=absolute --git-common-dir)/info/exclude"
+      if [ -f "${exclude}" ]; then
+        sed -i "/^# >>> agent-wt:${NAME}\$/,/^# <<< agent-wt:${NAME}\$/d" "${exclude}"
+      fi
+      git worktree remove --force "${wt}" || true
+      if [ "${created_branch}" = true ]; then
+        git branch -D "${branch}" || true
+      fi
+      echo "失敗したため、作りかけの worktree を削除しました: ${wt}" >&2

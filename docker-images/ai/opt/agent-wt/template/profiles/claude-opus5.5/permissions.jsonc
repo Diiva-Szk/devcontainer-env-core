@@ -1,0 +1,9 @@
+{
+  "permission": {
+    "bash": { "git status": "allow", "git diff *": "allow", "git log *": "allow" }
+  },
+  // claudecode の値は .claude/settings.json にそのまま書かれる
+  "claudecode": {
+    "model": "claude-opus-5-5"
+  }
+}

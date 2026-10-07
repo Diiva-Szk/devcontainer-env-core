@@ -1,0 +1,4 @@
+# rulesync は Codex の model を管理しないため、seed として置く。
+# rulesync generate はこのファイルの中身を残したまま permissions などをマージする。
+# Codex がプロジェクトの .codex/config.toml を読むのは、そのディレクトリを信頼したときだけ。
+model = "astra6"
