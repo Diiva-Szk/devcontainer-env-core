@@ -35,19 +35,19 @@ url_api = "https://api.github.com/repos/dyoshikawa/rulesync/releases/assets/6066
 provenance = "github-attestations"
 
 [[tools."aqua:github/copilot-cli"]]
-version = "1.0.91"
+version = "1.0.92"
 backend = "aqua:github/copilot-cli"
-specifiers = ["1.0.91"]
+specifiers = ["1.0.92"]
 
 [tools."aqua:github/copilot-cli"."platforms.linux-arm64"]
-checksum = "sha256:26a42491bec497a921f198d550a614e0a8989f1c2418f5bb1dd2150f09e6eac0"
-url = "https://github.com/github/copilot-cli/releases/download/v1.0.91/copilot-linux-arm64.tar.gz"
-url_api = "https://api.github.com/repos/github/copilot-cli/releases/assets/603757334"
+checksum = "sha256:634d5200d96c17f01357637a166bb303744e8ca965550d6bbcb72b52b5e3c6a4"
+url = "https://github.com/github/copilot-cli/releases/download/v1.0.92/copilot-linux-arm64.tar.gz"
+url_api = "https://api.github.com/repos/github/copilot-cli/releases/assets/613497306"
 
 [tools."aqua:github/copilot-cli"."platforms.linux-x64"]
-checksum = "sha256:0e7a0e85290228afecce4d4eed42fda80c0f5b9c86f433deb246cde1d5eec8e5"
-url = "https://github.com/github/copilot-cli/releases/download/v1.0.91/copilot-linux-x64.tar.gz"
-url_api = "https://api.github.com/repos/github/copilot-cli/releases/assets/603757663"
+checksum = "sha256:1d8daedb9cdb200061471cabe9f924f80293689cb9c42489344864c044f33ea9"
+url = "https://github.com/github/copilot-cli/releases/download/v1.0.92/copilot-linux-x64.tar.gz"
+url_api = "https://api.github.com/repos/github/copilot-cli/releases/assets/613497504"
 
 [[tools."aqua:github/copilot-language-server-release"]]
 version = "1.551.2"
@@ -65,19 +65,19 @@ url = "https://github.com/github/copilot-language-server-release/releases/downlo
 url_api = "https://api.github.com/repos/github/copilot-language-server-release/releases/assets/596656159"
 
 [[tools."aqua:google-antigravity/antigravity-cli"]]
-version = "1.2.16"
+version = "1.2.17"
 backend = "aqua:google-antigravity/antigravity-cli"
-specifiers = ["1.2.16"]
+specifiers = ["1.2.17"]
 
 [tools."aqua:google-antigravity/antigravity-cli"."platforms.linux-arm64"]
-checksum = "sha256:a6d269d2764e5636ab2bcda73b78c587fe9d00ead767aa3974574229585ee0d3"
-url = "https://github.com/google-antigravity/antigravity-cli/releases/download/1.2.16/agy_cli_linux_arm64.tar.gz"
-url_api = "https://api.github.com/repos/google-antigravity/antigravity-cli/releases/assets/607088308"
+checksum = "sha256:4a1af1bb91352b72f40fce373a028023bf0e47f5fceb3dfa48249816c0f0caec"
+url = "https://github.com/google-antigravity/antigravity-cli/releases/download/1.2.17/agy_cli_linux_arm64.tar.gz"
+url_api = "https://api.github.com/repos/google-antigravity/antigravity-cli/releases/assets/611706242"
 
 [tools."aqua:google-antigravity/antigravity-cli"."platforms.linux-x64"]
-checksum = "sha256:d4247430e04cebdbe1ca93d9ccb483cd2f3daeb4cdb0ace5a71cd130e0bdab84"
-url = "https://github.com/google-antigravity/antigravity-cli/releases/download/1.2.16/agy_cli_linux_x64.tar.gz"
-url_api = "https://api.github.com/repos/google-antigravity/antigravity-cli/releases/assets/607088306"
+checksum = "sha256:b0ed8a7c375b5af3af973f08a601e41aebb38bac7e80b922ab54d973a4275493"
+url = "https://github.com/google-antigravity/antigravity-cli/releases/download/1.2.17/agy_cli_linux_x64.tar.gz"
+url_api = "https://api.github.com/repos/google-antigravity/antigravity-cli/releases/assets/611706248"
 
 [[tools."aqua:vercel-labs/agent-browser"]]
 version = "0.38.2"
@@ -113,46 +113,32 @@ url = "https://github.com/mondeja/simple-icons-drawio/releases/download/16.34.0/
 url_api = "https://api.github.com/repos/mondeja/simple-icons-drawio/releases/assets/610168725"
 
 [[tools."github:openai/codex"]]
-version = "0.160.0"
+version = "0.160.1"
 backend = "github:openai/codex"
-specifiers = ["0.160.0"]
+specifiers = ["0.160.1"]
 
 [tools."github:openai/codex".options]
 asset_pattern = "codex-package-aarch64-unknown-linux-musl.tar.gz"
 version_prefix = "rust-v"
 
 [tools."github:openai/codex"."platforms.linux-arm64"]
-checksum = "sha256:7f0fe42ff22ecfa3a47bc4a34f5b22c4218b431a4ec0aba51c7d98299f07900c"
-url = "https://github.com/openai/codex/releases/download/rust-v0.160.0/codex-package-aarch64-unknown-linux-musl.tar.gz"
-url_api = "https://api.github.com/repos/openai/codex/releases/assets/604056302"
+checksum = "sha256:dff0954438fa455c2197ddb1f421d8d68625d98de610f76bedb6e5bc837ea35b"
+url = "https://github.com/openai/codex/releases/download/rust-v0.160.1/codex-package-aarch64-unknown-linux-musl.tar.gz"
+url_api = "https://api.github.com/repos/openai/codex/releases/assets/613345978"
 
 [[tools."github:openai/codex"]]
-version = "0.160.0"
+version = "0.160.1"
 backend = "github:openai/codex"
-specifiers = ["0.160.0"]
+specifiers = ["0.160.1"]
 
 [tools."github:openai/codex".options]
 asset_pattern = "codex-package-x86_64-unknown-linux-musl.tar.gz"
 version_prefix = "rust-v"
 
 [tools."github:openai/codex"."platforms.linux-x64"]
-checksum = "sha256:4fcc47ab57f52ff75363951a8761146cd10c8288bd86fed45487dbb204a16b71"
-url = "https://github.com/openai/codex/releases/download/rust-v0.160.0/codex-package-x86_64-unknown-linux-musl.tar.gz"
-url_api = "https://api.github.com/repos/openai/codex/releases/assets/604048102"
-
-[[tools."github:szk302/drawio-png-cli"]]
-version = "0.1.0"
-backend = "github:szk302/drawio-png-cli"
-specifiers = ["0.1.0"]
-
-[tools."github:szk302/drawio-png-cli".options]
-asset_pattern = "dip-*-x86_64-unknown-linux-musl.tar.gz"
-
-[tools."github:szk302/drawio-png-cli"."platforms.linux-x64"]
-checksum = "sha256:24e28578175dbe5a038afdfd6ace5cb71eb867891f4b29a1566d28dd20103543"
-url = "https://github.com/szk302/drawio-png-cli/releases/download/v0.1.0/dip-0.1.0-x86_64-unknown-linux-musl.tar.gz"
-url_api = "https://api.github.com/repos/szk302/drawio-png-cli/releases/assets/610979624"
-provenance = "github-attestations"
+checksum = "sha256:340801565906a7028f6baaa9ab6853addaef221f0016a1417a7c1ffdd96c21f0"
+url = "https://github.com/openai/codex/releases/download/rust-v0.160.1/codex-package-x86_64-unknown-linux-musl.tar.gz"
+url_api = "https://api.github.com/repos/openai/codex/releases/assets/613336480"
 
 [[tools."github:szk302/drawio-png-cli"]]
 version = "0.1.0"
@@ -168,21 +154,35 @@ url = "https://github.com/szk302/drawio-png-cli/releases/download/v0.1.0/dip-0.1
 url_api = "https://api.github.com/repos/szk302/drawio-png-cli/releases/assets/610979601"
 provenance = "github-attestations"
 
+[[tools."github:szk302/drawio-png-cli"]]
+version = "0.1.0"
+backend = "github:szk302/drawio-png-cli"
+specifiers = ["0.1.0"]
+
+[tools."github:szk302/drawio-png-cli".options]
+asset_pattern = "dip-*-x86_64-unknown-linux-musl.tar.gz"
+
+[tools."github:szk302/drawio-png-cli"."platforms.linux-x64"]
+checksum = "sha256:24e28578175dbe5a038afdfd6ace5cb71eb867891f4b29a1566d28dd20103543"
+url = "https://github.com/szk302/drawio-png-cli/releases/download/v0.1.0/dip-0.1.0-x86_64-unknown-linux-musl.tar.gz"
+url_api = "https://api.github.com/repos/szk302/drawio-png-cli/releases/assets/610979624"
+provenance = "github-attestations"
+
 [[tools."http:kiro-cli"]]
-version = "2.27.1"
+version = "2.28.0"
 backend = "http:kiro-cli"
-specifiers = ["2.27.1"]
+specifiers = ["2.28.0"]
 
 [tools."http:kiro-cli".options]
 strip_components = "1"
 
 [tools."http:kiro-cli"."platforms.linux-arm64"]
-checksum = "sha256:33ad5462c3111ba4ef527f1d58bda08a9d1997e0ae73841a7c2ca734ebcba2d0"
-url = "https://desktop-release.q.us-east-1.amazonaws.com/2.27.1/kirocli-aarch64-linux.tar.gz"
+checksum = "sha256:4a8bd9640868ee8ae9526eb0469f073481ec2c66c177208a4a5413ea6fbc862a"
+url = "https://desktop-release.q.us-east-1.amazonaws.com/2.28.0/kirocli-aarch64-linux.tar.gz"
 
 [tools."http:kiro-cli"."platforms.linux-x64"]
-checksum = "sha256:3c0d7268a4bfb73f8e827822049978fa578e020b271afc1021c7532602d45d99"
-url = "https://desktop-release.q.us-east-1.amazonaws.com/2.27.1/kirocli-x86_64-linux.tar.gz"
+checksum = "sha256:8343a15db789c24a906fc1eacb72734c7adc2d58cbe95f6e74a2ce750186058e"
+url = "https://desktop-release.q.us-east-1.amazonaws.com/2.28.0/kirocli-x86_64-linux.tar.gz"
 
 [[tools."npm:@playwright/cli"]]
 version = "0.1.22"
@@ -191,7 +191,7 @@ backend = "npm:@playwright/cli"
 specifiers = ["0.1.22"]
 
 [[tools."npm:ctx7"]]
-version = "0.5.12"
-aube = { path = ".mise/locks/npm-ctx7/0.5.12", digest = "sha256:d9a39733997a7d2eb69751c57368004c7f00003e144f59eb4d200709854ea62a" }
+version = "0.5.13"
+aube = { path = ".mise/locks/npm-ctx7/0.5.13", digest = "sha256:dc0e6f688a3af36a25b8dd9752deddc834b16105d67c599d2956abfb32107d3f" }
 backend = "npm:ctx7"
-specifiers = ["0.5.12"]
+specifiers = ["0.5.13"]
