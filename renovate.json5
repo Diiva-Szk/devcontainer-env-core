@@ -42,9 +42,12 @@
   schedule: [
     '* 0-11 * * 2',
   ],
-  // update-mise-lock ワークフローが Renovate のPRブランチへ mise.lock を push する。
+  // update-mise-lock / update-rulesync-lock ワークフローが Renovate のPRブランチへ lock をコミットする。
   // そのコミットを「人による編集」とみなされると Renovate がPRの更新を止めるため無視させる。
+  // コミットは lock 更新用の GitHub App のトークンで API から作るため、作者はその App の bot になる。
+  // 移行前に github-actions[bot] で作ったコミットが残るPRのため、そちらも残す。
   gitIgnoredAuthors: [
+    '339829328+diiva-szk-lock-updater[bot]@users.noreply.github.com',
     '41898282+github-actions[bot]@users.noreply.github.com',
   ],
   // Amazon Kiro CLI のバージョン取得元。
