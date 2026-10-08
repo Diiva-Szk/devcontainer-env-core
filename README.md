@@ -280,11 +280,38 @@ mise trust mise.toml  # 確認してから trust する
 | `USER_PASS` | `dev` | `user` コンテナの `sudo` のパスワード。**変更を推奨します**（イメージの最後の層で設定するため、変更してもビルドキャッシュは使われます） |
 | `AWS_REGION` | `ap-northeast-1` | `user` コンテナの AWS リージョン |
 | `KASMVNC_PASSWORD` | `dev` | `ai` コンテナのデスクトップ（KasmVNC）のログインパスワード。コンテナの起動時に反映する |
+| `GIT_SIGNING_KEY` | （空） | `ai` コンテナの git の署名に使う SSH の秘密鍵の中身。空なら署名しない。コンテナの起動時に反映する（[git の署名](#git-の署名)） |
 | `UID` / `GID` | `1000` | コンテナ内ユーザーの UID / GID。**通常は変更しないでください**（下記） |
 | `USER_NAME` | `dev` | コンテナ内のユーザー名。**通常は変更しないでください**（下記） |
 
 - **`UID` / `GID` / `USER_NAME` を変更すると、ビルドキャッシュがほぼ使われず、すべてをローカルでビルドします。** Linux ホストでは、Dev Containers がコンテナの作成時にユーザーの UID / GID をホストのユーザーに合わせるため（`updateRemoteUserUID`、既定で有効）、ファイルの所有者を合わせる目的で変更する必要はありません。
 - `USER_NAME` を変更した場合は、`devcontainer.json` の `workspaceFolder`（`/home/<USER_NAME>/work`）と `remoteUser` も合わせて変更してください。
+
+### git の署名
+
+`user` コンテナの署名は、VS Code がホストの git の設定を転送するかどうかに任せており、このリポジトリでは対応していません（GnuPG は入っていないため GPG 署名は使えません。SSH 署名は `user.signingkey` を `key::` 形式で書き、ssh-agent を転送している場合などに限り動きます）。`ai` コンテナでは、`.env` の `GIT_SIGNING_KEY` に SSH の秘密鍵を書いたときだけ、コミットとタグに SSH 署名を付けます（書かなければ署名しません）。
+
+1. 署名専用の鍵を作ります（パスフレーズは付けないでください。付けると起動時に読めず、署名は無効のままになります）。
+
+   ```sh
+   # ホストで実行する
+   ssh-keygen -t ed25519 -N '' -C 'git signing (devcontainer ai)' -f ~/.ssh/id_ed25519_git_signing
+   ```
+
+2. 公開鍵（`~/.ssh/id_ed25519_git_signing.pub`）を GitHub の **Settings → SSH and GPG keys → New SSH key** で、Key type を **Signing Key** にして登録します。
+3. 秘密鍵の中身を `.env` に書きます。改行を含むため、ダブルクォートで囲みます。
+
+   ```sh
+   # .devcontainer/devcontainer-env-core/.env
+   GIT_SIGNING_KEY="-----BEGIN OPENSSH PRIVATE KEY-----
+   ...
+   -----END OPENSSH PRIVATE KEY-----"
+   ```
+
+4. コンテナを作り直します（**Dev Containers: Rebuild Container**）。起動時に `setup-git-signing` が鍵を `~/.ssh/git_signing_key` に書き出し、`~/.gitconfig` に `gpg.format=ssh`・`user.signingkey`・`commit.gpgsign=true`・`tag.gpgsign=true` を設定します。
+
+- GitHub で Verified と表示されるには、コミットのメールアドレス（`user.email`）が鍵を登録したアカウントのものである必要があります。
+- **`ai` コンテナの AI エージェントは書き出された秘密鍵を読めます**（`docker exec` で入ったシェルからは環境変数 `GIT_SIGNING_KEY` も見えます。`ai` コマンドの ssh のセッションには引き継ぎません）。普段の認証用の鍵や他の署名鍵を使い回さず、署名専用の鍵にしてください。漏れた疑いがあれば GitHub から鍵を削除します。
 
 ## AI ツールの状態の保存
 
