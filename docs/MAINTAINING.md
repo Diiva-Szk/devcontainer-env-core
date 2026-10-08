@@ -285,7 +285,7 @@ flowchart TD
 
 - **Renovate が起点:** `GITHUB_TOKEN` 発の push は他ワークフローを起動しないため、GitHub App のトークンで PR を作ります。これにより生成された PR が下流の CI を起動できます。
 - **実行間隔:** `renovate.yml` は毎日 04:07 JST に実行します。新しい更新 PR を作るのは、AI ツールは毎日、それ以外は火曜のみです（[更新のタイミング](#更新のタイミング)）。
-- **lock → build の連鎖:** mise は `locked = true` のため、`config.toml` だけ更新すると `mise.lock` と不一致になりビルドが失敗します。Renovate には lock を更新させず（`skipArtifactsUpdate`）、`update-mise-lock` が PR ブランチへ lock を push します。push は GitHub App のトークンで行うため、その push が改めて `build-images` を起こします。push したコミットは `gitIgnoredAuthors` により Renovate から「人の編集」とみなされません。
+- **lock → build の連鎖:** mise は `locked = true` のため、`config.toml` だけ更新すると `mise.lock` と不一致になりビルドが失敗します。Renovate には lock を更新させず（`skipArtifactsUpdate`）、`update-mise-lock` が PR ブランチへ lock を push します。コミットは lock 更新用の GitHub App（`diiva-szk-lock-updater`）のトークンで GraphQL の `createCommitOnBranch` から作るため、GitHub による署名が付き（Verified）、そのコミットが改めて `build-images` を起こします。コミットの作者はその App の bot になり、`gitIgnoredAuthors` により Renovate から「人の編集」とみなされません。
 - **rulesync の lock → build の連鎖:** ビルドは `rulesync install --frozen` のため、`rulesync.jsonc` の `ref` だけ更新すると `rulesync.lock` と不一致になり失敗します。Renovate は `ref` だけを更新し、`update-rulesync-lock` が mise と同じ仕組みで lock を PR ブランチへ push します。
 - **validate → publish:** `publish` は `needs: validate` かつ `if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'` です。PR ではパース検証のみ行い、`main` からのみ GHCR へ publish します（手動実行で別ブランチを選んでも publish しません）。
 - **version bump との連動:** Feature の `version` を上げないと `publish` は何も配信しません。Renovate の `postUpgradeTasks` が `scripts/bump-feature-version.sh` で patch を上げます。手作業で Feature を変更した場合は `version` を上げてください。
@@ -294,8 +294,10 @@ flowchart TD
 
 | シークレット | 内容 | 利用ワークフロー |
 | --- | --- | --- |
-| `RENOVATE_APP_CLIENT_ID` | GitHub App の Client ID | renovate / update-mise-lock / update-rulesync-lock |
-| `RENOVATE_APP_PRIVATE_KEY` | GitHub App の秘密鍵 | renovate / update-mise-lock / update-rulesync-lock |
+| `RENOVATE_APP_CLIENT_ID` | Renovate 用 GitHub App（`diiva-szk-version-bumper`）の Client ID | renovate |
+| `RENOVATE_APP_PRIVATE_KEY` | Renovate 用 GitHub App の秘密鍵 | renovate |
+| `LOCK_UPDATER_APP_CLIENT_ID` | lock 更新用 GitHub App（`diiva-szk-lock-updater`。権限は Contents:write のみ）の Client ID | update-mise-lock / update-rulesync-lock |
+| `LOCK_UPDATER_APP_PRIVATE_KEY` | lock 更新用 GitHub App の秘密鍵 | update-mise-lock / update-rulesync-lock |
 
 ## Renovate
 
@@ -376,7 +378,7 @@ Action の SHA 固定だけでは、Action が実行時に取得するものま�
 - **ai のデスクトップはホストに公開しない:** KasmVNC のポート（8444）は `compose.yml` の `expose` で同じネットワークの user コンテナにだけ見せ、`ports` でホストへは公開しません。ホストからは user コンテナの `ai-desktop`（`aid`）が `127.0.0.1` で待ち受けて転送し、VS Code のポート転送経由で開きます。
 - **App トークンの権限の最小化:** `create-github-app-token` は `permission-*` を指定しないと App installation の全権限を継承するため、ワークフローごとに必要な権限だけを指定しています。
   - renovate: Contents / Issues / Pull requests / Checks / Commit statuses / Workflows（write）、Dependabot alerts（read。`vulnerabilityAlerts` 用）
-  - update-mise-lock / update-rulesync-lock: Contents（write）のみ
+  - update-mise-lock / update-rulesync-lock: Contents（write）のみ。App 自体も Renovate とは分け、Contents:write だけを付与した lock 更新用の App を使います（秘密鍵が漏れても Renovate の App の権限までは渡らないように）。
 - **PR のコードを実行するジョブと、書き込みトークンを扱うジョブの分離:** `update-mise-lock.yml` と `update-rulesync-lock.yml` は、lock を生成する `generate` ジョブと push する `push` ジョブを別 runner で実行します。同じ runner で PR のコードを実行した後にトークンを扱うと、`.git/hooks` 等を仕込まれてトークンを盗まれるおそれがあるためです。`push` ジョブは PR のコードを実行せず、受け取った lock のファイル構成・形式・書き込み先（シンボリックリンクでないこと）を検証してから取り込みます。
 - **publish は main からのみ:** `release-features.yml` の publish は `main` ブランチでのみ実行し、Environment `release` を使います。
 - **ビルドキャッシュの書き出しは main からのみ:** 利用者のビルドに取り込まれるため、`publish-build-cache.yml` は `main` でのみ `packages: write` を使います。PR のビルド（`build-images.yml`）はキャッシュを読むだけです。

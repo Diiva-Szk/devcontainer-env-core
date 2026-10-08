@@ -181,7 +181,8 @@ jobs:
 
             # rulesync.lock の形式であること（JSON として解釈でき、想定外のキーを含まない）。
             # 各ソースは解決済みのコミット（40桁の16進）と、成果物ごとの sha256 を持つこと。
-            python3 - "$src/$project.lock" <<'PY'
+            # -I: 作業ツリー（PR のファイル）を import の検索対象にしない（json.py 等で標準ライブラリを差し替えさせない）
+            python3 -I - "$src/$project.lock" <<'PY'
           import json, re, sys
           path = sys.argv[1]
           with open(path, encoding="utf-8") as f:
@@ -237,30 +238,68 @@ jobs:
 
       # GITHUB_TOKEN による push は他のワークフローを起動しないため、
       # そのままでは build-images.yml が lock 更新後のコミットで再実行されない。
-      # App のトークンで push し、ビルド検証を連鎖させる。
-      # 権限は lock の push に必要な Contents:write だけに絞る。
+      # App のトークンでコミットし、ビルド検証を連鎖させる。
+      # Renovate とは別の、Contents:write だけを持つ lock 更新用の App を使う
+      # （秘密鍵が漏れても、Renovate の App の権限までは渡らないように）。
+      # トークンの権限も、コミットの作成に必要な Contents:write だけに絞る。
       - name: Generate GitHub App token
         if: steps.apply.outputs.changed == 'true'
         id: app-token
         uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
         with:
-          client-id: ${{ secrets.RENOVATE_APP_CLIENT_ID }}
-          private-key: ${{ secrets.RENOVATE_APP_PRIVATE_KEY }}
+          client-id: ${{ secrets.LOCK_UPDATER_APP_CLIENT_ID }}
+          private-key: ${{ secrets.LOCK_UPDATER_APP_PRIVATE_KEY }}
           permission-contents: write
 
+      # git commit / push ではなく GraphQL の createCommitOnBranch でコミットを作る。
+      # ランナーには署名鍵が無く、ランナー上の git で作ったコミットは署名されない。
+      # API で作ったコミットは GitHub が署名する（Verified）ため、ブランチの
+      # 「署名付きコミットのみ許可」を満たせる。
+      # コミットの作者は lock 更新用の App の bot（renovate.json5 の gitIgnoredAuthors に登録済み）になる。
       - name: Commit and push
         if: steps.apply.outputs.changed == 'true'
+        shell: bash
         env:
-          APP_TOKEN: ${{ steps.app-token.outputs.token }}
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
           BRANCH: ${{ github.head_ref || github.ref_name }}
+          HEAD_SHA: ${{ needs.generate.outputs.sha }}
         run: |
-          # renovate.json5 の gitIgnoredAuthors と揃えること（Renovate がPRの更新を止めないように）
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          # 対象（rulesync.lock）は Validate and apply lock files でステージ済み
-          # 念のため hook を一切実行させない
-          git -c core.hooksPath=/dev/null commit --no-verify -m 'chore(deps): rulesync.lock を更新する'
-          # generate ジョブの基準コミットから進んでいれば non-fast-forward で失敗する
-          git -c core.hooksPath=/dev/null push --no-verify \
-            "https://x-access-token:${APP_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" \
-            "HEAD:refs/heads/${BRANCH}"
+          set -euo pipefail
+          changes="$RUNNER_TEMP/commit-changes"
+          payload="$RUNNER_TEMP/commit-payload.json"
+          # 対象（rulesync.lock）は Validate and apply lock files でステージ済み。
+          # ステージ済みの差分から追加・変更・削除するファイルを組み立てる。
+          git diff --cached --name-status --no-renames -z > "$changes"
+          # -I: 作業ツリー（PR のファイル）を import の検索対象にしない（base64.py 等で標準ライブラリを差し替えさせない）
+          python3 -I - "$changes" > "$payload" <<'PY'
+          import base64, json, os, sys
+          with open(sys.argv[1], "rb") as f:
+              fields = f.read().split(b"\0")
+          additions, deletions = [], []
+          for status, path in zip(fields[0::2], fields[1::2]):
+              path = path.decode()
+              if status == b"D":
+                  deletions.append({"path": path})
+              else:
+                  with open(path, "rb") as f:
+                      additions.append({"path": path, "contents": base64.b64encode(f.read()).decode()})
+          query = """
+          mutation ($input: CreateCommitOnBranchInput!) {
+            createCommitOnBranch(input: $input) { commit { oid url } }
+          }
+          """
+          json.dump({
+              "query": query,
+              "variables": {"input": {
+                  "branch": {
+                      "repositoryNameWithOwner": os.environ["GITHUB_REPOSITORY"],
+                      "branchName": os.environ["BRANCH"],
+                  },
+                  "message": {"headline": "chore(deps): rulesync.lock を更新する"},
+                  # generate ジョブの基準コミットから進んでいれば失敗する
+                  "expectedHeadOid": os.environ["HEAD_SHA"],
+                  "fileChanges": {"additions": additions, "deletions": deletions},
+              }},
+          }, sys.stdout)
+          PY
+          gh api graphql --input "$payload" --jq '.data.createCommitOnBranch.commit.url'
