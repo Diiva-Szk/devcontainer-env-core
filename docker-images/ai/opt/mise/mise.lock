@@ -18,20 +18,20 @@ url = "https://github.com/anthropics/claude-code/releases/download/v2.1.292/clau
 url_api = "https://api.github.com/repos/anthropics/claude-code/releases/assets/616117246"
 
 [[tools."aqua:dyoshikawa/rulesync"]]
-version = "26.0.0"
+version = "27.0.0"
 backend = "aqua:dyoshikawa/rulesync"
-specifiers = ["26.0.0"]
+specifiers = ["27.0.0"]
 
 [tools."aqua:dyoshikawa/rulesync"."platforms.linux-arm64"]
-checksum = "sha256:2faf2ed1184a59f99e42c97ec4896f6c2991a22bffef36ec472048fe363bd87c"
-url = "https://github.com/dyoshikawa/rulesync/releases/download/v26.0.0/rulesync-linux-arm64"
-url_api = "https://api.github.com/repos/dyoshikawa/rulesync/releases/assets/606690064"
+checksum = "sha256:cad6b20ece2c31f6b8d91ad4f44990a32942c84cb054ee07c7a8aba83c00ac9e"
+url = "https://github.com/dyoshikawa/rulesync/releases/download/v27.0.0/rulesync-linux-arm64"
+url_api = "https://api.github.com/repos/dyoshikawa/rulesync/releases/assets/611431782"
 provenance = "github-attestations"
 
 [tools."aqua:dyoshikawa/rulesync"."platforms.linux-x64"]
-checksum = "sha256:40f76ba6eca6b5277d7b49caabab5d6dd3f5c8d590c5ce30ca9a7dde154d6a10"
-url = "https://github.com/dyoshikawa/rulesync/releases/download/v26.0.0/rulesync-linux-x64"
-url_api = "https://api.github.com/repos/dyoshikawa/rulesync/releases/assets/606690055"
+checksum = "sha256:807e2cd46abbf99e7a053ac23ac8f662b508a44d87453efe9a7e9cd2c84fc05f"
+url = "https://github.com/dyoshikawa/rulesync/releases/download/v27.0.0/rulesync-linux-x64"
+url_api = "https://api.github.com/repos/dyoshikawa/rulesync/releases/assets/611431775"
 provenance = "github-attestations"
 
 [[tools."aqua:github/copilot-cli"]]
