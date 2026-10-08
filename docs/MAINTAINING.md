@@ -40,7 +40,7 @@ Feature（`devcontainer-features/` 配下）には `Dockerfile` を含めず、�
 │   │   ├── opt/agent-browser-skills/ # agent-browser のスキル本体の取得（rulesync.jsonc / rulesync.lock）
 │   │   ├── opt/drawio-webapp/    # dip に渡す draw.io の Web 資材の取得対象のパス（sparse-checkout）
 │   │   ├── opt/drawio-libraries/ # dip のライブラリと一緒に配置するライセンス表記（ライブラリの XML 自体は mise で取得）
-│   │   ├── usr/local/bin/        # ai-entrypoint.sh / start-desktop（デスクトップの起動）/ start-sshd（ssh サーバーの起動）/ sync-home-defaults / google-chrome（ai 用のラッパー。dev-base のものを置き換える）
+│   │   ├── usr/local/bin/        # ai-entrypoint.sh / start-desktop（デスクトップの起動）/ start-sshd（ssh サーバーの起動）/ setup-git-signing（git の署名の設定）/ sync-home-defaults / google-chrome（ai 用のラッパー。dev-base のものを置き換える）
 │   │   ├── usr/share/icons/st/   # st のアイコン
 │   │   └── home-config/          # AI エージェントとデスクトップ（KasmVNC / Openbox / idesk）の設定ファイル
 │   └── user/

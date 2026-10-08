@@ -332,14 +332,14 @@ RUN tmp_dir="$(mktemp -d)" && \
     chmod -R u=rwX,go=rX /opt/drawio-webapp && \
     rm -rf "${tmp_dir}" /tmp/drawio-webapp.sparse-checkout
 
-# デスクトップと ssh サーバーの起動スクリプトと、ai 用の google-chrome（ラッパー）。
+# デスクトップと ssh サーバーの起動スクリプト、git の署名の設定スクリプトと、ai 用の google-chrome（ラッパー）。
 #   google-chrome は dev-base で置いた共通のラッパーを、リモートデバッグ等を付ける ai 用のものに置き換える。
 COPY --chown=root:root ai/usr/share/icons/st /usr/share/icons/st
 COPY --chown=root:root ai/usr/local/bin /usr/local/bin
 
 RUN chmod -R u=rwX,go=rX /usr/share/icons/st && \
     chmod 0755 /usr/local/bin/start-desktop /usr/local/bin/start-sshd /usr/local/bin/ai-entrypoint.sh \
-               /usr/local/bin/sync-home-defaults /usr/local/bin/google-chrome
+               /usr/local/bin/sync-home-defaults /usr/local/bin/setup-git-signing /usr/local/bin/google-chrome
 
 # ssh（user コンテナの ai コマンド）や docker exec で入ったシェルから起動した GUI アプリもデスクトップに表示する
 # （ssh のセッションには start-sshd が ~/.ssh/environment で引き継ぐ）。

@@ -1,0 +1,57 @@
+#!/bin/bash
+###########################################################################
+# setup-git-signing
+#   ai コンテナの git のコミット・タグに SSH 署名を付ける設定をする。
+#   ai-entrypoint.sh がコンテナの起動時に呼ぶ。
+#
+#   ai コンテナは VS Code がアタッチしないため、ホストの ssh-agent / gpg-agent や
+#   git の設定が転送されない。代わりに .env の GIT_SIGNING_KEY（SSH の秘密鍵の中身）を
+#   ~/.ssh/git_signing_key に書き出し、~/.gitconfig で署名に使わせる。
+#
+#   GIT_SIGNING_KEY が空なら署名しない（以前に設定したものがあれば外す）。
+#   鍵が読めない（形式が違う・パスフレーズ付き）場合は、すべてのコミットが失敗しないよう
+#   署名を有効にせずに終了ステータス 1 を返す。
+#
+#   AI エージェントは書き出した秘密鍵を読めるため、署名専用の鍵を使うこと。
+###########################################################################
+set -euo pipefail
+
+key_file="${HOME}/.ssh/git_signing_key"
+
+disable() {
+  # このスクリプトが設定したものだけを外す（利用者が別の鍵を設定していれば触らない）
+  if [[ "$(git config --global --get user.signingkey || true)" == "$key_file" ]]; then
+    git config --global --unset user.signingkey || true
+    git config --global --unset gpg.format || true
+    git config --global --unset commit.gpgsign || true
+    git config --global --unset tag.gpgsign || true
+  fi
+  rm -f "$key_file" "${key_file}.pub"
+}
+
+key="${GIT_SIGNING_KEY:-}"
+# Windows のエディタで書いた .env の CRLF を取り除く
+key="${key//$'\r'/}"
+
+if [[ -z "$key" ]]; then
+  disable
+  exit 0
+fi
+
+(
+  umask 077
+  mkdir -p "${HOME}/.ssh"
+  printf '%s\n' "$key" >"$key_file"
+)
+
+# 公開鍵を取り出せることで、鍵として読めること（パスフレーズが無いこと）を確かめる
+if ! ssh-keygen -y -P '' -f "$key_file" >"${key_file}.pub" 2>/dev/null; then
+  echo "setup-git-signing: GIT_SIGNING_KEY を SSH の秘密鍵として読めません（パスフレーズ付きの鍵は使えません）。署名は無効のままにします" >&2
+  disable
+  exit 1
+fi
+
+git config --global gpg.format ssh
+git config --global user.signingkey "$key_file"
+git config --global commit.gpgsign true
+git config --global tag.gpgsign true
