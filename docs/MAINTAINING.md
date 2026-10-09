@@ -167,7 +167,7 @@ bash scripts/update-rulesync-locks.sh
 
 **理由:** 本来は agent-browser と同じく git transport で、公式リポジトリ（`upstash/context7`）の `ctx7@<版>` タグから取得するべきです。しかし `ctx7@<版>` は**注釈付きタグ**で、rulesync 24.0.0 の git transport はこれを解決できません（`git ls-remote` の出力の1行目（タグオブジェクトの SHA）を `resolvedRef` にしてしまい、チェックアウト後の `git rev-parse HEAD`（コミットの SHA、`ls-remote` では2行目の `^{}` 側）と一致せず `GitClientError: Checked out commit ..., expected locked commit ...` で失敗します）。agent-browser のタグ（`v0.38.1`）は軽量タグのためこの問題が起きません。
 
-**改変元とライセンス表記:** `docker-images/ai/opt/rulesync/.rulesync/skills/find-docs/SKILL.md` は `upstash/context7` の `ctx7@0.5.13` タグの `skills/find-docs/SKILL.md` を、`patch-find-docs.py` で `npx ctx7@latest` を `ctx7` に置き換えた改変版です。上流リポジトリは MIT ライセンス（Copyright (c) 2021 Upstash, Inc.）で、`skills/` 配下に個別のライセンスファイルは無くリポジトリルートの MIT が適用されます。MIT の唯一の条件（著作権表示とライセンス文を複製物に含めること）を満たすため、上流の `LICENSE` をそのまま同じディレクトリ（`.rulesync/skills/find-docs/LICENSE`）に置いています。`rulesync generate` はスキルのディレクトリをまるごと複製するため、`LICENSE` も `SKILL.md` と一緒に、リポジトリ・`/opt/ai-home-defaults`・各ツールの `skills/find-docs/` のすべてに付きます。
+**改変元とライセンス表記:** `docker-images/ai/opt/rulesync/.rulesync/skills/find-docs/SKILL.md` は `upstash/context7` の `ctx7@0.5.14` タグの `skills/find-docs/SKILL.md` を、`patch-find-docs.py` で `npx ctx7@latest` を `ctx7` に置き換えた改変版です。上流リポジトリは MIT ライセンス（Copyright (c) 2021 Upstash, Inc.）で、`skills/` 配下に個別のライセンスファイルは無くリポジトリルートの MIT が適用されます。MIT の唯一の条件（著作権表示とライセンス文を複製物に含めること）を満たすため、上流の `LICENSE` をそのまま同じディレクトリ（`.rulesync/skills/find-docs/LICENSE`）に置いています。`rulesync generate` はスキルのディレクトリをまるごと複製するため、`LICENSE` も `SKILL.md` と一緒に、リポジトリ・`/opt/ai-home-defaults`・各ツールの `skills/find-docs/` のすべてに付きます。
 
 **版のずれの検出:** `npm:ctx7` は Renovate が CLI 本体の版を自動で上げますが、vendoring した `SKILL.md` は連動して更新されません。CLI とスキルの版がずれたまま黙って通ることを防ぐため、取得元の版を `docker-images/ai/opt/rulesync/find-docs.version` に記録しています。このファイルは `.rulesync/skills/find-docs/` の**外**に置いています（中に置くと `rulesync generate` が各ツールのスキルのディレクトリへ一緒にコピーしてしまうため）。Dockerfile のビルドステップで `find-docs.version` の内容と `ctx7 --version` の出力を比較し、ずれていればビルドを失敗させます。そのため、ctx7 の版を Renovate が上げた PR は、スキルを取り直すまでビルドが落ち続けます。
 
@@ -184,7 +184,7 @@ bash scripts/update-rulesync-locks.sh
 
 **rulesync が直った場合:** rulesync の git transport が注釈付きタグを解決できるようになったら、vendoring をやめて agent-browser と同じ形（`rulesync.jsonc` の `sources` に git transport のエントリを追加）へ移行してください。移行後は次の変更が必要です。
 
-- `.rulesync/skills/find-docs/` の手動配置、`find-docs.version` と版の照合チェックは削除します（lock がコミット SHA を固定するため不要になります）。`rulesync` の `sources` は `path: "skills"` で `skills/find-docs/` 配下だけを取得し、そこには `SKILL.md` しかありません（`LICENSE` はリポジトリルートにしかなく、`ctx7@0.5.13` で確認済み）。そのため移行後も `LICENSE` は取得対象に含まれず、取得後にリポジトリルートの `LICENSE` を付け足す処理を残す必要があります。
+- `.rulesync/skills/find-docs/` の手動配置、`find-docs.version` と版の照合チェックは削除します（lock がコミット SHA を固定するため不要になります）。`rulesync` の `sources` は `path: "skills"` で `skills/find-docs/` 配下だけを取得し、そこには `SKILL.md` しかありません（`LICENSE` はリポジトリルートにしかなく、`ctx7@0.5.14` で確認済み）。そのため移行後も `LICENSE` は取得対象に含まれず、取得後にリポジトリルートの `LICENSE` を付け足す処理を残す必要があります。
 - `npx ctx7@latest` の置換自体は引き続き必要です。ビルドで取得したあとに `patch-find-docs.py` を呼ぶ処理を Dockerfile に追加してください（取得元が変わるだけで、置換そのものは今と同じ理由で必要です）。
 
 #### drawio-png の vendoring
