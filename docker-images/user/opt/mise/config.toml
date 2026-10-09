@@ -32,8 +32,9 @@ run = "ai"
 [tasks.ai-desktop]
 # /usr/local/bin/ai-desktop を呼ぶだけ。引数はそのまま渡る（mise run aid stop）。
 #   alias: コマンドと同じ短縮形（aid）でも実行できるようにする。
+#          mise tasks の既定の表示には alias の列が無いため、description にも短縮形を書いておく。
 #   ai-desktop は転送（socat）をセッションから切り離して起動するため、タスクが終わっても転送は続く。
-description = "ai コンテナのデスクトップをホストのブラウザで開く"
+description = "ai コンテナのデスクトップをホストのブラウザで開く（短縮形: aid）"
 alias = "aid"
 quiet = true
 run = "ai-desktop"
