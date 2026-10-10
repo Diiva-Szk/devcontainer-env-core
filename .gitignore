@@ -1,4 +1,6 @@
 .tmp/
+# mise run wt:add で作る git worktree
+.worktree/
 
 # Created by https://www.toptal.com/developers/gitignore/api/dotenv
 # Edit at https://www.toptal.com/developers/gitignore?templates=dotenv
