@@ -222,18 +222,22 @@ flowchart LR
 `user` / `ai` の両方のコンテナで、`.worktree/<ブランチ名>` に git worktree を作る mise タスクが使えます（定義は [docker-images/dev-base/etc/mise/config.toml](docker-images/dev-base/etc/mise/config.toml)）。
 
 ```sh
-mise run wt:add feat/foo           # .worktree/feat/foo を作る（ブランチが無ければ main から作成）
-mise run wt:add feat/foo -b dev    # 分岐元を指定する
+mise run wt:add feat/foo           # .worktree/feat/foo を作る（ブランチが無ければ origin のブランチ、それも無ければ main から作成）
+mise run wt:add feat/foo -b dev    # ブランチを新しく作るときの分岐元を指定する
 mise run wt:list                   # worktree の一覧
-mise run wt:rm feat/foo            # worktree とブランチを削除する（未コミットの変更・未マージのコミットがあれば中止）
+mise run wt:rm feat/foo            # worktree とブランチを削除する（未コミットの変更・未マージのコミットがあれば何も削除せず中止）
 mise run wt:rm feat/foo -f         # 強制的に削除する
 ```
 
-- リポジトリ内のどのディレクトリ（worktree の中を含む）で実行しても、メインの worktree 直下の `.worktree/` を使います。サブモジュールの中で実行した場合は、サブモジュールの `.worktree/` を使います。
+- リポジトリ内のどのディレクトリ（worktree の中を含む）で実行しても、メインの worktree 直下の `.worktree/` を使います。サブモジュールの中で実行した場合は、サブモジュールの `.worktree/` を使います。メインの worktree が無い構成（`git clone --bare` したリポジトリに worktree を足す構成など）には対応しておらず、エラーで止まります。
+- `wt:add` で指定したブランチの扱いは次のとおりです。ローカルのブランチがあればそれを使い、無くて `origin/<ブランチ名>` があれば、それを追跡するブランチを作ります。どちらも無ければ、分岐元（`-b`、既定: `main`）から新しく作ります。
+  - 他の人が push したブランチを使うときは、先に `git fetch` してください。
+  - 既にあるブランチ（ローカル・`origin`）を指定したときは、`-b` は使われません。
+  - 分岐元にはローカルのブランチがそのまま使われます。既定のブランチが `main` でないリポジトリでは `-b master` のように指定し、ローカルの `main` が古い場合は `-b origin/main` のように指定してください。
 - `.worktree/` は git の管理対象外にしてください（プロジェクトの `.gitignore` に `.worktree/` を追加する）。
 - worktree はコンテナ内の絶対パス（`/home/dev/work/...`）で記録されるため、ホストの git からは使えません。
-- `wt:rm` は worktree を削除してからブランチを削除します。ブランチが未マージの場合、worktree だけが削除され、ブランチは残ります。
-- `user` コンテナでは、trust していない `mise.toml` があるディレクトリで実行すると mise がエラーになります（[`mise trust` が必要](#user-コンテナでは-mise-trust-が必要)）。
+- `wt:rm` は、ブランチが未マージ（upstream があれば upstream に、無ければメインの worktree の HEAD に入っていない）のときは、worktree もブランチも削除せずに止まります。worktree が既に無い場合は、ブランチだけを削除します。
+- `user` コンテナでは、trust していない `mise.toml` があるディレクトリで実行すると mise がエラーになります（[`mise trust` が必要](#user-コンテナでは-mise-trust-が必要)）。trust はファイルのパスごとに必要なため、メインの worktree で trust していても、`wt:add` で作った worktree の `mise.toml` は trust されていません。worktree で作業する前に内容を確認して `mise trust` してください。`wt:rm` はメインの worktree から実行すると、trust せずに使えます。
 
 ## ツールの追加・バージョンの上書き
 

@@ -23,7 +23,7 @@ paranoid = true
 #   dir: ai は実行したディレクトリに対応する ai 側のディレクトリで起動するため、
 #        タスクの既定（設定ファイルの場所）ではなく実行したディレクトリで動かす。
 #   raw: 対話シェルを使うため、標準入出力を端末に直接つなぐ。
-description = "ai コンテナに入る（実行したディレクトリで起動する）"
+description = "[global] ai コンテナに入る（実行したディレクトリで起動する）"
 dir = "{{cwd}}"
 raw = true
 quiet = true
@@ -34,7 +34,7 @@ run = "ai"
 #   alias: コマンドと同じ短縮形（aid）でも実行できるようにする。
 #          mise tasks の既定の表示には alias の列が無いため、description にも短縮形を書いておく。
 #   ai-desktop は転送（socat）をセッションから切り離して起動するため、タスクが終わっても転送は続く。
-description = "ai コンテナのデスクトップをホストのブラウザで開く（短縮形: aid）"
+description = "[global] ai コンテナのデスクトップをホストのブラウザで開く（短縮形: aid）"
 alias = "aid"
 quiet = true
 run = "ai-desktop"
