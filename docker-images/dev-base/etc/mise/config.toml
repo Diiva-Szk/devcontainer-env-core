@@ -47,11 +47,11 @@ locked_scopes = ["system", "global"]
 # 必要に応じて ai/user 共通ツールを追加
 
 # ---------------------------------------------------------------------------
-# git worktree を .worktree/<ブランチ名> で管理するタスク（ai / user 共通）
+# git worktree を .worktrees/<ブランチ名> で管理するタスク（ai / user 共通）
 #   dir: この設定は system スコープのため {{config_root}} はリポジトリを指さない。
 #        実行したディレクトリで起動し、git でリポジトリのメインの worktree に移動する
-#        （worktree の中で実行しても同じ .worktree を使い、サブモジュールの中ではサブモジュールの
-#        .worktree を使う。git worktree list の先頭はサブモジュールだと .git/modules を指すため使わない）。
+#        （worktree の中で実行しても同じ .worktrees を使い、サブモジュールの中ではサブモジュールの
+#        .worktrees を使う。git worktree list の先頭はサブモジュールだと .git/modules を指すため使わない）。
 #        移動先は変数に代入してから cd する（cd "$(...)" だと置換の中の失敗で set -e が働かず、
 #        cd "" で実行したディレクトリに留まったまま続行してしまう）。
 #   quiet: mise は set の行を飛ばした次の行（コメント）を実行内容として表示するため、表示を止める。
@@ -59,7 +59,7 @@ locked_scopes = ["system", "global"]
 #        タスクには先頭に [global] を付ける（user/opt/mise/config.toml のタスクも同じ）。
 # ---------------------------------------------------------------------------
 [tasks."wt:add"]
-description = "[global] .worktree/<ブランチ名> に worktree を作る。ブランチがなければ origin のブランチか分岐元から作成する"
+description = "[global] .worktrees/<ブランチ名> に worktree を作る。ブランチがなければ origin のブランチか分岐元から作成する"
 dir = "{{cwd}}"
 quiet = true
 usage = '''
@@ -75,17 +75,17 @@ top="$(cd "$common/.." && git --git-dir="$common" rev-parse --show-toplevel)"
 cd "$top"
 git check-ref-format --branch "$usage_branch" > /dev/null
 if git show-ref --verify --quiet "refs/heads/$usage_branch"; then
-  git worktree add ".worktree/$usage_branch" "$usage_branch"
+  git worktree add ".worktrees/$usage_branch" "$usage_branch"
 elif git show-ref --verify --quiet "refs/remotes/origin/$usage_branch"; then
   # origin にだけあるブランチは、それを追跡するブランチを作る（素の git worktree add と同じ動作）
-  git worktree add --track -b "$usage_branch" ".worktree/$usage_branch" "origin/$usage_branch"
+  git worktree add --track -b "$usage_branch" ".worktrees/$usage_branch" "origin/$usage_branch"
 else
-  git worktree add -b "$usage_branch" ".worktree/$usage_branch" "$usage_base"
+  git worktree add -b "$usage_branch" ".worktrees/$usage_branch" "$usage_base"
 fi
 '''
 
 [tasks."wt:rm"]
-description = "[global] .worktree/<ブランチ名> の worktree とそのブランチを削除する"
+description = "[global] .worktrees/<ブランチ名> の worktree とそのブランチを削除する"
 dir = "{{cwd}}"
 quiet = true
 usage = '''
@@ -114,11 +114,11 @@ if [ "$force" != "true" ]; then
   fi
 fi
 # worktree が既に無い場合（手で消した・前回の実行が途中で止まったなど）は、ブランチの削除から続ける
-if [ -e ".worktree/$usage_branch" ]; then
+if [ -e ".worktrees/$usage_branch" ]; then
   if [ "$force" = "true" ]; then
-    git worktree remove --force ".worktree/$usage_branch"
+    git worktree remove --force ".worktrees/$usage_branch"
   else
-    git worktree remove ".worktree/$usage_branch"
+    git worktree remove ".worktrees/$usage_branch"
   fi
 fi
 # 登録だけ残った worktree があると branch -d/-D が拒否するため、片付けてから消す
@@ -130,7 +130,7 @@ else
 fi
 parent="$(dirname "$usage_branch")"
 if [ "$parent" != "." ]; then
-  (cd .worktree && rmdir -p --ignore-fail-on-non-empty "$parent")
+  (cd .worktrees && rmdir -p --ignore-fail-on-non-empty "$parent")
 fi
 '''
 
