@@ -1,0 +1,41 @@
+#!/usr/bin/env bash
+# agent-wt-mail <作業ツリーのルート> <アドレス>
+# メールの原本は Git の共通管理ディレクトリに置き、worktree 削除後も保持する。
+set -euo pipefail
+[ "$#" -eq 2 ] || { echo 'usage: agent-wt-mail ROOT NAME' >&2; exit 2; }
+cd "$1"
+name="$2"
+[[ "${name}" =~ ^[a-z0-9][a-z0-9._-]{0,63}$ && "${name}" != lmm ]] \
+  || { echo "無効なメールアドレス: ${name}" >&2; exit 1; }
+common="$(git rev-parse --path-format=absolute --git-common-dir)"
+git_dir="$(git rev-parse --path-format=absolute --git-dir)"
+mail_home="${common}/agent-wt/lmm"
+
+# 外から LMM_* を指定していても、初期化先はこのプロジェクトに固定する。
+LMM_HOME="${mail_home}" lmm-native box create "${name}" --exist-ok
+git config --file "${git_dir}/agent-wt-mail.config" lmm.name "${name}"
+
+# root の既存のローカル設定はそのまま利用する。worktree では既存のキーを保ちつつ
+# この作業ツリー用の宛先とパスを設定する（root の設定を親から継承しない）。
+if [ "${name}" != root ] || [ ! -e .lmm.local.yml ]; then
+  tmp="$(mktemp .lmm.local.yml.XXXXXX)"
+  trap 'rm -f "$tmp"' EXIT
+  if [ -f .lmm.local.yml ]; then
+    cp .lmm.local.yml "${tmp}"
+  fi
+  yq -i '.root = true | .receive.dir = "{config_dir}/.lmm-inbox/{name}" | .draft.dir = "{config_dir}/.lmm-drafts/{name}"' "${tmp}"
+  if [ "${name}" != root ]; then
+    yq -i '.post.reply_to = "root"' "${tmp}"
+  fi
+  mv "${tmp}" .lmm.local.yml
+fi
+
+# Git の info/exclude は全 worktree で共有される。メール関連は worktree の寿命とは
+# 独立して保持するため、agent-wt-remove で削除するブロックには入れない。
+exclude="${common}/info/exclude"
+mkdir -p "$(dirname "${exclude}")"
+touch "${exclude}"
+for pattern in '/.lmm.local.yml' '/.lmm-inbox/' '/.lmm-drafts/'; do
+  grep -qxF "${pattern}" "${exclude}" || printf '%s\n' "${pattern}" >> "${exclude}"
+done
+echo "mail: ${name} (${mail_home})"

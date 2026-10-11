@@ -33,14 +33,15 @@ Feature（`devcontainer-features/` 配下）には `Dockerfile` を含めず、�
 │   │   ├── etc/mise/             # mise の設定と lock（system スコープ）
 │   │   ├── etc/profile.d/        # ログインシェルで mise shims の PATH を復元
 │   │   ├── opt/python/           # Python パッケージ（requirements.in / requirements.txt）
-│   │   └── usr/local/bin/        # entrypoint.sh / google-chrome（共通の起動オプションを付けるラッパー。user 用）/ git-wt（mise の wt:* タスクと agent-wt が使う worktree の作成・削除）
+│   │   ├── opt/lmm/              # Local Markdown Mail のバージョン・SHA256 を固定したインストーラー
+│   │   └── usr/local/bin/        # entrypoint.sh / google-chrome / git-wt / lmm（作業ツリーごとのメール環境を補う）
 │   ├── ai/
 │   │   ├── opt/mise/             # mise の設定と lock（global スコープ）
 │   │   ├── opt/rulesync/         # AI ツールのスキルの取得と各ツールへの展開（rulesync.jsonc / rulesync.lock / find-docs.version / find-docs・drawio-png の vendoring）
 │   │   ├── opt/agent-browser-skills/ # agent-browser のスキル本体の取得（rulesync.jsonc / rulesync.lock）
 │   │   ├── opt/drawio-webapp/    # dip に渡す draw.io の Web 資材の取得対象のパス（sparse-checkout）
 │   │   ├── opt/drawio-libraries/ # dip のライブラリと一緒に配置するライセンス表記（ライブラリの XML 自体は mise で取得）
-│   │   ├── opt/agent-wt/         # agent-wt の dagu の DAG（dags/）と、プロジェクトの .agent-wt/ の雛形（template/）
+│   │   ├── opt/agent-wt/         # DAG（dags/）、メール初期化（bin/）、プロジェクトの .agent-wt/ の雛形（template/）
 │   │   ├── usr/local/bin/        # ai-entrypoint.sh / start-desktop（デスクトップの起動）/ start-sshd（ssh サーバーの起動）/ setup-git-signing（git の署名の設定）/ sync-home-defaults / google-chrome（ai 用のラッパー。dev-base のものを置き換える）
 │   │   ├── usr/share/icons/st/   # st のアイコン
 │   │   └── home-config/          # AI エージェントとデスクトップ（KasmVNC / Openbox / idesk）の設定ファイル
@@ -108,6 +109,7 @@ CLI ツールと言語ランタイム（Python / Node.js）は [mise](https://mi
 | 依存 | 定義 | 導入方法 |
 | --- | --- | --- |
 | Python パッケージ | `docker-images/dev-base/opt/python/requirements.in`（直接依存） / `requirements.txt`（推移的依存とハッシュ） | `uv pip install --system --require-hashes` |
+| Local Markdown Mail（user / ai） | `docker-images/dev-base/opt/lmm/install.sh` の version と両アーキテクチャの SHA256 | GitHub リリースを検証して `/opt/lmm` に配置。`lmm-native` は本体、`lmm` は cwd に応じた送信者・保存先を補うラッパー |
 | Renovate CLI（user） | `docker-images/user/opt/renovate/package.json` / `package-lock.json` | `npm ci --ignore-scripts` |
 | draw.io の Web 資材（ai） | `docker-images/Dockerfile` の `DRAWIO_WEBAPP_COMMIT` と `docker-images/ai/opt/drawio-webapp/sparse-checkout` | 固定したコミットから git の sparse checkout で必要なパスだけを取得し、`/opt/drawio-webapp` に配置（[draw.io の Web 資材](#drawio-の-web-資材ai)を参照） |
 | KasmVNC（ai） | `docker-images/Dockerfile` の `KASMVNC_VERSION` / `KASMVNC_SHA256_*` | GitHub リリースの `.deb` を sha256 で検証して `apt-get install` |
@@ -134,6 +136,18 @@ CLI ツールと言語ランタイム（Python / Node.js）は [mise](https://mi
 - `chrome-sandbox` の setuid ビットは外しています。コンテナ内では SUID のサンドボックスも使えず（`--no-sandbox` で起動します）、root への権限昇格の経路になり得る SUID バイナリを置かないためです。
 - Playwright CLI・agent-browser（ai）も、同梱のブラウザはダウンロードせず、Google Chrome を `PLAYWRIGHT_MCP_EXECUTABLE_PATH` / `AGENT_BROWSER_EXECUTABLE_PATH`（ともに `/opt/google/chrome/chrome`）で使います。ラッパーはリモートデバッグ用ポートやプロファイルを指定し、デスクトップの Chrome と衝突するため実体を指定しています。
 - dip（drawio-png-cli、ai）も同じ理由で `DIP_CHROME_PATH=/opt/google/chrome/chrome` を指定します（指定しないと PATH のラッパーを先に見つけます）。実体を直接起動するとラッパーの起動オプションが付かないため、`DIP_CHROME_ARGS` で `--no-sandbox --disable-dev-shm-usage --disable-gpu` を渡します（`--no-sandbox` が無いと、setuid ビットを外した `chrome-sandbox` の検査で起動直後に落ちます）。ヘッドレス・専用プロファイル・ループバック限定のデバッグポートは dip が自分で付けます。
+
+### agent-wt とローカルメール
+
+`lmm` は `docker-images/dev-base/opt/lmm/install.sh` のバージョンと amd64 / arm64 の SHA256 を手動で同時に更新します。リリースの `SHA256SUMS` と照合してください。mise の同名 shim と競合させないため、バイナリは直接 `/opt/lmm` に置き、ライセンス表示も同梱します。`lmm-native` が本体、`/usr/local/bin/lmm` が作業ツリーの環境を補うラッパーです。lmm の更新で mise / Python のインストールのキャッシュを失わないよう、配置とインストールは dev-base ステージの最後にまとめています。
+
+`agent-wt-mail` は各作業ツリーの Git 管理ディレクトリに `agent-wt-mail.config`（送信者）を記録し、Git の共通管理ディレクトリの `agent-wt/lmm/` にメールを保存します。ホーム配下の volume を増やさず、既存の work ディレクトリの共有と永続化を利用します。作成途中の失敗や worktree 削除でもメールボックスを消さず、再実行時には再利用します。
+
+結合テストは一時的な Git リポジトリに対して実際の CLI を実行します。必要なコマンドは `dagu`、`rulesync`、`lmm-native`、`yq`、`git`、`python3` です。メールの往復に加え、深い階層・サブディレクトリからの実行、`.` を含む名前の削除と失敗時の後片付け、下書きの保護、`[` を含むパスでの削除も検証します。`DISCARD_DRAFTS=true` でも未コミットの変更・未マージのコミットがあれば、worktree・下書き・ブランチが残ることを確認します。空のディレクトリは Git の検査では見つからないため、DAG 実行後に `${PWD}` が名前に残ったエントリがないことも確認します。Build images ワークフローでも、ビルドした ai イメージで同じテストを実行します。
+
+```sh
+python3 scripts/test-agent-wt.py
+```
 
 ### AI ツールのスキル（ai）
 

@@ -1,13 +1,19 @@
 # agent-wt-remove
 #   agent-wt-create で作った git worktree を、配置した設定ファイルごと削除する。
 #
-#   使い方（ai コンテナ内のどこからでも可）:
+#   メールボックスとメールの履歴は残す。同じ NAME で再作成すると引き継ぐ。
+#   使い方（ai コンテナ内の対象プロジェクトのルートで）:
 #     dagu start agent-wt-remove -- NAME=login-coder
 #     dagu start agent-wt-remove -- NAME=login-coder DELETE_BRANCH=true
+#     dagu start agent-wt-remove -- NAME=login-coder DISCARD_DRAFTS=true
 #
 #   削除は git-wt rm（mise の wt:rm と同じスクリプト）で行う。
-#   作業中の変更（生成したファイル以外の未コミットの変更・未追跡のファイル）が残っていると
+#   Git が検出する未コミットの変更・未追跡のファイルが残っていると
 #   git worktree remove が失敗し、何も消さない。捨ててよい場合は FORCE=true を渡す。
+#   Git が無視する .lmm-drafts/ も別途検査し、下書きが残っていれば止める。
+#   DISCARD_DRAFTS=true は下書きの破棄だけを許可し、Git の検査は続ける。
+#   FORCE=true は下書きも含めて強制削除する。
+#   lmm post は下書きを消さないため、送信済みの下書きも対象。受信の展開コピーは削除する。
 #   ブランチは既定では残す。DELETE_BRANCH=true でブランチも消す
 #   （マージされていないブランチは FORCE=true のときだけ消す。FORCE=true が無ければ、
 #   worktree も消さずに止まる）。
@@ -30,18 +36,23 @@ params:
   - name: FORCE
     type: boolean
     default: false
-    description: 未コミットの変更があっても削除する（マージされていないブランチも削除する）
+    description: 未コミットの変更・下書きがあっても削除する（マージされていないブランチも削除する）
+  - name: DISCARD_DRAFTS
+    type: boolean
+    default: false
+    description: 下書きの破棄を許可する（未コミットの変更・未マージのコミットの検査は続ける）
   - name: REPO
     type: string
-    default: /home/dev/work
-    pattern: '^/[A-Za-z0-9._/-]*$'
-    description: 対象のリポジトリ（ai コンテナではプロジェクトルートが /home/dev/work）
+    default: "."
+    description: 対象のプロジェクト（既定は dagu を実行したディレクトリ）
 
 steps:
   - id: remove
     description: worktree を削除し、.git/info/exclude のブロックを消し、必要ならブランチも消す
     run: |
       repo="$(git rev-parse --show-toplevel)"
+      [ "$(git rev-parse --path-format=absolute --git-dir)" = "$(git rev-parse --path-format=absolute --git-common-dir)" ] \
+        || { echo 'プロジェクトのメインの作業ツリーから実行してください' >&2; exit 1; }
       wt="${repo}/.worktrees/${NAME}"
 
       if ! git -C "${wt}" rev-parse --is-inside-work-tree >/dev/null 2>&1 \
@@ -58,8 +69,22 @@ steps:
         echo "role: ${role}, profile: ${profile}, branch: ${branch}"
       fi
 
-      # 生成したファイルは skip-worktree・exclude で隠しているため、それ以外の変更があるときだけ
-      # 削除が失敗する。ブランチも消すときは、未マージなら worktree も消さずに止まる（git-wt rm）
+      # .lmm-drafts/ は Git の除外対象なので git worktree remove では保護されない。
+      # 空のディレクトリと lmm が置くルート直下の .gitignore だけなら削除してよい。
+      if [ "${FORCE}" != true ] && [ "${DISCARD_DRAFTS}" != true ] && [ -d "${wt}/.lmm-drafts" ]; then
+        # プロジェクトのパスに [ などがあっても find のパターンに含めない。
+        draft="$(cd "${wt}/.lmm-drafts" && find . -mindepth 1 ! -type d \
+          ! -path ./.gitignore -print -quit)"
+        if [ -n "${draft}" ]; then
+          echo "下書きが残っているため削除しません: ${wt}/.lmm-drafts" >&2
+          echo '必要な下書きを退避・整理するか、下書きを捨ててよければ DISCARD_DRAFTS=true を渡してください' >&2
+          echo 'DISCARD_DRAFTS=true でも未コミットの変更・未マージのコミットの検査は行います' >&2
+          exit 1
+        fi
+      fi
+
+      # その他の未コミットの変更は Git に検査させる。
+      # ブランチも消すときは、未マージなら worktree も消さずに止まる（git-wt rm）。
       args=(--name "${NAME}")
       if [ "${FORCE}" = true ]; then
         args+=(--force)
@@ -80,5 +105,7 @@ steps:
 
       exclude="$(git rev-parse --path-format=absolute --git-common-dir)/info/exclude"
       if [ -f "${exclude}" ]; then
-        sed -i "/^# >>> agent-wt:${NAME}\$/,/^# <<< agent-wt:${NAME}\$/d" "${exclude}"
+        # NAME のうち、sed の基本正規表現で特別な意味を持つのは "."。
+        name_re="${NAME//./\\.}"
+        sed -i "/^# >>> agent-wt:${name_re}\$/,/^# <<< agent-wt:${name_re}\$/d" "${exclude}"
       fi

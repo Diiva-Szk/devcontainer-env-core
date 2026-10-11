@@ -1,10 +1,10 @@
 # agent-wt-init
 #   agent-wt-create が読む設定（<REPO>/.agent-wt/）の雛形をプロジェクトに作る。
-#   既にある場合は何もしない（上書きしない）。
+#   既にある設定は上書きせず、root のメール環境も初期化する。
 #
-#   使い方（ai コンテナ内のどこからでも可）:
+#   使い方（ai コンテナ内の対象プロジェクトのルートで）:
 #     dagu start agent-wt-init
-description: agent-wt の設定（.agent-wt/）の雛形をプロジェクトに作る
+description: agent-wt の設定の雛形とプロジェクトルートのメール環境を作る
 type: graph
 shell: ["bash", "-euo", "pipefail"]
 working_dir: ${REPO}
@@ -12,20 +12,23 @@ working_dir: ${REPO}
 params:
   - name: REPO
     type: string
-    default: /home/dev/work
-    pattern: '^/[A-Za-z0-9._/-]*$'
-    description: 対象のリポジトリ（ai コンテナではプロジェクトルートが /home/dev/work）
+    default: "."
+    description: 対象のプロジェクト（既定は dagu を実行したディレクトリ）
 
 steps:
   - id: init
     run: |
       repo="$(git rev-parse --show-toplevel)"
+      [ "$(git rev-parse --path-format=absolute --git-dir)" = "$(git rev-parse --path-format=absolute --git-common-dir)" ] \
+        || { echo 'プロジェクトのメインの作業ツリーから実行してください' >&2; exit 1; }
       dest="${repo}/.agent-wt"
       if [ -e "${dest}" ]; then
-        echo "既にあります: ${dest}" >&2
-        exit 1
+        [ -d "${dest}" ] || { echo "ディレクトリではありません: ${dest}" >&2; exit 1; }
+        echo "既存の設定を使います: ${dest}"
+      else
+        # 雛形は root 所有・読み取り専用で置いているため、権限は引き継がない
+        cp -r --no-preserve=mode,ownership /opt/agent-wt/template "${dest}"
+        echo "作成しました: ${dest}"
       fi
-      # 雛形は root 所有・読み取り専用で置いているため、権限は引き継がない
-      cp -r --no-preserve=mode,ownership /opt/agent-wt/template "${dest}"
-      echo "作成しました: ${dest}"
+      agent-wt-mail "${repo}" root
       find "${dest}" -type f | sort

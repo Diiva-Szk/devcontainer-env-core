@@ -225,6 +225,14 @@ RUN mise install && \
 # -------------------------------------------------------------------
 RUN uv pip install --system --require-hashes -r /opt/python/requirements.txt
 
+# ローカルメール（user / ai 共通）。更新時も上の mise / Python のキャッシュを使えるよう、
+# dev-base の最後に置く。ネイティブ CLI と cwd を解決するラッパーを分ける。
+USER root
+COPY --chown=root:root dev-base/opt/lmm /opt/lmm
+COPY --chown=root:root dev-base/usr/local/bin/lmm /usr/local/bin/lmm
+RUN bash /opt/lmm/install.sh && chmod 0755 /usr/local/bin/lmm
+USER ${USER_NAME}
+
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 
 ###########################################################################
@@ -427,7 +435,9 @@ RUN mise install && \
 ENV DAGU_SKIP_EXAMPLES=true
 COPY --chown=root:root ai/opt/agent-wt /opt/agent-wt
 USER root
-RUN chmod -R u=rwX,go=rX /opt/agent-wt
+RUN chmod -R u=rwX,go=rX /opt/agent-wt && \
+    chmod 0755 /opt/agent-wt/bin/* && \
+    ln -s /opt/agent-wt/bin/agent-wt-mail /usr/local/bin/agent-wt-mail
 USER ${USER_NAME}
 RUN set -eu; \
     dags_dir="${HOME}/.config/dagu/dags"; \

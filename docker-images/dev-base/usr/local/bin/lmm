@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+# agent-wt が登録した作業ツリーでは、毎回 cwd からメールの送信者と保存先を決める。
+# cd / 非対話シェル / user・ai 間でも、source や環境変数の切り替えは不要。
+set -euo pipefail
+
+if git_dir="$(git rev-parse --path-format=absolute --git-dir 2>/dev/null)" \
+    && [ -f "${git_dir}/agent-wt-mail.config" ]; then
+  common="$(git rev-parse --path-format=absolute --git-common-dir)"
+  name="$(git config --file "${git_dir}/agent-wt-mail.config" --get lmm.name)"
+  export LMM_NAME="${LMM_NAME-${name}}"
+  export LMM_HOME="${LMM_HOME-${common}/agent-wt/lmm}"
+fi
+
+# 未登録のディレクトリでは通常の lmm と同じ。明示した LMM_* は常に優先する。
+exec lmm-native "$@"

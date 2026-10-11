@@ -58,6 +58,7 @@ flowchart LR
 | 言語 | Python、Node.js（LTS のバージョンのみ） |
 | Python パッケージ | uv、ipykernel、pandas、pyarrow |
 | 汎用 | git、curl、wget、jq、yq、GitHub CLI（gh）、tmux、build-essential |
+| ローカルメール | Local Markdown Mail（lmm。作業ディレクトリから送信者を自動設定） |
 | Lint | hadolint、secretlint |
 | Terraform | tfenv、tflint、terraform-docs |
 | クラウド | AWS CLI、Google Cloud CLI |
@@ -179,14 +180,21 @@ dagu            # YAML で定義したワークフロー（DAG）の実行（age
 
 #### role・profile ごとの worktree（agent-wt）
 
-`ai` コンテナには、git worktree を作り、指定した role（coder・reviewer・designer など）と profile（Claude Code の Opus 5.5、Codex など）の AI エージェントの設定を rulesync で配置する dagu の DAG が入っています。role・profile ごとの設定はプロジェクトの `.agent-wt/` に置きます。
+`ai` コンテナには、git worktree を作り、指定した role（coder・reviewer・designer など）と profile（Claude Code の Opus 5.5、Codex など）の AI エージェントの設定を rulesync で配置する Dagu の DAG が入っています。同時に [Local Markdown Mail（lmm）](https://github.com/szk302/local-markdown-mail) のメールボックスと設定を用意し、プロジェクトルートと worktree の間で送受信できるようにします。role・profile ごとの設定はプロジェクトの `.agent-wt/` に置きます。
+
+**対象の Git プロジェクトのルート**で実行します。上の導入手順では `~/work` 自体がプロジェクトルートです。`~/work` を作業用ディレクトリとして、その配下に別のリポジトリを clone する構成にも対応しています。たとえば `~/work/GitHub/org_name/other-project` で実行すれば、そのプロジェクトが対象になります。階層の深さに制限はなく、`~/work` 自体が Git リポジトリである必要もありません。イメージを更新したら、`user` / `ai` コンテナをリビルドしてください。
 
 ```sh
-# ai コンテナ内で（どのディレクトリからでも可。対象は ~/work のリポジトリ）
-dagu start agent-wt-init                              # .agent-wt/ の雛形を作る（初回のみ）
-dagu start agent-wt-create -- NAME=login-coder        # .worktrees/login-coder を作り、設定を配置する
-dagu start agent-wt-remove -- NAME=login-coder        # worktree を設定ファイルごと削除する
+# ai コンテナ内で（user コンテナでは対象プロジェクトへ cd してから ai で入る）
+cd ~/work/GitHub/org_name/other-project
+# ~/work 自体が対象プロジェクトの場合は、代わりに cd ~/work
+dagu start agent-wt-init                            # .agent-wt/ の雛形と root のメール環境を作る
+# .agent-wt/worktrees.yaml の role・profile・branch・base を編集する
+dagu start agent-wt-create -- NAME=login-coder       # worktree・AI設定・メール環境をまとめて作る
+
+dagu start agent-wt-remove -- NAME=login-coder       # worktree を削除する（メール原本は残る）
 dagu start agent-wt-remove -- NAME=login-coder DELETE_BRANCH=true  # ブランチも削除する
+dagu start agent-wt-remove -- NAME=login-coder DISCARD_DRAFTS=true # 下書きの破棄を許可する（Git の検査は続ける）
 ```
 
 ```text
@@ -207,16 +215,53 @@ worktrees:
     role: coder
     profile: claude-opus5.5
     branch: feat/login   # 省略時は agent/<NAME>。ローカルに無ければ origin のブランチ、それも無ければ base から作る
-    base: main           # 省略時は HEAD
+    base: HEAD          # 現在のコミットから作る。main などのブランチ名も指定できる
 ```
 
 - rulesync は `common` → `role` → `profile` の順にソースを重ねて生成します（同じ相対パスのファイルは後ろが勝ちます。中身はマージされません）。
 - `ROLE=` `PROFILE=` `BRANCH=` `BASE=` を渡すと `worktrees.yaml` の値より優先します（`worktrees.yaml` に無い NAME でも作れます）。
+- `NAME` はメールアドレスとしても使います。小文字の `a-z`・`0-9`・`.`・`_`・`-`、先頭は英数字、最大64文字です。`root` と `lmm` は予約済みです。
+- 実行したディレクトリのプロジェクトが対象です。別の場所から実行する場合や Dagu の Web UI から起動する場合は、`REPO=/home/dev/work/GitHub/org_name/other-project` のようにプロジェクトの絶対パスを指定します。作成済み worktree 内からの初期化・作成・削除は受け付けません。
+- `agent-wt-init` を再実行しても既存の `.agent-wt/` は上書きしません。設定の雛形を更新する場合は、`/opt/agent-wt/template/` と比較して必要な変更を取り込んでください。
 - rulesync は Codex のモデル（`model`）を管理しないため、Codex の profile では `seed/.codex/config.toml` に書きます。rulesync はこのファイルの中身を残したまま権限などをマージします。Codex がプロジェクトの `.codex/config.toml` を読むのは、そのディレクトリを信頼したときだけです。
 - 生成したファイルは worktree の `git status` に出ないようにします（追跡済みのファイルは `git update-index --skip-worktree`、未追跡のファイルは `.git/info/exclude` に worktree ごとのブロックで追記。`.worktrees/` 自体も `.git/info/exclude` で無視します）。git は worktree ごとの `info/exclude` を読まないため、同じパスは本体の作業ツリーでも無視されます。ブロックは削除時に消えます。
 - worktree の作成・削除は、[git worktree のタスク](#git-worktree-のタスク)と同じスクリプト（`git-wt`）で行います。ブランチの決め方（origin のブランチを追跡するなど）も同じです。
-- 生成したファイル以外の未コミットの変更が残っていると、削除は失敗して何も消しません。`DELETE_BRANCH=true` のときは、ブランチが未マージの場合も何も消さずに止まります。捨ててよい場合は `FORCE=true` を渡してください。作成の途中で失敗した場合は、その実行で作った worktree とブランチを削除します。
+- Git が検出する未コミットの変更や、`.lmm-drafts/` 内の下書きが残っていると、削除は失敗して何も消しません。`DELETE_BRANCH=true` のときは、ブランチが未マージの場合も何も消さずに止まります。下書きを破棄してよい場合は `DISCARD_DRAFTS=true` を渡してください。Git の検査は続けるため、未コミットの変更や、削除対象のブランチに未マージのコミットがあれば、下書きも含めて何も消しません。`FORCE=true` は未コミットの変更・下書きも強制削除し、`DELETE_BRANCH=true` と併用すると未マージのブランチも削除します。作成の途中で失敗した場合は、その実行で作った worktree とブランチを削除します。
 - 実行のログは `dagu status <DAG 名>` や `~/.local/share/dagu/logs/` で確認できます。
+
+作成後は `.worktrees/login-coder` に移動して、profile に対応する `claude` や `codex` を起動します。DAG は準備までを行い、エージェントの起動や常駐は行いません。
+
+##### プロジェクトルートと worktree の間のメール
+
+`lmm` は `user` / `ai` 両方で使えます。送信者はプロジェクトルートでは `root`、worktree では `NAME` です。コマンドを実行するディレクトリから毎回決めるため、`cd` のたびに `export` や `source` を実行する必要はありません。worktree のサブディレクトリからも使えます。
+
+```sh
+# プロジェクトルート → worktree
+cd ~/work/GitHub/org_name/other-project  # ~/work 自体が対象なら cd ~/work
+draft=$(lmm draft -s "ログイン機能の実装")
+printf '\nログイン機能を実装してください。\n' >> "$draft/index.md"
+lmm post -t login-coder "$draft" && rm -r -- "$draft"  # 送信成功時だけ下書きを片付ける
+
+# worktree で受信し、プロジェクトルートへ報告する（宛先は省略できる）
+cd .worktrees/login-coder
+lmm receive                      # 出力されたディレクトリの index.md を読む
+draft=$(lmm draft -s "実装結果")
+printf '\n実装とテストが完了しました。\n' >> "$draft/index.md"
+# .lmm.local.yml の post.reply_to により root へ送る
+lmm post "$draft" && rm -r -- "$draft"
+
+# プロジェクトルートで報告を受信する
+cd ../..
+lmm receive
+```
+
+- スレッドを保って返信する場合は、`lmm post --reply <受信ディレクトリ> <下書きディレクトリ>` を使います。`lmm wait --in-reply-to <送信時のID> --timeout 60` で返信を待てます。
+- メールボックスと原本・送信控えは `<Git共通管理ディレクトリ>/agent-wt/lmm/`（通常は `.git/agent-wt/lmm/`）に置きます。プロジェクトごとに分離されるため、別プロジェクトでも同じ `NAME` を使えます。共有された work ディレクトリにあるので、`user` / `ai` 間で送受信でき、コンテナを作り直しても残ります。
+- ルートと worktree に `.lmm.local.yml` を配置します。受信の展開先は各作業ツリーの `.lmm-inbox/<自分のアドレス>/`、下書きは `.lmm-drafts/<自分のアドレス>/` です。たとえばルートが受信したメールは、送信者にかかわらず `.lmm-inbox/root/` に展開されます。ルートに既存の `.lmm.local.yml` がある場合はその設定を保ちます。これらのローカルファイルは Git の管理対象から除外します。
+- `lmm post` は送信後も下書きを残します。上の例では `&& rm -r -- "$draft"` により、送信が成功したときだけ下書きを削除しています。送信に失敗した下書きは残して修正・再送してください。
+- worktree を削除してもメールボックスは残り、同じ `NAME` で再作成すると引き継ぎます。受信の展開コピーは worktree と一緒に消えますが、原本は残ります。`.lmm-drafts/` に下書きがある場合は、送信済みのものも含めて削除を止めます。必要な下書きを退避・整理するか、破棄してよい場合に限り `DISCARD_DRAFTS=true` を指定してください。未コミットの変更・未マージのコミットの検査は引き続き行います。メールボックスと履歴も不要になったら、ルートで `lmm box remove <NAME>` を実行します。
+- 明示した `LMM_NAME` / `LMM_HOME` は自動設定より優先します。通常は設定せずに使ってください。agent-wt 未登録のリポジトリでは通常の lmm と同じ動作です。
+- フック通知は自動では登録しません。必要に応じて lmm のドキュメントに従って設定します。同じアドレスで `wait` と `hook` を併用すると受信が競合するため、どちらかに揃えてください。
 
 ### 6. `ai` コンテナのデスクトップを見る
 

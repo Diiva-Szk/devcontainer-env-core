@@ -1,7 +1,7 @@
 # agent-wt-create
 #   git worktree を作り、指定した role・profile の AI エージェントの設定を rulesync で配置する。
 #
-#   使い方（ai コンテナ内のどこからでも可）:
+#   使い方（ai コンテナ内の対象プロジェクトのルートで）:
 #     dagu start agent-wt-create -- NAME=login-coder
 #   NAME は <REPO>/.agent-wt/worktrees.yaml の worktrees のキー。
 #   ROLE・PROFILE・BRANCH・BASE を渡すと worktrees.yaml の値より優先する
@@ -26,7 +26,7 @@
 #       （git は worktree ごとの info/exclude を読まないため。同じパスは本体の
 #        worktree でも無視される点に注意。ブロックは agent-wt-remove で消す）
 #   <REPO>/.worktrees/ 自体も .git/info/exclude で無視する（.gitignore は変更しない）。
-description: git worktree を作り、role・profile の設定を rulesync で配置する
+description: git worktree を作り、role・profile の設定と双方向のメール環境を配置する
 type: graph
 shell: ["bash", "-euo", "pipefail"]
 working_dir: ${REPO}
@@ -36,8 +36,8 @@ params:
   - name: NAME
     type: string
     required: true
-    pattern: '^[A-Za-z0-9][A-Za-z0-9._-]*$'
-    description: worktree の名前（.agent-wt/worktrees.yaml のキー。<REPO>/.worktrees/<NAME> に作る）
+    pattern: '^[a-z0-9][a-z0-9._-]{0,63}$'
+    description: worktree の名前兼メールアドレス（小文字、最大64文字。root・lmm は予約）
   - name: ROLE
     type: string
     default: ""
@@ -60,15 +60,18 @@ params:
     description: ブランチを新しく作るときの起点（省略時は worktrees.yaml の値、それも無ければ HEAD）
   - name: REPO
     type: string
-    default: /home/dev/work
-    pattern: '^/[A-Za-z0-9._/-]*$'
-    description: 対象のリポジトリ（ai コンテナではプロジェクトルートが /home/dev/work）
+    default: "."
+    description: 対象のプロジェクト（既定は dagu を実行したディレクトリ）
 
 steps:
   - id: resolve
     description: worktrees.yaml と引数から role・profile・ブランチを決め、存在を確かめる
     run: |
       repo="$(git rev-parse --show-toplevel)"
+      [ "$(git rev-parse --path-format=absolute --git-dir)" = "$(git rev-parse --path-format=absolute --git-common-dir)" ] \
+        || { echo 'プロジェクトのメインの作業ツリーから実行してください' >&2; exit 1; }
+      [[ "${NAME}" != root && "${NAME}" != lmm ]] \
+        || { echo 'NAME の root と lmm は予約済みです' >&2; exit 1; }
       config_dir="${repo}/.agent-wt"
       spec="${config_dir}/worktrees.yaml"
 
@@ -100,7 +103,7 @@ steps:
       [ -f "${profile_dir}/rulesync.jsonc" ] || { echo "profile がありません（rulesync.jsonc が必要）: ${profile_dir}" >&2; exit 1; }
 
       wt="${repo}/.worktrees/${NAME}"
-      [ ! -e "${wt}" ] || { echo "既にあります: ${wt}" >&2; exit 1; }
+      [ ! -e "${wt}" ] && [ ! -L "${wt}" ] || { echo "既にあります: ${wt}" >&2; exit 1; }
 
       # 後続のステップに渡す
       {
@@ -155,24 +158,35 @@ steps:
       [ -d "${config_dir}/common" ] && input_roots+=("${config_dir}/common")
       input_roots+=("${role_dir}" "${profile_dir}")
 
+      # rulesync は作業ディレクトリの外の --config を拒否するため、
+      # サブディレクトリから DAG を実行した場合もプロジェクトルートへ移動する。
+      cd "${repo}"
       rulesync generate \
-        --config "${profile_dir}/rulesync.jsonc" \
+        --config ".agent-wt/profiles/${profile}/rulesync.jsonc" \
         --input-roots "${input_roots[@]}" \
         --output-roots "${wt}"
 
-  - id: hide
-    description: 生成したファイルを worktree の git status に出さないようにし、作成時の情報を残す
+  - id: mail
+    description: root と NAME のメールボックス、作業ツリーごとの送信者・返信先を設定する
     depends: [generate]
     run: |
       source "${DAG_RUN_WORK_DIR}/vars.sh"
+      agent-wt-mail "${repo}" root
+      agent-wt-mail "${wt}" "${NAME}"
 
-      untracked=()
+  - id: hide
+    description: 生成したファイルを worktree の git status に出さないようにし、作成時の情報を残す
+    depends: [mail]
+    run: |
+      source "${DAG_RUN_WORK_DIR}/vars.sh"
+
+      # 別の worktree の exclude ですでに隠れているファイルも、この worktree 自身の
+      # ブロックに記録する。先に作った worktree を削除しても隠れたままにするため。
+      mapfile -d '' -t untracked < <(git -C "${wt}" ls-files --others -z)
       while IFS= read -r -d '' entry; do
         status="${entry:0:2}"
         path="${entry:3}"
-        if [ "${status}" = "??" ]; then
-          untracked+=("${path}")
-        else
+        if [ "${status}" != "??" ]; then
           git -C "${wt}" update-index --skip-worktree -- "${path}"
           echo "skip-worktree: ${path}"
         fi
@@ -217,7 +231,9 @@ handler_on:
       [ -n "${created_branch:-}" ] || exit 0
       exclude="$(git rev-parse --path-format=absolute --git-common-dir)/info/exclude"
       if [ -f "${exclude}" ]; then
-        sed -i "/^# >>> agent-wt:${NAME}\$/,/^# <<< agent-wt:${NAME}\$/d" "${exclude}"
+        # NAME のうち、sed の基本正規表現で特別な意味を持つのは "."。
+        name_re="${NAME//./\\.}"
+        sed -i "/^# >>> agent-wt:${name_re}\$/,/^# <<< agent-wt:${name_re}\$/d" "${exclude}"
       fi
       git worktree remove --force "${wt}" || true
       if [ "${created_branch}" = true ]; then
