@@ -33,7 +33,7 @@ Feature（`devcontainer-features/` 配下）には `Dockerfile` を含めず、�
 │   │   ├── etc/mise/             # mise の設定と lock（system スコープ）
 │   │   ├── etc/profile.d/        # ログインシェルで mise shims の PATH を復元
 │   │   ├── opt/python/           # Python パッケージ（requirements.in / requirements.txt）
-│   │   └── usr/local/bin/        # entrypoint.sh / google-chrome（共通の起動オプションを付けるラッパー。user 用）
+│   │   └── usr/local/bin/        # entrypoint.sh / google-chrome（共通の起動オプションを付けるラッパー。user 用）/ git-wt（mise の wt:* タスクと agent-wt が使う worktree の作成・削除）
 │   ├── ai/
 │   │   ├── opt/mise/             # mise の設定と lock（global スコープ）
 │   │   ├── opt/rulesync/         # AI ツールのスキルの取得と各ツールへの展開（rulesync.jsonc / rulesync.lock / find-docs.version / find-docs・drawio-png の vendoring）

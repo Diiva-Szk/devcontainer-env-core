@@ -190,12 +190,15 @@ COPY --chown=root:root dev-base/etc/profile.d/mise.sh /etc/profile.d/mise.sh
 # entrypoint もユーザから書き換えられないよう root 所有・実行権限付きで配置する。
 COPY --chown=root:root dev-base/usr/local/bin/entrypoint.sh /usr/local/bin/entrypoint.sh
 
+# git worktree を .worktrees/ で管理するスクリプト（mise の wt:* タスクと ai の agent-wt が呼ぶ）。
+COPY --chown=root:root dev-base/usr/local/bin/git-wt /usr/local/bin/git-wt
+
 # Python パッケージの定義（ハッシュ付き requirements.txt）。root 所有・読み取り専用。
 COPY --chown=root:root dev-base/opt/python /opt/python
 
 RUN chmod -R u=rwX,go=rX /etc/mise /opt/python && \
     chmod 0644 /etc/profile.d/mise.sh && \
-    chmod 0755 /usr/local/bin/mise /usr/local/bin/entrypoint.sh
+    chmod 0755 /usr/local/bin/mise /usr/local/bin/entrypoint.sh /usr/local/bin/git-wt
 
 # ツール本体はユーザの data dir（既定: ~/.local/share/mise）に入り、shims 経由で PATH に載る。
 # ワークスペース側の mise.toml（実行時に足したツール）は mise が自動で読み込む。

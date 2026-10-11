@@ -5,10 +5,12 @@
 #     dagu start agent-wt-remove -- NAME=login-coder
 #     dagu start agent-wt-remove -- NAME=login-coder DELETE_BRANCH=true
 #
+#   削除は git-wt rm（mise の wt:rm と同じスクリプト）で行う。
 #   作業中の変更（生成したファイル以外の未コミットの変更・未追跡のファイル）が残っていると
 #   git worktree remove が失敗し、何も消さない。捨ててよい場合は FORCE=true を渡す。
 #   ブランチは既定では残す。DELETE_BRANCH=true でブランチも消す
-#   （マージされていないブランチは FORCE=true のときだけ消す）。
+#   （マージされていないブランチは FORCE=true のときだけ消す。FORCE=true が無ければ、
+#   worktree も消さずに止まる）。
 description: agent-wt-create で作った git worktree を設定ファイルごと削除する
 type: graph
 shell: ["bash", "-euo", "pipefail"]
@@ -57,12 +59,21 @@ steps:
       fi
 
       # 生成したファイルは skip-worktree・exclude で隠しているため、それ以外の変更があるときだけ
-      # git worktree remove が失敗する
+      # 削除が失敗する。ブランチも消すときは、未マージなら worktree も消さずに止まる（git-wt rm）
+      args=(--name "${NAME}")
       if [ "${FORCE}" = true ]; then
-        git worktree remove --force "${wt}"
-      elif ! git worktree remove "${wt}"; then
-        echo "未コミットの変更があるため削除しませんでした。捨ててよければ FORCE=true を渡してください" >&2
-        git -C "${wt}" status --short >&2
+        args+=(--force)
+      fi
+      if [ "${DELETE_BRANCH}" = true ] && [ -n "${branch}" ]; then
+        args+=(-- "${branch}")
+      else
+        args+=(--keep-branch)
+      fi
+      if ! git-wt rm "${args[@]}"; then
+        echo "削除しませんでした。捨ててよければ FORCE=true を渡してください" >&2
+        if [ -e "${wt}" ]; then
+          git -C "${wt}" status --short >&2
+        fi
         exit 1
       fi
       echo "削除しました: ${wt}"
@@ -70,12 +81,4 @@ steps:
       exclude="$(git rev-parse --path-format=absolute --git-common-dir)/info/exclude"
       if [ -f "${exclude}" ]; then
         sed -i "/^# >>> agent-wt:${NAME}\$/,/^# <<< agent-wt:${NAME}\$/d" "${exclude}"
-      fi
-
-      if [ "${DELETE_BRANCH}" = true ] && [ -n "${branch}" ]; then
-        if [ "${FORCE}" = true ]; then
-          git branch -D "${branch}"
-        else
-          git branch -d "${branch}"
-        fi
       fi

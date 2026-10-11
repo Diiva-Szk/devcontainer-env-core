@@ -118,7 +118,7 @@ steps:
       echo "branch:   ${branch}"
 
   - id: worktree
-    description: git worktree を作る（ブランチが無ければ BASE から作る）
+    description: git worktree を作る（ブランチがローカルに無ければ origin のブランチ、それも無ければ BASE から作る）
     depends: [resolve]
     run: |
       source "${DAG_RUN_WORK_DIR}/vars.sh"
@@ -129,14 +129,17 @@ steps:
       touch "${exclude}"
       grep -qxF '/.worktrees/' "${exclude}" || printf '%s\n' '/.worktrees/' >> "${exclude}"
 
+      # 失敗したときに片付けるブランチを決めておく（ローカルに無ければ、この実行で作るブランチ）。
+      # git-wt が途中で失敗しても片付けられるよう、呼ぶ前に書き残す
       if git show-ref --verify --quiet "refs/heads/${branch}"; then
-        git worktree add "${wt}" "${branch}"
         created_branch=false
       else
-        git worktree add -b "${branch}" "${wt}" "${base}"
         created_branch=true
       fi
       printf 'created_branch=%q\n' "${created_branch}" >> "${DAG_RUN_WORK_DIR}/vars.sh"
+
+      # 作り方は mise の wt:add と同じ（ローカル → origin/<branch> を追跡 → BASE から作る）
+      git-wt add --name "${NAME}" -b "${base}" -- "${branch}"
 
   - id: generate
     description: profile の seed をコピーし、rulesync で common・role・profile の設定を生成する

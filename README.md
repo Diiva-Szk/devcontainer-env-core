@@ -206,7 +206,7 @@ worktrees:
   login-coder:
     role: coder
     profile: claude-opus5.5
-    branch: feat/login   # 省略時は agent/<NAME>。無ければ base から作る
+    branch: feat/login   # 省略時は agent/<NAME>。ローカルに無ければ origin のブランチ、それも無ければ base から作る
     base: main           # 省略時は HEAD
 ```
 
@@ -214,7 +214,8 @@ worktrees:
 - `ROLE=` `PROFILE=` `BRANCH=` `BASE=` を渡すと `worktrees.yaml` の値より優先します（`worktrees.yaml` に無い NAME でも作れます）。
 - rulesync は Codex のモデル（`model`）を管理しないため、Codex の profile では `seed/.codex/config.toml` に書きます。rulesync はこのファイルの中身を残したまま権限などをマージします。Codex がプロジェクトの `.codex/config.toml` を読むのは、そのディレクトリを信頼したときだけです。
 - 生成したファイルは worktree の `git status` に出ないようにします（追跡済みのファイルは `git update-index --skip-worktree`、未追跡のファイルは `.git/info/exclude` に worktree ごとのブロックで追記。`.worktrees/` 自体も `.git/info/exclude` で無視します）。git は worktree ごとの `info/exclude` を読まないため、同じパスは本体の作業ツリーでも無視されます。ブロックは削除時に消えます。
-- 生成したファイル以外の未コミットの変更が残っていると、削除は失敗して何も消しません。捨ててよい場合は `FORCE=true` を渡してください。作成の途中で失敗した場合は、その実行で作った worktree とブランチを削除します。
+- worktree の作成・削除は、[git worktree のタスク](#git-worktree-のタスク)と同じスクリプト（`git-wt`）で行います。ブランチの決め方（origin のブランチを追跡するなど）も同じです。
+- 生成したファイル以外の未コミットの変更が残っていると、削除は失敗して何も消しません。`DELETE_BRANCH=true` のときは、ブランチが未マージの場合も何も消さずに止まります。捨ててよい場合は `FORCE=true` を渡してください。作成の途中で失敗した場合は、その実行で作った worktree とブランチを削除します。
 - 実行のログは `dagu status <DAG 名>` や `~/.local/share/dagu/logs/` で確認できます。
 
 ### 6. `ai` コンテナのデスクトップを見る
@@ -260,7 +261,7 @@ flowchart LR
 
 ## git worktree のタスク
 
-`user` / `ai` の両方のコンテナで、`.worktrees/<ブランチ名>` に git worktree を作る mise タスクが使えます（定義は [docker-images/dev-base/etc/mise/config.toml](docker-images/dev-base/etc/mise/config.toml)）。
+`user` / `ai` の両方のコンテナで、`.worktrees/<ブランチ名>` に git worktree を作る mise タスクが使えます。処理は `git-wt`（[docker-images/dev-base/usr/local/bin/git-wt](docker-images/dev-base/usr/local/bin/git-wt)）にあり、タスク（[docker-images/dev-base/etc/mise/config.toml](docker-images/dev-base/etc/mise/config.toml)）はこれを呼ぶだけです。mise を使わずに `git-wt add feat/foo` や `git wt add feat/foo` としても実行できます（trust していない `mise.toml` があるディレクトリでも使えます）。
 
 ```sh
 mise run wt:add feat/foo           # .worktrees/feat/foo を作る（ブランチが無ければ origin のブランチ、それも無ければ main から作成）
