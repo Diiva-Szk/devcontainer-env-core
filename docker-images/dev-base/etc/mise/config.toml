@@ -29,6 +29,7 @@ locked_scopes = ["system", "global"]
 "aqua:tmux/tmux-builds" = "3.7c"
 "aqua:hadolint/hadolint" = "2.15.1"
 "aqua:secretlint/secretlint" = "13.0.5"
+"aqua:max-sixty/worktrunk" = "0.80.0"
 # languages
 #   Python は python-build-standalone のビルド済みバイナリ、Node は nodejs.org の公式バイナリが入る。
 #   どちらも mise.lock に URL とチェックサムが記録される（Python は GitHub Artifact Attestations 付き）。
@@ -46,95 +47,39 @@ locked_scopes = ["system", "global"]
 
 # 必要に応じて ai/user 共通ツールを追加
 
-# ---------------------------------------------------------------------------
-# git worktree を .worktrees/<ブランチ名> で管理するタスク（ai / user 共通）
-#   dir: この設定は system スコープのため {{config_root}} はリポジトリを指さない。
-#        実行したディレクトリで起動し、git でリポジトリのメインの worktree に移動する
-#        （worktree の中で実行しても同じ .worktrees を使い、サブモジュールの中ではサブモジュールの
-#        .worktrees を使う。git worktree list の先頭はサブモジュールだと .git/modules を指すため使わない）。
-#        移動先は変数に代入してから cd する（cd "$(...)" だと置換の中の失敗で set -e が働かず、
-#        cd "" で実行したディレクトリに留まったまま続行してしまう）。
-#   quiet: mise は set の行を飛ばした次の行（コメント）を実行内容として表示するため、表示を止める。
-#   description: mise tasks の一覧でプロジェクトのタスクと区別できるよう、イメージが提供する
-#        タスクには先頭に [global] を付ける（user/opt/mise/config.toml のタスクも同じ）。
-# ---------------------------------------------------------------------------
+# Worktrunk の操作（ai / user 共通）。追加の引数はそのまま wt に渡す。
+# mise は子プロセスなので親シェルを cd できない。switch は --no-cd で移動せずに終える。
+# dir: system スコープの設定の場所ではなく、呼び出したディレクトリで実行する。
+# raw: Worktrunk の対話入力と出力を直接端末へ接続する。
+# raw_args: --help なども Worktrunk へ渡す。hooks の承認は自動化しない。
 [tasks."wt:add"]
-description = "[global] .worktrees/<ブランチ名> に worktree を作る。ブランチがなければ origin のブランチか分岐元から作成する"
+description = "[global] Worktrunk で新しいブランチと worktree を作る（移動しない）"
 dir = "{{cwd}}"
+raw = true
+raw_args = true
 quiet = true
-usage = '''
-arg "<branch>" help="ブランチ名"
-flag "-b --base <base>" help="ローカルにも origin にもブランチが無いときの分岐元" default="main"
-'''
-run = '''
-#!/usr/bin/env bash
-set -euo pipefail
-# メインの worktree のルートへ移動する（worktree の中・サブモジュールでも同じリポジトリを指す）
-common="$(git rev-parse --path-format=absolute --git-common-dir)"
-top="$(cd "$common/.." && git --git-dir="$common" rev-parse --show-toplevel)"
-cd "$top"
-git check-ref-format --branch "$usage_branch" > /dev/null
-if git show-ref --verify --quiet "refs/heads/$usage_branch"; then
-  git worktree add ".worktrees/$usage_branch" "$usage_branch"
-elif git show-ref --verify --quiet "refs/remotes/origin/$usage_branch"; then
-  # origin にだけあるブランチは、それを追跡するブランチを作る（素の git worktree add と同じ動作）
-  git worktree add --track -b "$usage_branch" ".worktrees/$usage_branch" "origin/$usage_branch"
-else
-  git worktree add -b "$usage_branch" ".worktrees/$usage_branch" "$usage_base"
-fi
-'''
+run = "wt switch --create --no-cd"
 
-[tasks."wt:rm"]
-description = "[global] .worktrees/<ブランチ名> の worktree とそのブランチを削除する"
+[tasks."wt:switch"]
+description = "[global] Worktrunk で既存ブランチの worktree を用意・選択する（移動しない）"
 dir = "{{cwd}}"
+raw = true
+raw_args = true
 quiet = true
-usage = '''
-arg "<branch>" help="削除するブランチ名"
-flag "-f --force" help="未コミットの変更や未マージのコミットがあっても削除する"
-'''
-run = '''
-#!/usr/bin/env bash
-set -euo pipefail
-# メインの worktree のルートへ移動する（worktree の中・サブモジュールでも同じリポジトリを指す）
-common="$(git rev-parse --path-format=absolute --git-common-dir)"
-top="$(cd "$common/.." && git --git-dir="$common" rev-parse --show-toplevel)"
-cd "$top"
-force="${usage_force:-false}"
-if ! git show-ref --verify --quiet "refs/heads/$usage_branch"; then
-  echo "error: ブランチ '$usage_branch' がありません" >&2
-  exit 1
-fi
-if [ "$force" != "true" ]; then
-  # worktree を消す前に、git branch -d と同じ基準（upstream、無ければ HEAD）でマージ済みか確かめる。
-  # 後から branch -d で止まると、worktree だけが消えた状態になるため
-  target="$(git rev-parse --verify --quiet "$usage_branch@{upstream}" || git rev-parse HEAD)"
-  if ! git merge-base --is-ancestor "refs/heads/$usage_branch" "$target"; then
-    echo "error: ブランチ '$usage_branch' には未マージのコミットがあります（-f で強制的に削除できます）" >&2
-    exit 1
-  fi
-fi
-# worktree が既に無い場合（手で消した・前回の実行が途中で止まったなど）は、ブランチの削除から続ける
-if [ -e ".worktrees/$usage_branch" ]; then
-  if [ "$force" = "true" ]; then
-    git worktree remove --force ".worktrees/$usage_branch"
-  else
-    git worktree remove ".worktrees/$usage_branch"
-  fi
-fi
-# 登録だけ残った worktree があると branch -d/-D が拒否するため、片付けてから消す
-git worktree prune
-if [ "$force" = "true" ]; then
-  git branch -D "$usage_branch"
-else
-  git branch -d "$usage_branch"
-fi
-parent="$(dirname "$usage_branch")"
-if [ "$parent" != "." ]; then
-  (cd .worktrees && rmdir -p --ignore-fail-on-non-empty "$parent")
-fi
-'''
+run = "wt switch --no-cd"
 
 [tasks."wt:list"]
-description = "[global] worktree の一覧を表示する"
+description = "[global] Worktrunk で worktree と変更状況の一覧を表示する"
 dir = "{{cwd}}"
-run = "git worktree list"
+raw = true
+raw_args = true
+quiet = true
+run = "wt list"
+
+[tasks."wt:rm"]
+description = "[global] Worktrunk で worktree を削除し、完了を待つ（統合済みならブランチも削除）"
+dir = "{{cwd}}"
+raw = true
+raw_args = true
+quiet = true
+run = "wt remove --foreground"

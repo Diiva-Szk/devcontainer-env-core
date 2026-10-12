@@ -32,6 +32,7 @@ Feature（`devcontainer-features/` 配下）には `Dockerfile` を含めず、�
 │   ├── dev-base/                 # ai / user 共通
 │   │   ├── etc/mise/             # mise の設定と lock（system スコープ）
 │   │   ├── etc/profile.d/        # ログインシェルで mise shims の PATH を復元
+│   │   ├── etc/xdg/worktrunk/    # Worktrunk の共通設定（worktree の配置先）
 │   │   ├── opt/python/           # Python パッケージ（requirements.in / requirements.txt）
 │   │   └── usr/local/bin/        # entrypoint.sh / google-chrome（共通の起動オプションを付けるラッパー。user 用）
 │   ├── ai/
@@ -133,6 +134,18 @@ CLI ツールと言語ランタイム（Python / Node.js）は [mise](https://mi
 - `chrome-sandbox` の setuid ビットは外しています。コンテナ内では SUID のサンドボックスも使えず（`--no-sandbox` で起動します）、root への権限昇格の経路になり得る SUID バイナリを置かないためです。
 - Playwright CLI・agent-browser（ai）も、同梱のブラウザはダウンロードせず、Google Chrome を `PLAYWRIGHT_MCP_EXECUTABLE_PATH` / `AGENT_BROWSER_EXECUTABLE_PATH`（ともに `/opt/google/chrome/chrome`）で使います。ラッパーはリモートデバッグ用ポートやプロファイルを指定し、デスクトップの Chrome と衝突するため実体を指定しています。
 - dip（drawio-png-cli、ai）も同じ理由で `DIP_CHROME_PATH=/opt/google/chrome/chrome` を指定します（指定しないと PATH のラッパーを先に見つけます）。実体を直接起動するとラッパーの起動オプションが付かないため、`DIP_CHROME_ARGS` で `--no-sandbox --disable-dev-shm-usage --disable-gpu` を渡します（`--no-sandbox` が無いと、setuid ビットを外した `chrome-sandbox` の検査で起動直後に落ちます）。ヘッドレス・専用プロファイル・ループバック限定のデバッグポートは dip が自分で付けます。
+
+### Worktrunk と git worktree のタスク
+
+Worktrunk は dev-base の mise 設定で `aqua:max-sixty/worktrunk` のバージョンを固定し、`mise.lock` に amd64 / arm64 の成果物とチェックサムを記録します。worktree の配置先（`.worktrees/{{ branch | sanitize }}`）は `/etc/xdg/worktrunk/config.toml` で設定します。
+
+dev-base の mise 設定には `wt:add`・`wt:switch`・`wt:list`・`wt:rm` を定義しています。`dir = "{{cwd}}"` と `raw_args = true` で、呼び出したディレクトリと引数（`--help` を含む）を Worktrunk に渡します。タスクは親シェルを移動できないため switch には `--no-cd`、削除の完了を待つため remove には `--foreground` を付けます。hooks の承認を自動で行う指定は付けません。
+
+`scripts/test-worktrunk-mise.py` は、既存の Worktrunk を隔離した mise 環境に登録し、実際の shim とタスクで一時的な Git リポジトリを操作します。サブディレクトリからの作成、引数の転送、未コミットの変更がある worktree の削除保護、ブランチを残す削除と再作成を検証します。`mise`・`wt`・`git`・`python3` が必要です。Build images ワークフローでも、ビルドした user イメージで実行します。
+
+```sh
+python3 scripts/test-worktrunk-mise.py
+```
 
 ### AI ツールのスキル（ai）
 
