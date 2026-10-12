@@ -58,6 +58,7 @@ flowchart LR
 | 言語 | Python、Node.js（LTS のバージョンのみ） |
 | Python パッケージ | uv、ipykernel、pandas、pyarrow |
 | 汎用 | git、Worktrunk（wt）、curl、wget、jq、yq、GitHub CLI（gh）、tmux、build-essential |
+| ローカルメール | [Local Markdown Mail](https://github.com/szk302/local-markdown-mail)（lmm。ローカルのファイルだけで AI エージェントと人が Markdown のメッセージをやり取りする） |
 | Lint | hadolint、secretlint |
 | Terraform | tfenv、tflint、terraform-docs |
 | クラウド | AWS CLI、Google Cloud CLI |

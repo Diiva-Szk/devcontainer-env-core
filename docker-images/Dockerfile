@@ -212,6 +212,7 @@ USER ${USER_NAME}
 RUN mise install && \
     mise --version && \
     wt --version && \
+    lmm --version && \
     python --version && \
     node --version
 
