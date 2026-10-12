@@ -392,7 +392,7 @@ RUN chmod -R u=rwX,go=rX /opt/mise
 USER ${USER_NAME}
 
 # ai 専用ツールをインストール（Kiro CLI / Antigravity CLI / rulesync / Playwright CLI /
-# Context7 CLI / drawio-png-cli（dip）を含む）
+# Context7 CLI / drawio-png-cli（dip）/ Dagu を含む）
 #   バイナリの取得・検証は mise が行う。各 CLI の付属のセットアップコマンドは実行しない。
 #
 # Kiro CLI: `kiro-cli setup` は実行しない（シェル統合を入れない）。
@@ -413,7 +413,11 @@ RUN mise install && \
     rulesync --version && \
     playwright-cli --version && \
     ctx7 --version && \
-    dip --version
+    dip --version && \
+    dagu version
+
+# Dagu: 初回起動時に DAG ディレクトリ（~/.config/dagu/dags）へサンプルの DAG を書き出させない。
+ENV DAGU_SKIP_EXAMPLES=true
 
 # draw.io のカスタムライブラリ（dip library / dip insert で使う図形・アイコン）
 #   ライブラリの XML は mise で取得し（ai/opt/mise/config.toml。lock がチェックサムを固定する）、
