@@ -83,6 +83,21 @@ url = "https://github.com/jqlang/jq/releases/download/jq-1.8.2/jq-linux-amd64"
 url_api = "https://api.github.com/repos/jqlang/jq/releases/assets/453012752"
 provenance = "github-attestations"
 
+[[tools."aqua:max-sixty/worktrunk"]]
+version = "0.80.0"
+backend = "aqua:max-sixty/worktrunk"
+specifiers = ["0.80.0"]
+
+[tools."aqua:max-sixty/worktrunk"."platforms.linux-arm64"]
+checksum = "sha256:347b260c1b044a53a7720b33181d7c66dcde945efbd605d784e5b6a5616c17e9"
+url = "https://github.com/max-sixty/worktrunk/releases/download/v0.80.0/worktrunk-aarch64-unknown-linux-musl.tar.xz"
+url_api = "https://api.github.com/repos/max-sixty/worktrunk/releases/assets/593794349"
+
+[tools."aqua:max-sixty/worktrunk"."platforms.linux-x64"]
+checksum = "sha256:532ce3ed5eecb1be274c925b5887f61671e2434a4ca2561b9a8ac9379dbba199"
+url = "https://github.com/max-sixty/worktrunk/releases/download/v0.80.0/worktrunk-x86_64-unknown-linux-musl.tar.xz"
+url_api = "https://api.github.com/repos/max-sixty/worktrunk/releases/assets/593794384"
+
 [[tools."aqua:mikefarah/yq"]]
 version = "4.53.6"
 backend = "aqua:mikefarah/yq"

@@ -57,7 +57,7 @@ flowchart LR
 | --- | --- |
 | 言語 | Python、Node.js（LTS のバージョンのみ） |
 | Python パッケージ | uv、ipykernel、pandas、pyarrow |
-| 汎用 | git、curl、wget、jq、yq、GitHub CLI（gh）、tmux、build-essential |
+| 汎用 | git、Worktrunk（wt）、curl、wget、jq、yq、GitHub CLI（gh）、tmux、build-essential |
 | Lint | hadolint、secretlint |
 | Terraform | tfenv、tflint、terraform-docs |
 | クラウド | AWS CLI、Google Cloud CLI |
@@ -219,25 +219,26 @@ flowchart LR
 
 ## git worktree のタスク
 
-`user` / `ai` の両方のコンテナで、`.worktrees/<ブランチ名>` に git worktree を作る mise タスクが使えます（定義は [docker-images/dev-base/etc/mise/config.toml](docker-images/dev-base/etc/mise/config.toml)）。
+`user` / `ai` の両方のコンテナに [Worktrunk](https://worktrunk.dev/)（`wt`）が入っており、`.worktrees/` に git worktree を作る mise タスクが使えます（定義は [docker-images/dev-base/etc/mise/config.toml](docker-images/dev-base/etc/mise/config.toml)）。タスク名の後の引数・オプションは、そのまま Worktrunk に渡します。
 
 ```sh
-mise run wt:add feat/foo           # .worktrees/feat/foo を作る（ブランチが無ければ origin のブランチ、それも無ければ main から作成）
-mise run wt:add feat/foo -b dev    # ブランチを新しく作るときの分岐元を指定する
-mise run wt:list                   # worktree の一覧
-mise run wt:rm feat/foo            # worktree とブランチを削除する（未コミットの変更・未マージのコミットがあれば何も削除せず中止）
-mise run wt:rm feat/foo -f         # 強制的に削除する
+mise run wt:add feat/foo                    # 新しいブランチ feat/foo と .worktrees/feat-foo を作る
+mise run wt:add feat/foo -b dev             # 分岐元を指定する（省略時はデフォルトブランチ）
+mise run wt:switch feat/foo                 # 既存のブランチの worktree を用意する（無ければ作る）
+mise run wt:list                            # worktree と変更状況の一覧
+mise run wt:rm feat/foo                     # worktree を削除し、統合済みならブランチも削除する
+mise run wt:rm feat/foo --no-delete-branch  # worktree だけを削除し、ブランチを残す
 ```
 
-- リポジトリ内のどのディレクトリ（worktree の中を含む）で実行しても、メインの worktree 直下の `.worktrees/` を使います。サブモジュールの中で実行した場合は、サブモジュールの `.worktrees/` を使います。メインの worktree が無い構成（`git clone --bare` したリポジトリに worktree を足す構成など）には対応しておらず、エラーで止まります。
-- `wt:add` で指定したブランチの扱いは次のとおりです。ローカルのブランチがあればそれを使い、無くて `origin/<ブランチ名>` があれば、それを追跡するブランチを作ります。どちらも無ければ、分岐元（`-b`、既定: `main`）から新しく作ります。
-  - 他の人が push したブランチを使うときは、先に `git fetch` してください。
-  - 既にあるブランチ（ローカル・`origin`）を指定したときは、`-b` は使われません。
-  - 分岐元にはローカルのブランチがそのまま使われます。既定のブランチが `main` でないリポジトリでは `-b master` のように指定し、ローカルの `main` が古い場合は `-b origin/main` のように指定してください。
+- `wt:add` は `wt switch --create --no-cd`、`wt:switch` は `wt switch --no-cd`、`wt:list` は `wt list`、`wt:rm` は `wt remove --foreground` を実行します。`mise run wt:add --help` のように、Worktrunk のヘルプも表示できます。
+- **mise タスクは親シェルのディレクトリを変更できません。** 作った worktree へは `cd .worktrees/feat-foo` のように移動してください。
+- 配置先の既定値は `.worktrees/{{ branch | sanitize }}` です。`feat/foo` は `.worktrees/feat-foo` となり、worktree 同士が入れ子になりません。リポジトリ内のどのディレクトリ（worktree の中を含む）で実行しても、メインの worktree 直下の `.worktrees/` を使います。設定は `/etc/xdg/worktrunk/config.toml` にあり、`~/.config/worktrunk/config.toml` で上書きできます。以前のタスクで作った `.worktrees/feat/foo` も Git の登録情報から見つけるため、そのまま `wt:switch` / `wt:rm` で扱えます。
+- 既存のブランチ（ローカル・`origin`）には `wt:add` ではなく `wt:switch` を使います。他の人が push したブランチを使うときは、先に `git fetch` してください。
+- プロジェクトの `.config/wt.toml` に hooks があると、Worktrunk が実行の承認を求めます。内容を確認してから承認してください。hooks を実行しない場合は `--no-hooks` を付けます。
+- `wt:rm` は未コミットの変更があると止まります。未マージのブランチは残しますが、worktree 自体は削除します。`-f`（`--force`）は未コミットの変更の破棄、`-D` は未マージのブランチの削除を許可します（以前の `wt:rm -f` と異なり、`-f` だけでは未マージのブランチは消えません）。詳しくは [Worktrunk の削除仕様](https://worktrunk.dev/remove/)を参照してください。
 - `.worktrees/` は git の管理対象外にしてください（プロジェクトの `.gitignore` に `.worktrees/` を追加する）。
 - worktree はコンテナ内の絶対パス（`/home/dev/work/...`）で記録されるため、ホストの git からは使えません。
-- `wt:rm` は、ブランチが未マージ（upstream があれば upstream に、無ければメインの worktree の HEAD に入っていない）のときは、worktree もブランチも削除せずに止まります。worktree が既に無い場合は、ブランチだけを削除します。
-- `user` コンテナでは、trust していない `mise.toml` があるディレクトリで実行すると mise がエラーになります（[`mise trust` が必要](#user-コンテナでは-mise-trust-が必要)）。trust はファイルのパスごとに必要なため、メインの worktree で trust していても、`wt:add` で作った worktree の `mise.toml` は trust されていません。worktree で作業する前に内容を確認して `mise trust` してください。`wt:rm` はメインの worktree から実行すると、trust せずに使えます。
+- `user` コンテナでは、trust していない `mise.toml` があるディレクトリで実行すると mise がエラーになります（[`mise trust` が必要](#user-コンテナでは-mise-trust-が必要)）。`wt` を直接実行する場合も mise の shim を経由するため同じです。trust はファイルのパスごとに必要なため、メインの worktree で trust していても、`wt:add` で作った worktree の `mise.toml` は trust されていません。worktree で作業する前に内容を確認して `mise trust` してください。
 
 ## ツールの追加・バージョンの上書き
 

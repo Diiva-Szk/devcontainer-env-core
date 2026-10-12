@@ -190,10 +190,13 @@ COPY --chown=root:root dev-base/etc/profile.d/mise.sh /etc/profile.d/mise.sh
 # entrypoint もユーザから書き換えられないよう root 所有・実行権限付きで配置する。
 COPY --chown=root:root dev-base/usr/local/bin/entrypoint.sh /usr/local/bin/entrypoint.sh
 
+# Worktrunk の共通設定（worktree の配置先。user / ai 共通）。
+COPY --chown=root:root dev-base/etc/xdg/worktrunk /etc/xdg/worktrunk
+
 # Python パッケージの定義（ハッシュ付き requirements.txt）。root 所有・読み取り専用。
 COPY --chown=root:root dev-base/opt/python /opt/python
 
-RUN chmod -R u=rwX,go=rX /etc/mise /opt/python && \
+RUN chmod -R u=rwX,go=rX /etc/mise /opt/python /etc/xdg/worktrunk && \
     chmod 0644 /etc/profile.d/mise.sh && \
     chmod 0755 /usr/local/bin/mise /usr/local/bin/entrypoint.sh
 
@@ -208,6 +211,7 @@ USER ${USER_NAME}
 # ベース共通ツールをインストール（Python / Node / uv を含む）
 RUN mise install && \
     mise --version && \
+    wt --version && \
     python --version && \
     node --version
 
