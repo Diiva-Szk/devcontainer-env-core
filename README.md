@@ -64,7 +64,7 @@ flowchart LR
 
 **`ai` コンテナ** — [docker-images/ai/opt/mise/config.toml](docker-images/ai/opt/mise/config.toml)
 
-Claude Code、OpenAI Codex CLI、GitHub Copilot CLI、GitHub Copilot Language Server、Amazon Kiro CLI、Google Antigravity CLI、rulesync、Playwright CLI・agent-browser（ブラウザは Google Chrome を使う）、Context7 CLI（ctx7）、drawio-png-cli（dip。`.drawio.png` の図面の抽出・検証・更新。描画には Google Chrome を使う）
+Claude Code、OpenAI Codex CLI、GitHub Copilot CLI、GitHub Copilot Language Server、Amazon Kiro CLI、Google Antigravity CLI、rulesync、Dagu（`dagu`。YAML で定義したワークフロー（DAG）を実行する）、Playwright CLI・agent-browser（ブラウザは Google Chrome を使う）、Context7 CLI（ctx7）、drawio-png-cli（dip。`.drawio.png` の図面の抽出・検証・更新。描画には Google Chrome を使う）
 
 dip のライブラリ（`dip library` / `dip insert` で図に入れる図形・アイコン）として、[Simple Icons の draw.io ライブラリ](https://github.com/mondeja/simple-icons-drawio)（`simple-icons`）を `/opt/drawio-libraries` に入れ、`DIP_LIBRARY_PATH` で指しています。ブランドのロゴの利用は、各ブランドの商標の条件に従ってください。
 
@@ -167,6 +167,7 @@ playwright-cli  # ブラウザ操作（Playwright CLI）
 agent-browser   # ブラウザ操作（agent-browser）
 ctx7            # ライブラリの最新ドキュメントを引く（Context7 CLI）
 dip             # .drawio.png の図面の抽出・検証・更新（drawio-png-cli）
+dagu            # YAML で定義したワークフロー（DAG）の実行（Dagu）
 ```
 
 - 各ツールのログイン（認証）は、初回に `ai` コンテナ内で行ってください。**ログイン情報と会話履歴は、コンテナを作り直しても残ります**（[AI ツールの状態の保存](#ai-ツールの状態の保存)）。

@@ -17,6 +17,21 @@ checksum = "sha256:cf9cfb714ded1f27c1d3b7fb274faef50d72312c4b14525a74659188f59bd
 url = "https://github.com/anthropics/claude-code/releases/download/v2.1.295/claude-linux-x64.tar.gz"
 url_api = "https://api.github.com/repos/anthropics/claude-code/releases/assets/622631007"
 
+[[tools."aqua:dagucloud/dagu"]]
+version = "2.18.2"
+backend = "aqua:dagucloud/dagu"
+specifiers = ["2.18.2"]
+
+[tools."aqua:dagucloud/dagu"."platforms.linux-arm64"]
+checksum = "sha256:f67c63ef343b11a6822f881348cf1ff27a28c97ea2ee267f21a87364a90a1dc5"
+url = "https://github.com/dagucloud/dagu/releases/download/v2.18.2/dagu_2.18.2_linux_arm64.tar.gz"
+url_api = "https://api.github.com/repos/dagucloud/dagu/releases/assets/609076465"
+
+[tools."aqua:dagucloud/dagu"."platforms.linux-x64"]
+checksum = "sha256:5a84c093b9ba9d02b7a60e106bb91d46f9383fd01c62bd51560e41193f05792b"
+url = "https://github.com/dagucloud/dagu/releases/download/v2.18.2/dagu_2.18.2_linux_amd64.tar.gz"
+url_api = "https://api.github.com/repos/dagucloud/dagu/releases/assets/609076396"
+
 [[tools."aqua:dyoshikawa/rulesync"]]
 version = "29.0.0"
 backend = "aqua:dyoshikawa/rulesync"
