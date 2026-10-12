@@ -7,9 +7,9 @@
 #     dagu start agent-wt-remove -- NAME=login-coder DELETE_BRANCH=true
 #     dagu start agent-wt-remove -- NAME=login-coder DISCARD_DRAFTS=true
 #
-#   削除は git-wt rm（mise の wt:rm と同じスクリプト）で行う。
+#   worktree の削除は Worktrunk（wt remove）で行う。
 #   Git が検出する未コミットの変更・未追跡のファイルが残っていると
-#   git worktree remove が失敗し、何も消さない。捨ててよい場合は FORCE=true を渡す。
+#   wt remove が失敗し、何も消さない。捨ててよい場合は FORCE=true を渡す。
 #   Git が無視する .lmm-drafts/ も別途検査し、下書きが残っていれば止める。
 #   DISCARD_DRAFTS=true は下書きの破棄だけを許可し、Git の検査は続ける。
 #   FORCE=true は下書きも含めて強制削除する。
@@ -65,11 +65,12 @@ steps:
       git_dir="$(git -C "${wt}" rev-parse --path-format=absolute --git-dir)"
       branch="$(git -C "${wt}" symbolic-ref --quiet --short HEAD || true)"
       if [ -f "${git_dir}/agent-wt.env" ]; then
-        source "${git_dir}/agent-wt.env"
-        echo "role: ${role}, profile: ${profile}, branch: ${branch}"
+        # 作成後に git switch された場合は、記録より現在のブランチを優先する。
+        (source "${git_dir}/agent-wt.env"; echo "role: ${role}, profile: ${profile}")
       fi
+      echo "branch: ${branch:-（detached HEAD）}"
 
-      # .lmm-drafts/ は Git の除外対象なので git worktree remove では保護されない。
+      # .lmm-drafts/ は Git の除外対象なので wt remove では保護されない。
       # 空のディレクトリと lmm が置くルート直下の .gitignore だけなら削除してよい。
       if [ "${FORCE}" != true ] && [ "${DISCARD_DRAFTS}" != true ] && [ -d "${wt}/.lmm-drafts" ]; then
         # プロジェクトのパスに [ などがあっても find のパターンに含めない。
@@ -83,18 +84,24 @@ steps:
         fi
       fi
 
-      # その他の未コミットの変更は Git に検査させる。
-      # ブランチも消すときは、未マージなら worktree も消さずに止まる（git-wt rm）。
-      args=(--name "${NAME}")
+      # wt remove は未マージでも worktree を消してブランチだけ残す。
+      # DAG は従来どおり、ブランチ削除を指定して未マージなら何も消さずに止める。
+      if [ "${DELETE_BRANCH}" = true ] && [ -n "${branch}" ] && [ "${FORCE}" != true ]; then
+        target="$(git rev-parse --verify --quiet "${branch}@{upstream}" || git -C "${repo}" rev-parse HEAD)"
+        if ! git merge-base --is-ancestor "refs/heads/${branch}" "${target}"; then
+          echo "ブランチ '${branch}' には未マージのコミットがあるため削除しません" >&2
+          git -C "${wt}" status --short >&2
+          exit 1
+        fi
+      fi
+
+      # 作業ツリーの検査・削除は Worktrunk に任せ、完了後にブランチと設定を片付ける。
+      # ブランチは上と同じ基準（upstream、無ければメインの HEAD）で git branch に検査させる。
+      args=(--foreground --no-hooks --no-delete-branch)
       if [ "${FORCE}" = true ]; then
         args+=(--force)
       fi
-      if [ "${DELETE_BRANCH}" = true ] && [ -n "${branch}" ]; then
-        args+=(-- "${branch}")
-      else
-        args+=(--keep-branch)
-      fi
-      if ! git-wt rm "${args[@]}"; then
+      if ! wt -C "${repo}" remove "${args[@]}" "${wt}"; then
         echo "削除しませんでした。捨ててよければ FORCE=true を渡してください" >&2
         if [ -e "${wt}" ]; then
           git -C "${wt}" status --short >&2
@@ -102,6 +109,14 @@ steps:
         exit 1
       fi
       echo "削除しました: ${wt}"
+
+      if [ "${DELETE_BRANCH}" = true ] && [ -n "${branch}" ]; then
+        if [ "${FORCE}" = true ]; then
+          git -C "${repo}" branch -D -- "${branch}"
+        else
+          git -C "${repo}" branch -d -- "${branch}"
+        fi
+      fi
 
       exclude="$(git rev-parse --path-format=absolute --git-common-dir)/info/exclude"
       if [ -f "${exclude}" ]; then

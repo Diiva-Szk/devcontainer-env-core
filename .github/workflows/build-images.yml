@@ -11,6 +11,7 @@ on:
       - 'scripts/fill-mise-lock-checksums.sh'
       - 'scripts/check-node-lts.sh'
       - 'scripts/test-agent-wt.py'
+      - 'scripts/test-worktrunk-mise.py'
       - '.github/workflows/build-images.yml'
   workflow_dispatch:
 
@@ -70,3 +71,10 @@ jobs:
             --entrypoint python3 \
             -v "${PWD}:/tmp/env-core:ro" \
             ai /tmp/env-core/scripts/test-agent-wt.py
+
+      - name: Test Worktrunk mise tasks and shell integration
+        run: |
+          docker compose -f compose.yml run --rm --no-deps \
+            --entrypoint python3 \
+            -v "${PWD}:/tmp/env-core:ro" \
+            user /tmp/env-core/scripts/test-worktrunk-mise.py

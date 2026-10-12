@@ -96,6 +96,7 @@ steps:
         [[ "${v}" =~ ^[A-Za-z0-9][A-Za-z0-9._-]*$ ]] || { echo "role・profile に使えない文字があります: ${v}" >&2; exit 1; }
       done
       git check-ref-format --branch "${branch}" >/dev/null
+      [ "${branch}" != '@' ] || { echo 'BRANCH の @ は Worktrunk の予約名です' >&2; exit 1; }
 
       role_dir="${config_dir}/roles/${role}"
       profile_dir="${config_dir}/profiles/${profile}"
@@ -104,6 +105,15 @@ steps:
 
       wt="${repo}/.worktrees/${NAME}"
       [ ! -e "${wt}" ] && [ ! -L "${wt}" ] || { echo "既にあります: ${wt}" >&2; exit 1; }
+
+      # wt switch は既存の worktree を再利用する。DAG では別の作業ツリーを
+      # 設定で上書きしないよう、チェックアウト済みのブランチは作成前に拒否する。
+      while IFS= read -r -d '' entry; do
+        if [ "${entry}" = "branch refs/heads/${branch}" ]; then
+          echo "既に worktree で使われているブランチです: ${branch}" >&2
+          exit 1
+        fi
+      done < <(git worktree list --porcelain -z)
 
       # 後続のステップに渡す
       {
@@ -133,16 +143,30 @@ steps:
       grep -qxF '/.worktrees/' "${exclude}" || printf '%s\n' '/.worktrees/' >> "${exclude}"
 
       # 失敗したときに片付けるブランチを決めておく（ローカルに無ければ、この実行で作るブランチ）。
-      # git-wt が途中で失敗しても片付けられるよう、呼ぶ前に書き残す
+      # wt switch が途中で失敗しても片付けられるよう、呼ぶ前に書き残す
+      args=()
       if git show-ref --verify --quiet "refs/heads/${branch}"; then
         created_branch=false
       else
         created_branch=true
+        args+=(--create)
+        if git show-ref --verify --quiet "refs/remotes/origin/${branch}"; then
+          args+=(--base "origin/${branch}")
+        else
+          # Git のリビジョンとして解決してから渡し、Worktrunk の shortcut と区別する。
+          base_commit="$(git rev-parse --verify --end-of-options "${base}^{commit}")"
+          args+=(--base "${base_commit}")
+        fi
       fi
       printf 'created_branch=%q\n' "${created_branch}" >> "${DAG_RUN_WORK_DIR}/vars.sh"
 
-      # 作り方は mise の wt:add と同じ（ローカル → origin/<branch> を追跡 → BASE から作る）
-      git-wt add --name "${NAME}" -b "${base}" -- "${branch}"
+      # NAME は英数字と ._- のみ。パス全体を TOML に埋め込まず、repo 基準の配置先を指定する。
+      # 設定生成とメール初期化は DAG が担うため、Worktrunk の hooks は実行しない。
+      wt -C "${repo}" --config-set "worktree-path=\".worktrees/${NAME}\"" \
+        switch --no-cd --no-hooks "${args[@]}" "${branch}"
+      [ "$(git -C "${wt}" rev-parse --show-toplevel)" = "${wt}" ] \
+        && [ "$(git -C "${wt}" symbolic-ref --short HEAD)" = "${branch}" ] \
+        || { echo '指定した worktree・ブランチを作成できませんでした' >&2; exit 1; }
 
   - id: generate
     description: profile の seed をコピーし、rulesync で common・role・profile の設定を生成する
@@ -235,7 +259,7 @@ handler_on:
         name_re="${NAME//./\\.}"
         sed -i "/^# >>> agent-wt:${name_re}\$/,/^# <<< agent-wt:${name_re}\$/d" "${exclude}"
       fi
-      git worktree remove --force "${wt}" || true
+      wt -C "${repo}" remove --foreground --no-hooks --force --no-delete-branch "${wt}" || true
       if [ "${created_branch}" = true ]; then
         git branch -D "${branch}" || true
       fi

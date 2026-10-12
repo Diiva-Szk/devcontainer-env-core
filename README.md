@@ -13,7 +13,7 @@
 - [必要なもの](#必要なもの)
 - [使い方](#使い方)
 - [VS Code の Feature](#vs-code-の-feature)
-- [git worktree のタスク](#git-worktree-のタスク)
+- [Worktrunk で worktree を操作する](#worktrunk-で-worktree-を操作する)
 - [ツールの追加・バージョンの上書き](#ツールの追加バージョンの上書き)
 - [設定項目](#設定項目)
 - [AI ツールの状態の保存](#ai-ツールの状態の保存)
@@ -220,12 +220,13 @@ worktrees:
 
 - rulesync は `common` → `role` → `profile` の順にソースを重ねて生成します（同じ相対パスのファイルは後ろが勝ちます。中身はマージされません）。
 - `ROLE=` `PROFILE=` `BRANCH=` `BASE=` を渡すと `worktrees.yaml` の値より優先します（`worktrees.yaml` に無い NAME でも作れます）。
+- `BASE=origin/main` のようにリモート追跡ブランチから新しいブランチを作っても、upstream は自動設定しません。同名の `origin/<BRANCH>` が既にある場合は、それを追跡します。
 - `NAME` はメールアドレスとしても使います。小文字の `a-z`・`0-9`・`.`・`_`・`-`、先頭は英数字、最大64文字です。`root` と `lmm` は予約済みです。
 - 実行したディレクトリのプロジェクトが対象です。別の場所から実行する場合や Dagu の Web UI から起動する場合は、`REPO=/home/dev/work/GitHub/org_name/other-project` のようにプロジェクトの絶対パスを指定します。作成済み worktree 内からの初期化・作成・削除は受け付けません。
 - `agent-wt-init` を再実行しても既存の `.agent-wt/` は上書きしません。設定の雛形を更新する場合は、`/opt/agent-wt/template/` と比較して必要な変更を取り込んでください。
 - rulesync は Codex のモデル（`model`）を管理しないため、Codex の profile では `seed/.codex/config.toml` に書きます。rulesync はこのファイルの中身を残したまま権限などをマージします。Codex がプロジェクトの `.codex/config.toml` を読むのは、そのディレクトリを信頼したときだけです。
 - 生成したファイルは worktree の `git status` に出ないようにします（追跡済みのファイルは `git update-index --skip-worktree`、未追跡のファイルは `.git/info/exclude` に worktree ごとのブロックで追記。`.worktrees/` 自体も `.git/info/exclude` で無視します）。git は worktree ごとの `info/exclude` を読まないため、同じパスは本体の作業ツリーでも無視されます。ブロックは削除時に消えます。
-- worktree の作成・削除は、[git worktree のタスク](#git-worktree-のタスク)と同じスクリプト（`git-wt`）で行います。ブランチの決め方（origin のブランチを追跡するなど）も同じです。
+- worktree の作成・削除には [Worktrunk](#worktrunk-で-worktree-を操作する) の `wt switch` / `wt remove` を使います。DAG は配置先を `.worktrees/<NAME>` に固定し、Worktrunk の hooks を実行せず、AI 設定とメールの準備を行います。既に別の worktree で使われているブランチは受け付けません。削除は完了まで待ち、ブランチ削除を指定したときは事前に未マージのコミットを検査します。
 - Git が検出する未コミットの変更や、`.lmm-drafts/` 内の下書きが残っていると、削除は失敗して何も消しません。`DELETE_BRANCH=true` のときは、ブランチが未マージの場合も何も消さずに止まります。下書きを破棄してよい場合は `DISCARD_DRAFTS=true` を渡してください。Git の検査は続けるため、未コミットの変更や、削除対象のブランチに未マージのコミットがあれば、下書きも含めて何も消しません。`FORCE=true` は未コミットの変更・下書きも強制削除し、`DELETE_BRANCH=true` と併用すると未マージのブランチも削除します。作成の途中で失敗した場合は、その実行で作った worktree とブランチを削除します。
 - 実行のログは `dagu status <DAG 名>` や `~/.local/share/dagu/logs/` で確認できます。
 
@@ -304,27 +305,42 @@ flowchart LR
 - `vscode-common` は Markdown Preview Enhanced の `chromePath` に `user` コンテナの Google Chrome（`/usr/local/bin/google-chrome`）を設定します。PDF・PNG などのエクスポートで使われます。
 - `:1` と指定すると、メジャーバージョン 1 の最新版が使われます。
 
-## git worktree のタスク
+## Worktrunk で worktree を操作する
 
-`user` / `ai` の両方のコンテナで、`.worktrees/<ブランチ名>` に git worktree を作る mise タスクが使えます。処理は `git-wt`（[docker-images/dev-base/usr/local/bin/git-wt](docker-images/dev-base/usr/local/bin/git-wt)）にあり、タスク（[docker-images/dev-base/etc/mise/config.toml](docker-images/dev-base/etc/mise/config.toml)）はこれを呼ぶだけです。mise を使わずに `git-wt add feat/foo` や `git wt add feat/foo` としても実行できます（trust していない `mise.toml` があるディレクトリでも使えます）。
+`user` / `ai` の両方のコンテナで [Worktrunk](https://worktrunk.dev/) の `wt` を使えます。対話 Bash にはシェル統合を設定してあるため、`wt switch` で worktree を作成・選択すると、そのディレクトリへ移動します。
 
 ```sh
-mise run wt:add feat/foo           # .worktrees/feat/foo を作る（ブランチが無ければ origin のブランチ、それも無ければ main から作成）
-mise run wt:add feat/foo -b dev    # ブランチを新しく作るときの分岐元を指定する
-mise run wt:list                   # worktree の一覧
-mise run wt:rm feat/foo            # worktree とブランチを削除する（未コミットの変更・未マージのコミットがあれば何も削除せず中止）
-mise run wt:rm feat/foo -f         # 強制的に削除する
+wt switch --create feat/foo                # 新しいブランチと .worktrees/feat-foo を作り、移動する
+wt switch --create feat/bar --base dev     # 分岐元を指定する
+wt switch feat/foo                        # 既存のブランチへ移動する（worktree がなければ作る）
+wt switch -                               # 前の worktree に戻る
+wt list                                   # worktree と変更状況の一覧
+wt remove --foreground --no-delete-branch feat/foo  # worktree を削除し、ブランチを残す
+wt remove --foreground feat/bar            # worktree を削除し、統合済みならブランチも削除する
 ```
 
-- リポジトリ内のどのディレクトリ（worktree の中を含む）で実行しても、メインの worktree 直下の `.worktrees/` を使います。サブモジュールの中で実行した場合は、サブモジュールの `.worktrees/` を使います。メインの worktree が無い構成（`git clone --bare` したリポジトリに worktree を足す構成など）には対応しておらず、エラーで止まります。
-- `wt:add` で指定したブランチの扱いは次のとおりです。ローカルのブランチがあればそれを使い、無くて `origin/<ブランチ名>` があれば、それを追跡するブランチを作ります。どちらも無ければ、分岐元（`-b`、既定: `main`）から新しく作ります。
-  - 他の人が push したブランチを使うときは、先に `git fetch` してください。
-  - 既にあるブランチ（ローカル・`origin`）を指定したときは、`-b` は使われません。
-  - 分岐元にはローカルのブランチがそのまま使われます。既定のブランチが `main` でないリポジトリでは `-b master` のように指定し、ローカルの `main` が古い場合は `-b origin/main` のように指定してください。
-- `.worktrees/` は git の管理対象外にしてください（プロジェクトの `.gitignore` に `.worktrees/` を追加する）。
-- worktree はコンテナ内の絶対パス（`/home/dev/work/...`）で記録されるため、ホストの git からは使えません。
-- `wt:rm` は、ブランチが未マージ（upstream があれば upstream に、無ければメインの worktree の HEAD に入っていない）のときは、worktree もブランチも削除せずに止まります。worktree が既に無い場合は、ブランチだけを削除します。
-- `user` コンテナでは、trust していない `mise.toml` があるディレクトリで実行すると mise がエラーになります（[`mise trust` が必要](#user-コンテナでは-mise-trust-が必要)）。trust はファイルのパスごとに必要なため、メインの worktree で trust していても、`wt:add` で作った worktree の `mise.toml` は trust されていません。worktree で作業する前に内容を確認して `mise trust` してください。`wt:rm` はメインの worktree から実行すると、trust せずに使えます。
+配置先の既定値は `.worktrees/{{ branch | sanitize }}` です。`feat/foo` は `.worktrees/feat-foo` となり、worktree 同士が入れ子になりません。設定は `/etc/xdg/worktrunk/config.toml` にあり、`~/.config/worktrunk/config.toml` で上書きできます。既存の `.worktrees/feat/foo` や、Dagu で作った `.worktrees/login-coder` も Git の登録情報から見つけるため、そのまま切り替えられます。既存の worktree を自動で移動することはありません。
+
+- 新しいブランチは `--create` で作ります。分岐元を省略すると、Worktrunk が判定したデフォルトブランチを使います。既存のリモートブランチへ切り替えるときは、先に `git fetch` してください。
+- プロジェクトの `.config/wt.toml` にある hooks は、内容を確認してから承認してください。hooks を実行しない場合は `wt switch --no-hooks ...` / `wt remove --no-hooks ...` を使います。
+- `wt remove` は未コミットの変更があると止まります。未マージのブランチは残しますが、worktree 自体は削除します。`--force` は未コミットの変更の破棄、`-D` は未マージのブランチの削除を許可します。既定では削除をバックグラウンドで行うため、完了を待つときは `--foreground` を付けます。詳しくは [Worktrunk の削除仕様](https://worktrunk.dev/remove/)を参照してください。
+- **agent-wt で作った worktree の削除は `dagu start agent-wt-remove -- NAME=...` を使ってください。** 下書きの保護、ブランチ削除前のマージ確認、生成設定の除外ルールの片付けも行います。`wt remove` を直接使うと、これらの agent-wt 固有の処理は行われません。
+- `.worktrees/` は Git の管理対象外にしてください。`agent-wt-create` は `.git/info/exclude` に追加します。Worktrunk だけで使う場合は、プロジェクトの `.gitignore` などに追加してください。
+- worktree はコンテナ内の絶対パス（`/home/dev/work/...`）で記録されるため、ホストの Git からは使えません。
+- 対話 Bash の `wt` は、プロジェクトの `mise.toml` の trust に関係なく、イメージに入っている Worktrunk を使います。スクリプト内の `wt` や `git wt` は mise の shim を経由するため、`user` コンテナではプロジェクトや worktree の `mise.toml` の内容を確認して `mise trust` してください（[`mise trust` が必要](#user-コンテナでは-mise-trust-が必要)）。Bash 以外のシェルでは、[Worktrunk のシェル統合](https://worktrunk.dev/shell-integration/)を設定してください。
+
+mise タスクからも操作できます。タスク名の後の引数・オプションは Worktrunk に渡します。
+
+```sh
+mise run wt:add feat/foo --base dev --no-hooks     # 新しいブランチと worktree を作る
+mise run wt:switch feat/foo --no-hooks             # 既存ブランチの worktree を用意・選択する
+mise run wt:list                                  # 一覧を表示する
+mise run wt:rm feat/foo --no-delete-branch --no-hooks # worktree を削除し、ブランチを残す
+```
+
+`wt:add` は `wt switch --create --no-cd`、`wt:switch` は `wt switch --no-cd`、`wt:rm` は `wt remove --foreground` を実行します。**mise タスクは親シェルのディレクトリを変更できません。** 移動するときは対話 Bash の `wt switch` を使ってください。`user` コンテナで mise タスクを使う場合は、先に対象の `mise.toml` を `mise trust` する必要があります。agent-wt で作った worktree の削除には引き続き Dagu を使ってください。
+
+独自の `git-wt` スクリプトは Worktrunk に置き換えました。Worktrunk が提供する `git-wt` も `wt` と同じ CLI です。以前の mise タスクと異なり、既存のブランチには `wt:switch` を使い、`wt:rm -f` は未コミットの変更だけを破棄します。未マージのブランチも削除する場合は、Worktrunk の `-D` を明示します。
 
 ## ツールの追加・バージョンの上書き
 

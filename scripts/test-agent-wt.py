@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run the shipped DAGs with real dagu, rulesync, lmm-native and yq in temporary repos."""
+"""Run Worktrunk and the shipped DAGs with real CLIs in temporary repos."""
 
 import json
 import os
@@ -19,7 +19,8 @@ class AgentWorktreeTest(unittest.TestCase):
         self.temp = tempfile.TemporaryDirectory(prefix="agent-wt-test.")
         self.addCleanup(self.temp.cleanup)
         self.base = Path(self.temp.name)
-        self.env = {k: v for k, v in os.environ.items() if not k.startswith(("LMM_", "DAGU_", "GIT_"))}
+        self.env = {k: v for k, v in os.environ.items()
+                    if not k.startswith(("LMM_", "DAGU_", "GIT_", "WORKTRUNK_"))}
         self.env.update(
             PATH=f"{AGENT / 'bin'}:{SOURCE / 'docker-images/dev-base/usr/local/bin'}:{os.environ['PATH']}",
             DAGU_HOME=str(self.base / "dagu"),
@@ -27,6 +28,8 @@ class AgentWorktreeTest(unittest.TestCase):
             DAGU_SKIP_EXAMPLES="true",
             GIT_CONFIG_NOSYSTEM="1",
             GIT_CONFIG_GLOBAL="/dev/null",
+            WORKTRUNK_CONFIG_PATH=str(self.base / "worktrunk-user.toml"),
+            WORKTRUNK_SYSTEM_CONFIG_PATH=str(SOURCE / "docker-images/dev-base/etc/xdg/worktrunk/config.toml"),
         )
         (self.base / "dags").mkdir()
         for dag in (AGENT / "dags").glob("*.yaml"):
@@ -256,6 +259,93 @@ class AgentWorktreeTest(unittest.TestCase):
         self.dag("init", cwd=wt, success=False)
         self.assertFalse((wt / ".agent-wt").exists())
 
+    def test_worktrunk_commands_and_bash_directory_switch(self):
+        integration = SOURCE / "docker-images/dev-base/etc/bash/worktrunk.sh"
+        # The host need not have the image's profile script installed.
+        init = self.base / "worktrunk.sh"
+        init.write_text(integration.read_text().replace(
+            "/etc/profile.d/mise.sh", str(SOURCE / "docker-images/dev-base/etc/profile.d/mise.sh")))
+        output = self.run_cmd("bash", "--noprofile", "--norc", "-eic",
+            'source "$1"; wt switch --create feat/shell --no-hooks; printf "\\nWT_CWD=%s\\n" "$PWD"; '
+            'wt switch main --no-hooks; printf "\\nROOT_CWD=%s\\n" "$PWD"', "bash", str(init),
+            env={"WORKTRUNK_BIN": shutil.which("wt")})
+        wt = self.repo / ".worktrees/feat-shell"
+        self.assertIn(f"WT_CWD={wt}\n", output)
+        self.assertIn(f"ROOT_CWD={self.repo}", output)
+        listing = json.loads(self.run_cmd("wt", "list", "--format=json"))
+        paths = {item["worktree"]["path"] for item in listing["items"] if "worktree" in item}
+        self.assertIn(str(wt), paths)
+        self.run_cmd("wt", "remove", "--foreground", "--no-hooks", "feat/shell")
+        self.assertFalse(wt.exists())
+        self.run_cmd("git", "show-ref", "--verify", "refs/heads/feat/shell", success=False)
+
+    def test_branch_in_another_worktree_is_preserved(self):
+        other = self.repo / ".worktrees/external"
+        self.run_cmd("git", "worktree", "add", "-b", "external", str(other))
+        (other / "CLAUDE.md").write_text("keep existing rules\n")
+        (other / "user-change.txt").write_text("keep existing work\n")
+        output = self.dag("create", "NAME=login-coder", "BRANCH=external", success=False)
+        self.assertIn("既に worktree で使われているブランチ", output)
+        self.assertEqual((other / "CLAUDE.md").read_text(), "keep existing rules\n")
+        self.assertEqual((other / "user-change.txt").read_text(), "keep existing work\n")
+        self.assertFalse((self.repo / ".worktrees/login-coder").exists())
+        self.run_cmd("git", "show-ref", "--verify", "refs/heads/external")
+
+    def test_origin_branch_is_tracked_and_existing_branch_is_reused(self):
+        remote = self.new_repo("origin")
+        (remote / "remote.txt").write_text("remote work\n")
+        self.run_cmd("git", "add", "remote.txt", cwd=remote)
+        self.run_cmd("git", "-c", "user.name=Test", "-c", "user.email=test@example.com",
+                     "commit", "-m", "remote work", cwd=remote)
+        self.run_cmd("git", "branch", "feat/login", cwd=remote)
+        self.run_cmd("git", "remote", "add", "origin", str(remote))
+        self.run_cmd("git", "fetch", "origin")
+        wt = self.create()
+        self.assertEqual((wt / "remote.txt").read_text(), "remote work\n")
+        self.assertEqual(self.run_cmd("git", "rev-parse", "--abbrev-ref", "@{upstream}", cwd=wt),
+                         "origin/feat/login")
+        # The branch is merged into its upstream but not the main worktree's HEAD.
+        self.dag("remove", "NAME=login-coder", "DELETE_BRANCH=true")
+        self.assertFalse(wt.exists())
+        self.run_cmd("git", "show-ref", "--verify", "refs/heads/feat/login", success=False)
+        self.run_cmd("git", "branch", "existing")
+        wt = self.create("login-coder", "BRANCH=existing", "BASE=not-a-ref")
+        self.assertEqual(self.run_cmd("git", "branch", "--show-current", cwd=wt), "existing")
+
+    def test_dag_skips_worktrunk_hooks_and_overrides_path_settings(self):
+        (self.base / "worktrunk-user.toml").write_text(
+            'worktree-path = "../elsewhere/{{ branch | sanitize }}"\n'
+            'pre-start = "touch user-hook-ran"\n')
+        config = self.repo / ".config/wt.toml"
+        config.parent.mkdir()
+        config.write_text('pre-start = "touch project-hook-ran"\n'
+                          'pre-remove = "exit 71"\n')
+        self.run_cmd("git", "add", ".config/wt.toml")
+        self.run_cmd("git", "-c", "user.name=Test", "-c", "user.email=test@example.com",
+                     "commit", "-m", "project hooks")
+        wt = self.create()
+        self.assertTrue((wt / "CLAUDE.md").is_file())
+        for marker in ("user-hook-ran", "project-hook-ran"):
+            self.assertEqual(list(self.base.rglob(marker)), [])
+        self.dag("remove", "NAME=login-coder")
+        self.assertFalse(wt.exists())
+        self.assertFalse((self.base / "elsewhere").exists())
+
+    def test_removal_uses_current_branch_after_switch(self):
+        wt = self.create()
+        self.run_cmd("git", "switch", "-c", "changed", cwd=wt)
+        self.dag("remove", "NAME=login-coder", "DELETE_BRANCH=true")
+        self.assertFalse(wt.exists())
+        self.run_cmd("git", "show-ref", "--verify", "refs/heads/feat/login")
+        self.run_cmd("git", "show-ref", "--verify", "refs/heads/changed", success=False)
+
+    def test_detached_worktree_removal_keeps_original_branch(self):
+        wt = self.create()
+        self.run_cmd("git", "switch", "--detach", cwd=wt)
+        self.dag("remove", "NAME=login-coder", "DELETE_BRANCH=true")
+        self.assertFalse(wt.exists())
+        self.run_cmd("git", "show-ref", "--verify", "refs/heads/feat/login")
+
     def test_generation_failure_rolls_back_only_new_work(self):
         other = self.create("axb", "ROLE=coder", "PROFILE=codex-astra6")
         profile = self.repo / ".agent-wt/profiles/broken"
@@ -288,7 +378,7 @@ class AgentWorktreeTest(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    for tool in ("dagu", "rulesync", "lmm-native", "yq", "git"):
+    for tool in ("dagu", "rulesync", "lmm-native", "yq", "git", "wt"):
         if shutil.which(tool) is None:
             raise SystemExit(f"Required tool is missing: {tool}")
     unittest.main(verbosity=2)

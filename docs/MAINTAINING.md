@@ -32,9 +32,11 @@ Feature（`devcontainer-features/` 配下）には `Dockerfile` を含めず、�
 │   ├── dev-base/                 # ai / user 共通
 │   │   ├── etc/mise/             # mise の設定と lock（system スコープ）
 │   │   ├── etc/profile.d/        # ログインシェルで mise shims の PATH を復元
+│   │   ├── etc/bash/             # Worktrunk の対話 Bash 統合
+│   │   ├── etc/xdg/worktrunk/    # Worktrunk の共通設定（配置先）
 │   │   ├── opt/python/           # Python パッケージ（requirements.in / requirements.txt）
 │   │   ├── opt/lmm/              # Local Markdown Mail のバージョン・SHA256 を固定したインストーラー
-│   │   └── usr/local/bin/        # entrypoint.sh / google-chrome / git-wt / lmm（作業ツリーごとのメール環境を補う）
+│   │   └── usr/local/bin/        # entrypoint.sh / google-chrome / lmm（作業ツリーごとのメール環境を補う）
 │   ├── ai/
 │   │   ├── opt/mise/             # mise の設定と lock（global スコープ）
 │   │   ├── opt/rulesync/         # AI ツールのスキルの取得と各ツールへの展開（rulesync.jsonc / rulesync.lock / find-docs.version / find-docs・drawio-png の vendoring）
@@ -139,15 +141,30 @@ CLI ツールと言語ランタイム（Python / Node.js）は [mise](https://mi
 
 ### agent-wt とローカルメール
 
+Worktrunk は dev-base の mise 設定で `aqua:max-sixty/worktrunk` のバージョンを固定し、`mise.lock` に amd64 / arm64 の成果物とチェックサムを記録します。通常の `wt` 操作の配置先は `/etc/xdg/worktrunk/config.toml`、対話 Bash の統合は `/etc/bash/worktrunk.sh` が設定します。ログイン Bash では `/etc/bash.bashrc` が `/etc/profile.d` より先に読まれるため、統合スクリプト内でも mise shims を復元します。
+
+対話 Bash では `/` で `mise which wt` を実行してイメージ側の実体を解決し、`WORKTRUNK_BIN` で公式シェル関数に渡します。利用者が明示した `WORKTRUNK_BIN` は優先します。user の paranoid モードで未 trust の `mise.toml` があっても、シェル起動と worktree の移動に影響させず、mise 自体の trust 要件は維持します。スクリプトの `wt`・`git wt` と mise タスクは通常の mise の設定解決を使います。
+
+dev-base の mise 設定には `wt:add`・`wt:switch`・`wt:list`・`wt:rm` を定義しています。`dir = "{{cwd}}"` と `raw_args = true` で、呼び出したディレクトリと引数を Worktrunk に渡します。タスクは親シェルを移動できないため switch には `--no-cd`、削除完了後に戻るため remove には `--foreground` を付けます。hooks の承認を自動で行う指定は付けません。
+
+agent-wt は Worktrunk の `wt switch` / `wt remove` を直接呼びます。配置先は `--config-set` で `.worktrees/<NAME>` に固定します（v0.80.0 の配布バイナリには `switch --path` が無いため使いません）。作成前にブランチが別の worktree で使われていないことを確認し、`--no-cd --no-hooks` で作成します。設定生成とメール初期化は DAG が行います。
+
+削除と作成失敗時の後片付けには `--foreground --no-hooks --no-delete-branch` を指定し、worktree の削除完了を待ちます。Worktrunk は未マージでも worktree を削除するため、DAG はブランチ削除を指定した場合に、upstream（無ければメインの HEAD）へのマージを先に確認します。ブランチは worktree 削除後に `git branch -d`（`FORCE=true` のときだけ `-D`）で削除し、従来の判定基準を保ちます。`.lmm-drafts/` の保護も DAG が担当します。
+
+Worktrunk は Git 共通管理ディレクトリに状態を保存します。通常は `.git/config` の `worktrunk.*`（デフォルトブランチ・移動履歴など）と `.git/wt/`（`cache/`・`trash/`・`logs/` など）です。バックグラウンドでの削除が途中で中断されると、`trash/` に削除途中の内容が残る場合があります。
+
 `lmm` は `docker-images/dev-base/opt/lmm/install.sh` のバージョンと amd64 / arm64 の SHA256 を手動で同時に更新します。リリースの `SHA256SUMS` と照合してください。mise の同名 shim と競合させないため、バイナリは直接 `/opt/lmm` に置き、ライセンス表示も同梱します。`lmm-native` が本体、`/usr/local/bin/lmm` が作業ツリーの環境を補うラッパーです。lmm の更新で mise / Python のインストールのキャッシュを失わないよう、配置とインストールは dev-base ステージの最後にまとめています。
 
 `agent-wt-mail` は各作業ツリーの Git 管理ディレクトリに `agent-wt-mail.config`（送信者）を記録し、Git の共通管理ディレクトリの `agent-wt/lmm/` にメールを保存します。ホーム配下の volume を増やさず、既存の work ディレクトリの共有と永続化を利用します。作成途中の失敗や worktree 削除でもメールボックスを消さず、再実行時には再利用します。
 
-結合テストは一時的な Git リポジトリに対して実際の CLI を実行します。必要なコマンドは `dagu`、`rulesync`、`lmm-native`、`yq`、`git`、`python3` です。メールの往復に加え、深い階層・サブディレクトリからの実行、`.` を含む名前の削除と失敗時の後片付け、下書きの保護、`[` を含むパスでの削除も検証します。`DISCARD_DRAFTS=true` でも未コミットの変更・未マージのコミットがあれば、worktree・下書き・ブランチが残ることを確認します。空のディレクトリは Git の検査では見つからないため、DAG 実行後に `${PWD}` が名前に残ったエントリがないことも確認します。Build images ワークフローでも、ビルドした ai イメージで同じテストを実行します。
+結合テストは一時的な Git リポジトリに対して実際の CLI を実行します。必要なコマンドは `wt`、`dagu`、`rulesync`、`lmm-native`、`yq`、`git`、`python3` です。メールの往復に加え、深い階層・サブディレクトリからの実行、`.` を含む名前の削除と失敗時の後片付け、下書きの保護、`[` を含むパスでの削除も検証します。`DISCARD_DRAFTS=true` でも未コミットの変更・未マージのコミットがあれば、worktree・下書き・ブランチが残ることを確認します。Worktrunk の共通設定と Bash のディレクトリ移動、リモートの追跡、既存 worktree の保護、作成後のブランチ変更・detached HEAD、DAG から hooks を実行しないことも対象です。空のディレクトリは Git の検査では見つからないため、DAG 実行後に `${PWD}` が名前に残ったエントリがないことも確認します。Build images ワークフローでも、ビルドした ai イメージで同じテストを実行します。
 
 ```sh
 python3 scripts/test-agent-wt.py
+python3 scripts/test-worktrunk-mise.py
 ```
+
+`test-worktrunk-mise.py` は `mise`・`wt`・`git`・`python3` が必要です。既存の Worktrunk を隔離した mise 環境に登録し、実際の shim・タスク・対話 Bash を使います。タスクの引数転送と削除保護、未 trust のプロジェクトと新しい worktree でのシェル関数の移動、mise の trust 要件が維持されることを検証します。CI では user イメージで実行します。
 
 ### AI ツールのスキル（ai）
 
