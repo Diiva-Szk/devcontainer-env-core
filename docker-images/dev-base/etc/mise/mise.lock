@@ -205,6 +205,32 @@ url = "https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-c
 checksum = "sha256:016a4b1702f8c97b585f9ae12c6182762758c17ef5302cb8561c7f6be5cc9af3"
 url = "https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-cli-562.0.0-linux-x86_64.tar.gz"
 
+[[tools."github:szk302/local-markdown-mail"]]
+version = "0.2.0"
+backend = "github:szk302/local-markdown-mail"
+specifiers = ["0.2.0"]
+
+[tools."github:szk302/local-markdown-mail".options]
+asset_pattern = "lmm-*-aarch64-unknown-linux-musl.tar.gz"
+
+[tools."github:szk302/local-markdown-mail"."platforms.linux-arm64"]
+checksum = "sha256:102d3867b5b613152898e08cf764b414c737d0a1e22242196cc233dc44848f14"
+url = "https://github.com/szk302/local-markdown-mail/releases/download/v0.2.0/lmm-v0.2.0-aarch64-unknown-linux-musl.tar.gz"
+url_api = "https://api.github.com/repos/szk302/local-markdown-mail/releases/assets/635031109"
+
+[[tools."github:szk302/local-markdown-mail"]]
+version = "0.2.0"
+backend = "github:szk302/local-markdown-mail"
+specifiers = ["0.2.0"]
+
+[tools."github:szk302/local-markdown-mail".options]
+asset_pattern = "lmm-*-x86_64-unknown-linux-musl.tar.gz"
+
+[tools."github:szk302/local-markdown-mail"."platforms.linux-x64"]
+checksum = "sha256:8559447da59814184cb122512086c4b193418d15ed0712b4197191f5dcb70a05"
+url = "https://github.com/szk302/local-markdown-mail/releases/download/v0.2.0/lmm-v0.2.0-x86_64-unknown-linux-musl.tar.gz"
+url_api = "https://api.github.com/repos/szk302/local-markdown-mail/releases/assets/635031110"
+
 [[tools.node]]
 version = "24.21.0"
 backend = "core:node"
