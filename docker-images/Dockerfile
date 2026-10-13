@@ -471,14 +471,15 @@ RUN chmod 0755 "/home/${USER_NAME}/.vnc/xstartup"
 #   find-docs（ctx7）: 本来は agent-browser と同じく git transport で公式リポジトリの
 #     ctx7@<版> タグから取得すべきだが、rulesync 24.0.0 は注釈付きタグの解決に失敗する
 #     既知の問題があり使えない。ai/opt/rulesync/.rulesync/skills/find-docs/SKILL.md に
-#     手動で vendoring している（取得元・置換の経緯は docs/MAINTAINING.md）。
+#     vendoring している（取得元・置換の経緯は docs/MAINTAINING.md）。
 #     COPY ai/opt/rulesync /opt/rulesync で配置され、rulesync install --frozen が
 #     対象にしない（sources に無い）ため、そのまま generate --global に乗る。
 #     取得元の版は ai/opt/rulesync/find-docs.version に記録し（.rulesync/skills/ の
 #     外に置く。中に置くと generate が各ツールのスキルのディレクトリへそのファイルも
 #     コピーしてしまう）、下の RUN で ctx7 --version と照合する。ずれていれば
 #     ビルドを落とす（CLI の版だけが Renovate で上がり、スキルが古いまま残って
-#     気づけない事態を防ぐ）。
+#     気づけない事態を防ぐ）。Renovate の PR では update-find-docs-skill ワークフローが
+#     同じ版のタグからスキルを作り直して push し、この照合を通す。
 #   drawio-png（dip）: find-docs と同じく、リリースタグ（v<版>）が注釈付きタグのため
 #     rulesync で取得できず、ai/opt/rulesync/.rulesync/skills/drawio-png/ に SKILL.md と
 #     LICENSE（MIT）を vendoring している。SKILL.md は案内だけで、手順の本文は
@@ -518,7 +519,7 @@ RUN set -eu; \
     ctx7_version="$(ctx7 --version)"; \
     if [ "${find_docs_version}" != "${ctx7_version}" ]; then \
       echo "find-docs スキル（vendoring、版 ${find_docs_version}）が ctx7（版 ${ctx7_version}）と揃っていません。" >&2; \
-      echo "ctx7 を更新した版のタグから find-docs/SKILL.md を取り直し、find-docs.version も更新してください（docs/MAINTAINING.md）。" >&2; \
+      echo "bash scripts/update-find-docs-skill.sh でスキルを作り直してください（PR 上では update-find-docs-skill ワークフローが行います。docs/MAINTAINING.md）。" >&2; \
       exit 1; \
     fi; \
     rulesync install --frozen; \

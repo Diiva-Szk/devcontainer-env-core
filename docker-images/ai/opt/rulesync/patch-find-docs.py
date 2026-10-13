@@ -8,10 +8,10 @@
 
 想定した文字列が見つからない場合は失敗する（上流の文言が変わったとき、
 黙って npx ctx7@latest が残ることを防ぐため）。ctx7 を更新する Renovate の PR で
-これが起きた場合、ビルドが落ちるので、docs/MAINTAINING.md の手順に沿って
-この置換を直すこと。
+これが起きた場合、update-find-docs-skill ワークフローとビルドが落ちるので、
+docs/MAINTAINING.md を参照してこの置換を直すこと。
 
-使い方:
+使い方（通常は scripts/update-find-docs-skill.sh が取得したファイルに対して呼ぶ）:
     python3 patch-find-docs.py <SKILL.md のパス>
 """
 

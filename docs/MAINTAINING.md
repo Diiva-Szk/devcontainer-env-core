@@ -112,7 +112,7 @@ CLI ツールと言語ランタイム（Python / Node.js）は [mise](https://mi
 | draw.io の Web 資材（ai） | `docker-images/Dockerfile` の `DRAWIO_WEBAPP_COMMIT` と `docker-images/ai/opt/drawio-webapp/sparse-checkout` | 固定したコミットから git の sparse checkout で必要なパスだけを取得し、`/opt/drawio-webapp` に配置（[draw.io の Web 資材](#drawio-の-web-資材ai)を参照） |
 | KasmVNC（ai） | `docker-images/Dockerfile` の `KASMVNC_VERSION` / `KASMVNC_SHA256_*` | GitHub リリースの `.deb` を sha256 で検証して `apt-get install` |
 | ブラウザ操作 CLI のスキル（ai） | `docker-images/ai/opt/rulesync/` / `docker-images/ai/opt/agent-browser-skills/`（`rulesync.jsonc` と `rulesync.lock`） | `rulesync install --frozen` で取得し `rulesync generate --global` で各ツールへ展開 |
-| find-docs スキル（ai） | `docker-images/ai/opt/rulesync/.rulesync/skills/find-docs/SKILL.md`（vendoring） | `rulesync generate --global` で各ツールへ展開（取得は手動。[AI ツールのスキル](#ai-ツールのスキルai)を参照） |
+| find-docs スキル（ai） | `docker-images/ai/opt/rulesync/.rulesync/skills/find-docs/SKILL.md`（vendoring） | `rulesync generate --global` で各ツールへ展開（取得は `scripts/update-find-docs-skill.sh`。PR 上では `update-find-docs-skill.yml` が実行する。[find-docs の vendoring](#find-docs-の-vendoring)を参照） |
 | dip のライブラリ（ai。Simple Icons） | `docker-images/ai/opt/mise/config.toml`（`github:mondeja/simple-icons-drawio`）と `mise.lock` | mise で取得し、Dockerfile で `/opt/drawio-libraries` へコピーして `DIP_LIBRARY_PATH` で指す（[dip のライブラリ](#dip-のライブラリai)を参照） |
 | drawio-png スキル（ai） | `docker-images/ai/opt/rulesync/.rulesync/skills/drawio-png/SKILL.md`（vendoring） | `rulesync generate --global` で各ツールへ展開（取得は手動。[drawio-png の vendoring](#drawio-png-の-vendoring)を参照） |
 | デスクトップ（ai）、socat（user） | `docker-images/Dockerfile` | Debian のパッケージ（`apt-get`） |
@@ -180,24 +180,30 @@ bash scripts/update-rulesync-locks.sh
 
 **理由:** 本来は agent-browser と同じく git transport で、公式リポジトリ（`upstash/context7`）の `ctx7@<版>` タグから取得するべきです。しかし `ctx7@<版>` は**注釈付きタグ**で、rulesync 24.0.0 の git transport はこれを解決できません（`git ls-remote` の出力の1行目（タグオブジェクトの SHA）を `resolvedRef` にしてしまい、チェックアウト後の `git rev-parse HEAD`（コミットの SHA、`ls-remote` では2行目の `^{}` 側）と一致せず `GitClientError: Checked out commit ..., expected locked commit ...` で失敗します）。agent-browser のタグ（`v0.38.1`）は軽量タグのためこの問題が起きません。
 
-**改変元とライセンス表記:** `docker-images/ai/opt/rulesync/.rulesync/skills/find-docs/SKILL.md` は `upstash/context7` の `ctx7@0.6.0` タグの `skills/find-docs/SKILL.md` を、`patch-find-docs.py` で `npx ctx7@latest` を `ctx7` に置き換えた改変版です。上流リポジトリは MIT ライセンス（Copyright (c) 2021 Upstash, Inc.）で、`skills/` 配下に個別のライセンスファイルは無くリポジトリルートの MIT が適用されます。MIT の唯一の条件（著作権表示とライセンス文を複製物に含めること）を満たすため、上流の `LICENSE` をそのまま同じディレクトリ（`.rulesync/skills/find-docs/LICENSE`）に置いています。`rulesync generate` はスキルのディレクトリをまるごと複製するため、`LICENSE` も `SKILL.md` と一緒に、リポジトリ・`/opt/ai-home-defaults`・各ツールの `skills/find-docs/` のすべてに付きます。
+**改変元とライセンス表記:** `docker-images/ai/opt/rulesync/.rulesync/skills/find-docs/SKILL.md` は `upstash/context7` の `ctx7@<版>` タグ（版は `find-docs.version` に記録）の `skills/find-docs/SKILL.md` を、`patch-find-docs.py` で `npx ctx7@latest` を `ctx7` に置き換えた改変版です。上流リポジトリは MIT ライセンス（Copyright (c) 2021 Upstash, Inc.）で、`skills/` 配下に個別のライセンスファイルは無くリポジトリルートの MIT が適用されます。MIT の唯一の条件（著作権表示とライセンス文を複製物に含めること）を満たすため、上流の `LICENSE` をそのまま同じディレクトリ（`.rulesync/skills/find-docs/LICENSE`）に置いています。`rulesync generate` はスキルのディレクトリをまるごと複製するため、`LICENSE` も `SKILL.md` と一緒に、リポジトリ・`/opt/ai-home-defaults`・各ツールの `skills/find-docs/` のすべてに付きます。
 
-**版のずれの検出:** `npm:ctx7` は Renovate が CLI 本体の版を自動で上げますが、vendoring した `SKILL.md` は連動して更新されません。CLI とスキルの版がずれたまま黙って通ることを防ぐため、取得元の版を `docker-images/ai/opt/rulesync/find-docs.version` に記録しています。このファイルは `.rulesync/skills/find-docs/` の**外**に置いています（中に置くと `rulesync generate` が各ツールのスキルのディレクトリへ一緒にコピーしてしまうため）。Dockerfile のビルドステップで `find-docs.version` の内容と `ctx7 --version` の出力を比較し、ずれていればビルドを失敗させます。そのため、ctx7 の版を Renovate が上げた PR は、スキルを取り直すまでビルドが落ち続けます。
+**版のずれの検出:** `npm:ctx7` は Renovate が CLI 本体の版を自動で上げますが、vendoring した `SKILL.md` は連動して更新されません。CLI とスキルの版がずれたまま黙って通ることを防ぐため、取得元の版を `docker-images/ai/opt/rulesync/find-docs.version` に記録しています。このファイルは `.rulesync/skills/find-docs/` の**外**に置いています（中に置くと `rulesync generate` が各ツールのスキルのディレクトリへ一緒にコピーしてしまうため）。Dockerfile のビルドステップで `find-docs.version` の内容と `ctx7 --version` の出力を比較し、ずれていればビルドを失敗させます。
 
-**取得・置換の手順（ctx7 を更新するとき）:**
+**自動での取り直し:** Renovate が ctx7 の版を上げた PR では、`update-find-docs-skill.yml` が同じ版のタグからスキルを作り直し、PR ブランチへ push します（`update-mise-lock.yml` と同じく、lock 更新用の App のトークンで署名付きのコミットを作ります。コミットの見出しは `chore(deps): find-docs スキルを ctx7 <版> に揃える`）。上流の `SKILL.md` の変更は、この push の差分として PR 上で確認できます。手元では次のスクリプトで同じことができます。
 
-1. 新しい版のタグ（`ctx7@<新版>`）から `skills/find-docs/SKILL.md` と `LICENSE`（リポジトリルート）を取得します（例: `git clone --depth 1 --branch ctx7@<新版> https://github.com/upstash/context7.git`）。
-2. 取得した `SKILL.md` を `docker-images/ai/opt/rulesync/.rulesync/skills/find-docs/SKILL.md` に、`LICENSE` を同じディレクトリの `docker-images/ai/opt/rulesync/.rulesync/skills/find-docs/LICENSE` に上書きします（著作権表示の年やライセンスの種類が変わっていないか確認してください。変わっていた場合はこの節の記載も合わせて直します）。
-3. `python3 docker-images/ai/opt/rulesync/patch-find-docs.py docker-images/ai/opt/rulesync/.rulesync/skills/find-docs/SKILL.md` を実行します。上流のスキルはすべてのコマンドを `npx ctx7@latest ...` で実行させる前提で書かれているため、これをそのまま配ると mise で固定した版ではなく実行時に npm から最新版を取得してしまいます。このスクリプトが、インストール手順の段落を「`ctx7` はイメージに入っている」という1文へ置き換え、残りの `npx ctx7@latest` を `ctx7` へ置換します。
-4. `docker-images/ai/opt/rulesync/find-docs.version` を新しい版の番号（`ctx7 --version` と同じ表記）に書き換えます。
-5. mise 側の `npm:ctx7` のバージョンと必ず揃えます（`docker-images/ai/opt/mise/config.toml`）。
-6. `docker compose build ai` で、版の照合（`find-docs.version` と `ctx7 --version`）と置換の確認（`npx ctx7` / `ctx7@latest` / `npm install -g` が残っていないこと）のチェックが通ることを確認します。
+```sh
+bash scripts/update-find-docs-skill.sh
+```
 
-**置換が失敗したとき:** `patch-find-docs.py` は、想定した文字列（`Run commands with `npx ctx7@latest` ...` の段落など）が見つからない場合に失敗します。これは上流のスキルの文言が変わったことを意味するため、黙って `npx ctx7@latest` が残ることはありません。失敗した場合は、取得した新しい `SKILL.md` の文言を見て `patch-find-docs.py` の正規表現を直してください。
+このスクリプトは次の処理を行います。
+
+1. ai の mise 設定（`docker-images/ai/opt/mise/config.toml`）の `npm:ctx7` から版を読み、`upstash/context7` のタグ `ctx7@<版>` を partial clone で取得します（必要な2ファイルだけを取り出します。注釈付きタグでも `git clone --branch` は問題なく取得できます）。
+2. 上流の `LICENSE`（リポジトリルート）が `.rulesync/skills/find-docs/LICENSE` と同じことを確かめます。**変わっていた場合は何も書き換えずに失敗します。** 著作権表示の年やライセンスの種類が変わっていないかを人が確認し、`LICENSE` を置き換えたうえで、この節の記載も合わせて直してください。
+3. 取得した `SKILL.md` に `patch-find-docs.py` を適用します。上流のスキルはすべてのコマンドを `npx ctx7@latest ...` で実行させる前提で書かれているため、これをそのまま配ると mise で固定した版ではなく実行時に npm から最新版を取得してしまいます。このスクリプトが、インストール手順の段落を「`ctx7` はイメージに入っている」という1文へ置き換え、残りの `npx ctx7@latest` を `ctx7` へ置換します。
+4. 結果を `.rulesync/skills/find-docs/SKILL.md` に、版を `find-docs.version` に書き込みます。内容は毎回タグから作り直すため、版が変わっていなければ差分は出ません（`patch-find-docs.py` を変えた場合も、このスクリプトで作り直します）。
+
+ワークフローの `push` ジョブは PR のコードを実行せず、受け取った `SKILL.md` と `find-docs.version` を検証してから決まったパスにだけ書き込みます（`find-docs.version` が mise 設定の ctx7 の版と一致すること、`SKILL.md` が UTF-8 で `name: find-docs` の frontmatter を持ち、`npx ctx7` / `ctx7@latest` / `npm install -g` が残っていないこと）。
+
+**置換が失敗したとき:** `patch-find-docs.py` は、想定した文字列（`Run commands with `npx ctx7@latest` ...` の段落など）が見つからない場合に失敗します。これは上流のスキルの文言が変わったことを意味するため、黙って `npx ctx7@latest` が残ることはありません。このとき `update-find-docs-skill.yml` が失敗し、スキルが古いままなのでビルドも落ちます。取得した新しい `SKILL.md` の文言を見て `patch-find-docs.py` の正規表現を直し、PR に push してください（`patch-find-docs.py` の変更でワークフローが再実行され、スキルが作り直されます）。
 
 **rulesync が直った場合:** rulesync の git transport が注釈付きタグを解決できるようになったら、vendoring をやめて agent-browser と同じ形（`rulesync.jsonc` の `sources` に git transport のエントリを追加）へ移行してください。移行後は次の変更が必要です。
 
-- `.rulesync/skills/find-docs/` の手動配置、`find-docs.version` と版の照合チェックは削除します（lock がコミット SHA を固定するため不要になります）。`rulesync` の `sources` は `path: "skills"` で `skills/find-docs/` 配下だけを取得し、そこには `SKILL.md` しかありません（`LICENSE` はリポジトリルートにしかなく、`ctx7@0.6.0` で確認済み）。そのため移行後も `LICENSE` は取得対象に含まれず、取得後にリポジトリルートの `LICENSE` を付け足す処理を残す必要があります。
+- `.rulesync/skills/find-docs/` の手動配置、`find-docs.version` と版の照合チェック、`scripts/update-find-docs-skill.sh` と `update-find-docs-skill.yml` は削除します（lock がコミット SHA を固定し、ref は Renovate の customManager が更新するため不要になります）。`rulesync` の `sources` は `path: "skills"` で `skills/find-docs/` 配下だけを取得し、そこには `SKILL.md` しかありません（`LICENSE` はリポジトリルートにしかなく、`ctx7@0.6.0` で確認済み）。そのため移行後も `LICENSE` は取得対象に含まれず、取得後にリポジトリルートの `LICENSE` を付け足す処理を残す必要があります。
 - `npx ctx7@latest` の置換自体は引き続き必要です。ビルドで取得したあとに `patch-find-docs.py` を呼ぶ処理を Dockerfile に追加してください（取得元が変わるだけで、置換そのものは今と同じ理由で必要です）。
 
 #### drawio-png の vendoring
@@ -269,7 +275,7 @@ dip の同梱資材は基本図形だけで、AWS・Google Cloud・Azure など�
 
 ## CI/CD パイプライン
 
-`.github/workflows/` の6ワークフローは、以下のように連鎖して動作します。
+`.github/workflows/` の7ワークフローは、以下のように連鎖して動作します。
 
 ```mermaid
 flowchart TD
@@ -286,10 +292,12 @@ flowchart TD
     PR -->|"docker-images/**"| build["build-images.yml<br/>lock の検査 + Node LTS の検査 + user / ai をビルド検証"]
     PR -->|"docker-images/**/mise/config.toml"| lock["update-mise-lock.yml<br/>generate: mise.lock とサイドカーを作り直す<br/>push: 検証して PR ブランチへ push（別 runner）"]
     PR -->|"docker-images/**/rulesync.jsonc"| rlock["update-rulesync-lock.yml<br/>generate: rulesync.lock を作り直す<br/>push: 検証して PR ブランチへ push（別 runner）"]
+    PR -->|"docker-images/ai/opt/mise/config.toml"| fdocs["update-find-docs-skill.yml<br/>generate: find-docs スキルを ctx7 と同じ版のタグから作り直す<br/>push: 検証して PR ブランチへ push（別 runner）"]
     PR -->|"devcontainer-features/**"| validate["release-features.yml : validate<br/>features package のパース検証<br/>拡張機能の版が Marketplace に存在するかの検査"]
 
     lock -->|"App token の push が再トリガー"| build
     rlock -->|"App token の push が再トリガー"| build
+    fdocs -->|"App token の push が再トリガー"| build
 
     merge(["main へマージ"]) --> publish["release-features.yml : publish<br/>GHCR へ Feature を publish（main のみ・Environment release）"]
     merge --> cache["publish-build-cache.yml<br/>amd64 / arm64 のビルドキャッシュを GHCR へ push（main のみ）"]
@@ -300,6 +308,7 @@ flowchart TD
 - **実行間隔:** `renovate.yml` は毎日 04:07 JST に実行します。新しい更新 PR を作るのは、AI ツールは毎日、それ以外は火曜のみです（[更新のタイミング](#更新のタイミング)）。
 - **lock → build の連鎖:** mise は `locked = true` のため、`config.toml` だけ更新すると `mise.lock` と不一致になりビルドが失敗します。Renovate には lock を更新させず（`skipArtifactsUpdate`）、`update-mise-lock` が PR ブランチへ lock を push します。コミットは lock 更新用の GitHub App（`diiva-szk-lock-updater`）のトークンで GraphQL の `createCommitOnBranch` から作るため、GitHub による署名が付き（Verified）、そのコミットが改めて `build-images` を起こします。コミットの作者はその App の bot になり、`gitIgnoredAuthors` により Renovate から「人の編集」とみなされません。
 - **rulesync の lock → build の連鎖:** ビルドは `rulesync install --frozen` のため、`rulesync.jsonc` の `ref` だけ更新すると `rulesync.lock` と不一致になり失敗します。Renovate は `ref` だけを更新し、`update-rulesync-lock` が mise と同じ仕組みで lock を PR ブランチへ push します。
+- **find-docs スキル → build の連鎖:** ビルドは vendoring した find-docs スキルの版（`find-docs.version`）と `ctx7 --version` を照合するため、Renovate が ctx7 の版だけを上げると失敗します。`update-find-docs-skill` が同じ版のタグからスキルを作り直し、mise と同じ仕組みで PR ブランチへ push します（[find-docs の vendoring](#find-docs-の-vendoring)）。
 - **validate → publish:** `publish` は `needs: validate` かつ `if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'` です。PR ではパース検証のみ行い、`main` からのみ GHCR へ publish します（手動実行で別ブランチを選んでも publish しません）。
 - **version bump との連動:** Feature の `version` を上げないと `publish` は何も配信しません。Renovate の `postUpgradeTasks` が `scripts/bump-feature-version.sh` で patch を上げます。手作業で Feature を変更した場合は `version` を上げてください。
 
@@ -309,8 +318,8 @@ flowchart TD
 | --- | --- | --- |
 | `RENOVATE_APP_CLIENT_ID` | Renovate 用 GitHub App（`diiva-szk-version-bumper`）の Client ID | renovate |
 | `RENOVATE_APP_PRIVATE_KEY` | Renovate 用 GitHub App の秘密鍵 | renovate |
-| `LOCK_UPDATER_APP_CLIENT_ID` | lock 更新用 GitHub App（`diiva-szk-lock-updater`。権限は Contents:write のみ）の Client ID | update-mise-lock / update-rulesync-lock |
-| `LOCK_UPDATER_APP_PRIVATE_KEY` | lock 更新用 GitHub App の秘密鍵 | update-mise-lock / update-rulesync-lock |
+| `LOCK_UPDATER_APP_CLIENT_ID` | lock 更新用 GitHub App（`diiva-szk-lock-updater`。権限は Contents:write のみ）の Client ID | update-mise-lock / update-rulesync-lock / update-find-docs-skill |
+| `LOCK_UPDATER_APP_PRIVATE_KEY` | lock 更新用 GitHub App の秘密鍵 | update-mise-lock / update-rulesync-lock / update-find-docs-skill |
 
 ## Renovate
 
@@ -350,7 +359,7 @@ flowchart TD
 | draw.io の Web 資材（dip 用） | Renovate の対象外。dip の互換コミットに合わせて手で更新する（[draw.io の Web 資材](#drawio-の-web-資材ai)） |
 | dip のライブラリ（Simple Icons） | Renovate の mise マネージャ（github-releases）。lock は `update-mise-lock.yml` が作り直す |
 | drawio-png スキル（dip、vendoring） | Renovate の対象外。スキルは版によって変わらない案内のため通常は取り直さない（[drawio-png の vendoring](#drawio-png-の-vendoring)） |
-| find-docs スキル（ctx7、vendoring） | Renovate の対象外。ctx7 の版を更新するたびに手動で取り直す（[find-docs の vendoring](#find-docs-の-vendoring)）。rulesync の git transport が注釈付きタグに対応したら、agent-browser と同じ `customManagers` の正規表現に移行する |
+| find-docs スキル（ctx7、vendoring） | Renovate の対象外。Renovate が ctx7 の版を上げた PR で、`update-find-docs-skill.yml` が同じ版のタグから作り直す（[find-docs の vendoring](#find-docs-の-vendoring)）。rulesync の git transport が注釈付きタグに対応したら、agent-browser と同じ `customManagers` の正規表現に移行する |
 | Renovate 本体のコンテナ / BuildKit | `customManagers` の正規表現（`CLI_IMAGE_TAG` / `BUILDKIT_IMAGE_TAG` のバージョン + digest） |
 | Python パッケージ | pip-compile マネージャ（`requirements.txt` のヘッダーのコマンドで再生成） |
 | VS Code 拡張機能 | `customManagers` の正規表現（`// renovate:` コメント）。Marketplace は参照できないため GitHub のリリースを代理指標にし、`release-features.yml` が `scripts/check-vscode-extensions.sh` で指定の版が Marketplace に存在することを検査する（未公開の版は `renovate.json5` の `allowedVersions` で除外する） |
@@ -361,11 +370,11 @@ flowchart TD
 
 | Action | 利用ワークフロー |
 | --- | --- |
-| [`actions/checkout`](https://github.com/actions/checkout) | build-images / publish-build-cache / release-features / update-mise-lock / update-rulesync-lock |
-| [`actions/upload-artifact`](https://github.com/actions/upload-artifact) | update-mise-lock / update-rulesync-lock |
-| [`actions/download-artifact`](https://github.com/actions/download-artifact) | update-mise-lock / update-rulesync-lock |
+| [`actions/checkout`](https://github.com/actions/checkout) | build-images / publish-build-cache / release-features / update-mise-lock / update-rulesync-lock / update-find-docs-skill |
+| [`actions/upload-artifact`](https://github.com/actions/upload-artifact) | update-mise-lock / update-rulesync-lock / update-find-docs-skill |
+| [`actions/download-artifact`](https://github.com/actions/download-artifact) | update-mise-lock / update-rulesync-lock / update-find-docs-skill |
 | [`devcontainers/action`](https://github.com/devcontainers/action) | release-features |
-| [`actions/create-github-app-token`](https://github.com/actions/create-github-app-token) | renovate / update-mise-lock / update-rulesync-lock |
+| [`actions/create-github-app-token`](https://github.com/actions/create-github-app-token) | renovate / update-mise-lock / update-rulesync-lock / update-find-docs-skill |
 | [`renovatebot/github-action`](https://github.com/renovatebot/github-action) | renovate |
 
 Action の SHA 固定だけでは、Action が実行時に取得するものまでは固定されません。以下は個別に固定しています。
@@ -391,8 +400,8 @@ Action の SHA 固定だけでは、Action が実行時に取得するものま�
 - **ai のデスクトップはホストに公開しない:** KasmVNC のポート（8444）は `compose.yml` の `expose` で同じネットワークの user コンテナにだけ見せ、`ports` でホストへは公開しません。ホストからは user コンテナの `ai-desktop`（`aid`）が `127.0.0.1` で待ち受けて転送し、VS Code のポート転送経由で開きます。
 - **App トークンの権限の最小化:** `create-github-app-token` は `permission-*` を指定しないと App installation の全権限を継承するため、ワークフローごとに必要な権限だけを指定しています。
   - renovate: Contents / Issues / Pull requests / Checks / Commit statuses / Workflows（write）、Dependabot alerts（read。`vulnerabilityAlerts` 用）
-  - update-mise-lock / update-rulesync-lock: Contents（write）のみ。App 自体も Renovate とは分け、Contents:write だけを付与した lock 更新用の App を使います（秘密鍵が漏れても Renovate の App の権限までは渡らないように）。
-- **PR のコードを実行するジョブと、書き込みトークンを扱うジョブの分離:** `update-mise-lock.yml` と `update-rulesync-lock.yml` は、lock を生成する `generate` ジョブと push する `push` ジョブを別 runner で実行します。同じ runner で PR のコードを実行した後にトークンを扱うと、`.git/hooks` 等を仕込まれてトークンを盗まれるおそれがあるためです。`push` ジョブは PR のコードを実行せず、受け取った lock のファイル構成・形式・書き込み先（シンボリックリンクでないこと）を検証してから取り込みます。
+  - update-mise-lock / update-rulesync-lock / update-find-docs-skill: Contents（write）のみ。App 自体も Renovate とは分け、Contents:write だけを付与した lock 更新用の App を使います（秘密鍵が漏れても Renovate の App の権限までは渡らないように）。
+- **PR のコードを実行するジョブと、書き込みトークンを扱うジョブの分離:** `update-mise-lock.yml`・`update-rulesync-lock.yml`・`update-find-docs-skill.yml` は、lock（またはスキル）を生成する `generate` ジョブと push する `push` ジョブを別 runner で実行します。同じ runner で PR のコードを実行した後にトークンを扱うと、`.git/hooks` 等を仕込まれてトークンを盗まれるおそれがあるためです。`push` ジョブは PR のコードを実行せず、受け取った lock（またはスキル）のファイル構成・形式・書き込み先（シンボリックリンクでないこと）を検証してから取り込みます。
 - **publish は main からのみ:** `release-features.yml` の publish は `main` ブランチでのみ実行し、Environment `release` を使います。
 - **ビルドキャッシュの書き出しは main からのみ:** 利用者のビルドに取り込まれるため、`publish-build-cache.yml` は `main` でのみ `packages: write` を使います。PR のビルド（`build-images.yml`）はキャッシュを読むだけです。
 - **イメージ内の依存の固定:** mise のツールは `mise.lock`、Python パッケージはハッシュ付き `requirements.txt`、Renovate CLI は `package-lock.json`、ブラウザ操作 CLI のスキルは `rulesync.lock` で固定しています。

@@ -42,7 +42,8 @@
   schedule: [
     '* 0-11 * * 2',
   ],
-  // update-mise-lock / update-rulesync-lock ワークフローが Renovate のPRブランチへ lock をコミットする。
+  // update-mise-lock / update-rulesync-lock ワークフローが Renovate のPRブランチへ lock をコミットする
+  // （update-find-docs-skill ワークフローも同じ App で find-docs スキルをコミットする）。
   // そのコミットを「人による編集」とみなされると Renovate がPRの更新を止めるため無視させる。
   // コミットは lock 更新用の GitHub App のトークンで API から作るため、作者はその App の bot になる。
   // 移行前に github-actions[bot] で作ったコミットが残るPRのため、そちらも残す。

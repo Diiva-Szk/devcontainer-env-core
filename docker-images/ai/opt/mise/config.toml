@@ -38,7 +38,8 @@
 #   スキル（find-docs）は opt/rulesync/.rulesync/skills/find-docs/SKILL.md に、
 #   公式リポジトリの同じ版のタグから取得した内容を vendoring している（rulesync が
 #   注釈付きタグ（ctx7@<版> 形式）を解決できないため。dyoshikawa/rulesync 側の既知の問題）。
-#   版を変えるときは SKILL.md も同じタグから取り直すこと。
+#   版を変えると、PR 上で update-find-docs-skill ワークフローが SKILL.md を同じ版のタグから
+#   作り直す（手元では scripts/update-find-docs-skill.sh）。
 "npm:ctx7" = "0.6.0"
 
 # drawio-png-cli（dip。.drawio.png に埋め込まれた draw.io の XML を抽出・検証・更新する CLI）
