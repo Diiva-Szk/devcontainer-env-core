@@ -33,20 +33,20 @@ url = "https://github.com/dagucloud/dagu/releases/download/v2.18.2/dagu_2.18.2_l
 url_api = "https://api.github.com/repos/dagucloud/dagu/releases/assets/609076396"
 
 [[tools."aqua:dyoshikawa/rulesync"]]
-version = "29.0.0"
+version = "33.0.0"
 backend = "aqua:dyoshikawa/rulesync"
-specifiers = ["29.0.0"]
+specifiers = ["33.0.0"]
 
 [tools."aqua:dyoshikawa/rulesync"."platforms.linux-arm64"]
-checksum = "sha256:7c49c01d9c8545fdac918db2115dc00ebec97011d7feb8a66cf684223c99925e"
-url = "https://github.com/dyoshikawa/rulesync/releases/download/v29.0.0/rulesync-linux-arm64"
-url_api = "https://api.github.com/repos/dyoshikawa/rulesync/releases/assets/623254462"
+checksum = "sha256:d179b3e4071b10349262c380d555ca4781e01f176c93f4a4a70b4c529fa93f3b"
+url = "https://github.com/dyoshikawa/rulesync/releases/download/v33.0.0/rulesync-linux-arm64"
+url_api = "https://api.github.com/repos/dyoshikawa/rulesync/releases/assets/632619099"
 provenance = "github-attestations"
 
 [tools."aqua:dyoshikawa/rulesync"."platforms.linux-x64"]
-checksum = "sha256:54bde333b8a9dc30466e7f2cc6a4a8329c9d8fdc770854b630d684a702d4609a"
-url = "https://github.com/dyoshikawa/rulesync/releases/download/v29.0.0/rulesync-linux-x64"
-url_api = "https://api.github.com/repos/dyoshikawa/rulesync/releases/assets/623254467"
+checksum = "sha256:c691b2c210bd6cc27abe60338164b2158c8523b965df08760658890aad1600db"
+url = "https://github.com/dyoshikawa/rulesync/releases/download/v33.0.0/rulesync-linux-x64"
+url_api = "https://api.github.com/repos/dyoshikawa/rulesync/releases/assets/632619103"
 provenance = "github-attestations"
 
 [[tools."aqua:github/copilot-cli"]]
