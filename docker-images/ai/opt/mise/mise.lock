@@ -18,19 +18,19 @@ url = "https://github.com/anthropics/claude-code/releases/download/v2.1.296/clau
 url_api = "https://api.github.com/repos/anthropics/claude-code/releases/assets/625598991"
 
 [[tools."aqua:dagucloud/dagu"]]
-version = "2.18.2"
+version = "2.19.2"
 backend = "aqua:dagucloud/dagu"
-specifiers = ["2.18.2"]
+specifiers = ["2.19.2"]
 
 [tools."aqua:dagucloud/dagu"."platforms.linux-arm64"]
-checksum = "sha256:f67c63ef343b11a6822f881348cf1ff27a28c97ea2ee267f21a87364a90a1dc5"
-url = "https://github.com/dagucloud/dagu/releases/download/v2.18.2/dagu_2.18.2_linux_arm64.tar.gz"
-url_api = "https://api.github.com/repos/dagucloud/dagu/releases/assets/609076465"
+checksum = "sha256:8931188a8d40d314346cb3f36d0b26c615b0b6c490297801e82811d14856556d"
+url = "https://github.com/dagucloud/dagu/releases/download/v2.19.2/dagu_2.19.2_linux_arm64.tar.gz"
+url_api = "https://api.github.com/repos/dagucloud/dagu/releases/assets/634271116"
 
 [tools."aqua:dagucloud/dagu"."platforms.linux-x64"]
-checksum = "sha256:5a84c093b9ba9d02b7a60e106bb91d46f9383fd01c62bd51560e41193f05792b"
-url = "https://github.com/dagucloud/dagu/releases/download/v2.18.2/dagu_2.18.2_linux_amd64.tar.gz"
-url_api = "https://api.github.com/repos/dagucloud/dagu/releases/assets/609076396"
+checksum = "sha256:df2b3d7d27c8e9b206e061e0d6b082ca7d3c3bd205d60453577a955e8991998f"
+url = "https://github.com/dagucloud/dagu/releases/download/v2.19.2/dagu_2.19.2_linux_amd64.tar.gz"
+url_api = "https://api.github.com/repos/dagucloud/dagu/releases/assets/634271272"
 
 [[tools."aqua:dyoshikawa/rulesync"]]
 version = "29.0.0"
@@ -50,34 +50,34 @@ url_api = "https://api.github.com/repos/dyoshikawa/rulesync/releases/assets/6232
 provenance = "github-attestations"
 
 [[tools."aqua:github/copilot-cli"]]
-version = "1.0.95"
+version = "1.0.96"
 backend = "aqua:github/copilot-cli"
-specifiers = ["1.0.95"]
+specifiers = ["1.0.96"]
 
 [tools."aqua:github/copilot-cli"."platforms.linux-arm64"]
-checksum = "sha256:4cae94d3abd15699d6a479103a9a39fb3c1dcd85a6ce191882f1902340f10f44"
-url = "https://github.com/github/copilot-cli/releases/download/v1.0.95/copilot-linux-arm64.tar.gz"
-url_api = "https://api.github.com/repos/github/copilot-cli/releases/assets/625456447"
+checksum = "sha256:5073e1ee39fab0c724d10e6fc852977830b5196aa9b66cde934a65faa8010d6b"
+url = "https://github.com/github/copilot-cli/releases/download/v1.0.96/copilot-linux-arm64.tar.gz"
+url_api = "https://api.github.com/repos/github/copilot-cli/releases/assets/634671337"
 
 [tools."aqua:github/copilot-cli"."platforms.linux-x64"]
-checksum = "sha256:c91a8874f3b2bdc905c2452f9d9fc923013924feb431e256eb769ff792719d7f"
-url = "https://github.com/github/copilot-cli/releases/download/v1.0.95/copilot-linux-x64.tar.gz"
-url_api = "https://api.github.com/repos/github/copilot-cli/releases/assets/625456602"
+checksum = "sha256:66b60b58b14d72390f30d6d7f8480d18a0f05c111d132e4ff8f92ae637d413f8"
+url = "https://github.com/github/copilot-cli/releases/download/v1.0.96/copilot-linux-x64.tar.gz"
+url_api = "https://api.github.com/repos/github/copilot-cli/releases/assets/634671736"
 
 [[tools."aqua:github/copilot-language-server-release"]]
-version = "1.552.0"
+version = "1.553.0"
 backend = "aqua:github/copilot-language-server-release"
-specifiers = ["1.552.0"]
+specifiers = ["1.553.0"]
 
 [tools."aqua:github/copilot-language-server-release"."platforms.linux-arm64"]
-checksum = "sha256:9328ac3a815ae9a924437fa200f74052b4369ea7bce9498f758774342fff3ad5"
-url = "https://github.com/github/copilot-language-server-release/releases/download/1.552.0/copilot-language-server-linux-arm64-1.552.0.zip"
-url_api = "https://api.github.com/repos/github/copilot-language-server-release/releases/assets/623563550"
+checksum = "sha256:f37d6ebf11c99ff52b3e49bcdd4490cffc9b1aa287455ef553eadc7c965ed71f"
+url = "https://github.com/github/copilot-language-server-release/releases/download/1.553.0/copilot-language-server-linux-arm64-1.553.0.zip"
+url_api = "https://api.github.com/repos/github/copilot-language-server-release/releases/assets/634832609"
 
 [tools."aqua:github/copilot-language-server-release"."platforms.linux-x64"]
-checksum = "sha256:f941950a2497740b3ceee1b43a0ec7f19077c23e96e6521dae0a8e54d567a2f7"
-url = "https://github.com/github/copilot-language-server-release/releases/download/1.552.0/copilot-language-server-linux-x64-1.552.0.zip"
-url_api = "https://api.github.com/repos/github/copilot-language-server-release/releases/assets/623563552"
+checksum = "sha256:3345dd63b7cde538b9aa40f67147ac8da27bffa6df4ac99bbc0ede9864ddd698"
+url = "https://github.com/github/copilot-language-server-release/releases/download/1.553.0/copilot-language-server-linux-x64-1.553.0.zip"
+url_api = "https://api.github.com/repos/github/copilot-language-server-release/releases/assets/634832612"
 
 [[tools."aqua:google-antigravity/antigravity-cli"]]
 version = "1.3.3"
@@ -110,36 +110,22 @@ url = "https://github.com/vercel-labs/agent-browser/releases/download/v0.39.0/ag
 url_api = "https://api.github.com/repos/vercel-labs/agent-browser/releases/assets/625880294"
 
 [[tools."github:mondeja/simple-icons-drawio"]]
-version = "16.34.0"
+version = "16.35.0"
 backend = "github:mondeja/simple-icons-drawio"
-specifiers = ["16.34.0"]
+specifiers = ["16.35.0"]
 
 [tools."github:mondeja/simple-icons-drawio".options]
 asset_pattern = "simple-icons.xml"
 
 [tools."github:mondeja/simple-icons-drawio"."platforms.linux-arm64"]
-checksum = "sha256:e5e7df91046c7e320874d321f9ae8a78280a9cf40141d3b870b3145b40065fdd"
-url = "https://github.com/mondeja/simple-icons-drawio/releases/download/16.34.0/simple-icons.xml"
-url_api = "https://api.github.com/repos/mondeja/simple-icons-drawio/releases/assets/610168725"
+checksum = "sha256:6c1e42717efde08c170dc9f3d88ff2e7c43b42beb20a8a2981cafaf60835d55d"
+url = "https://github.com/mondeja/simple-icons-drawio/releases/download/16.35.0/simple-icons.xml"
+url_api = "https://api.github.com/repos/mondeja/simple-icons-drawio/releases/assets/631322109"
 
 [tools."github:mondeja/simple-icons-drawio"."platforms.linux-x64"]
-checksum = "sha256:e5e7df91046c7e320874d321f9ae8a78280a9cf40141d3b870b3145b40065fdd"
-url = "https://github.com/mondeja/simple-icons-drawio/releases/download/16.34.0/simple-icons.xml"
-url_api = "https://api.github.com/repos/mondeja/simple-icons-drawio/releases/assets/610168725"
-
-[[tools."github:openai/codex"]]
-version = "0.162.1"
-backend = "github:openai/codex"
-specifiers = ["0.162.1"]
-
-[tools."github:openai/codex".options]
-asset_pattern = "codex-package-aarch64-unknown-linux-musl.tar.gz"
-version_prefix = "rust-v"
-
-[tools."github:openai/codex"."platforms.linux-arm64"]
-checksum = "sha256:53a9ce0b94beb27a63fdeb2f7704d95199e17b3898aa33b60461a1a93ac0d88b"
-url = "https://github.com/openai/codex/releases/download/rust-v0.162.1/codex-package-aarch64-unknown-linux-musl.tar.gz"
-url_api = "https://api.github.com/repos/openai/codex/releases/assets/625981063"
+checksum = "sha256:6c1e42717efde08c170dc9f3d88ff2e7c43b42beb20a8a2981cafaf60835d55d"
+url = "https://github.com/mondeja/simple-icons-drawio/releases/download/16.35.0/simple-icons.xml"
+url_api = "https://api.github.com/repos/mondeja/simple-icons-drawio/releases/assets/631322109"
 
 [[tools."github:openai/codex"]]
 version = "0.162.1"
@@ -155,19 +141,19 @@ checksum = "sha256:a676f5722aae0d86cbe3764332f08eab1fdd89dc0a300b3ad4ffbf48611fa
 url = "https://github.com/openai/codex/releases/download/rust-v0.162.1/codex-package-x86_64-unknown-linux-musl.tar.gz"
 url_api = "https://api.github.com/repos/openai/codex/releases/assets/625965833"
 
-[[tools."github:szk302/drawio-png-cli"]]
-version = "0.1.0"
-backend = "github:szk302/drawio-png-cli"
-specifiers = ["0.1.0"]
+[[tools."github:openai/codex"]]
+version = "0.162.1"
+backend = "github:openai/codex"
+specifiers = ["0.162.1"]
 
-[tools."github:szk302/drawio-png-cli".options]
-asset_pattern = "dip-*-x86_64-unknown-linux-musl.tar.gz"
+[tools."github:openai/codex".options]
+asset_pattern = "codex-package-aarch64-unknown-linux-musl.tar.gz"
+version_prefix = "rust-v"
 
-[tools."github:szk302/drawio-png-cli"."platforms.linux-x64"]
-checksum = "sha256:24e28578175dbe5a038afdfd6ace5cb71eb867891f4b29a1566d28dd20103543"
-url = "https://github.com/szk302/drawio-png-cli/releases/download/v0.1.0/dip-0.1.0-x86_64-unknown-linux-musl.tar.gz"
-url_api = "https://api.github.com/repos/szk302/drawio-png-cli/releases/assets/610979624"
-provenance = "github-attestations"
+[tools."github:openai/codex"."platforms.linux-arm64"]
+checksum = "sha256:53a9ce0b94beb27a63fdeb2f7704d95199e17b3898aa33b60461a1a93ac0d88b"
+url = "https://github.com/openai/codex/releases/download/rust-v0.162.1/codex-package-aarch64-unknown-linux-musl.tar.gz"
+url_api = "https://api.github.com/repos/openai/codex/releases/assets/625981063"
 
 [[tools."github:szk302/drawio-png-cli"]]
 version = "0.1.0"
@@ -183,21 +169,35 @@ url = "https://github.com/szk302/drawio-png-cli/releases/download/v0.1.0/dip-0.1
 url_api = "https://api.github.com/repos/szk302/drawio-png-cli/releases/assets/610979601"
 provenance = "github-attestations"
 
+[[tools."github:szk302/drawio-png-cli"]]
+version = "0.1.0"
+backend = "github:szk302/drawio-png-cli"
+specifiers = ["0.1.0"]
+
+[tools."github:szk302/drawio-png-cli".options]
+asset_pattern = "dip-*-x86_64-unknown-linux-musl.tar.gz"
+
+[tools."github:szk302/drawio-png-cli"."platforms.linux-x64"]
+checksum = "sha256:24e28578175dbe5a038afdfd6ace5cb71eb867891f4b29a1566d28dd20103543"
+url = "https://github.com/szk302/drawio-png-cli/releases/download/v0.1.0/dip-0.1.0-x86_64-unknown-linux-musl.tar.gz"
+url_api = "https://api.github.com/repos/szk302/drawio-png-cli/releases/assets/610979624"
+provenance = "github-attestations"
+
 [[tools."http:kiro-cli"]]
-version = "2.29.1"
+version = "2.31.0"
 backend = "http:kiro-cli"
-specifiers = ["2.29.1"]
+specifiers = ["2.31.0"]
 
 [tools."http:kiro-cli".options]
 strip_components = "1"
 
 [tools."http:kiro-cli"."platforms.linux-arm64"]
-checksum = "sha256:a451af6d72397f540d565089812bcf785afd0d16073568d43658df605d599891"
-url = "https://desktop-release.q.us-east-1.amazonaws.com/2.29.1/kirocli-aarch64-linux.tar.gz"
+checksum = "sha256:4b00b411437520298d28ae8a1c51f63f4bfdb490c07170b4d5ae91cbeadabc0f"
+url = "https://desktop-release.q.us-east-1.amazonaws.com/2.31.0/kirocli-aarch64-linux.tar.gz"
 
 [tools."http:kiro-cli"."platforms.linux-x64"]
-checksum = "sha256:9d25a37eec54d6dbd972cc2fc0b8bb548d530836e364e97d12af34ef6388fc03"
-url = "https://desktop-release.q.us-east-1.amazonaws.com/2.29.1/kirocli-x86_64-linux.tar.gz"
+checksum = "sha256:8b3a8c3b032178e2662a6a530fa0bb7ee92e223528613f8f03b51d18b23a5e11"
+url = "https://desktop-release.q.us-east-1.amazonaws.com/2.31.0/kirocli-x86_64-linux.tar.gz"
 
 [[tools."npm:@playwright/cli"]]
 version = "0.1.22"
