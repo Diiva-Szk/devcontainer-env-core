@@ -161,20 +161,6 @@ backend = "github:szk302/drawio-png-cli"
 specifiers = ["0.1.0"]
 
 [tools."github:szk302/drawio-png-cli".options]
-asset_pattern = "dip-*-aarch64-unknown-linux-musl.tar.gz"
-
-[tools."github:szk302/drawio-png-cli"."platforms.linux-arm64"]
-checksum = "sha256:0ff21201559ace0f3513f7d6101cf9919806b188e684e76d6aedf2f1d2e31283"
-url = "https://github.com/szk302/drawio-png-cli/releases/download/v0.1.0/dip-0.1.0-aarch64-unknown-linux-musl.tar.gz"
-url_api = "https://api.github.com/repos/szk302/drawio-png-cli/releases/assets/610979601"
-provenance = "github-attestations"
-
-[[tools."github:szk302/drawio-png-cli"]]
-version = "0.1.0"
-backend = "github:szk302/drawio-png-cli"
-specifiers = ["0.1.0"]
-
-[tools."github:szk302/drawio-png-cli".options]
 asset_pattern = "dip-*-x86_64-unknown-linux-musl.tar.gz"
 
 [tools."github:szk302/drawio-png-cli"."platforms.linux-x64"]
@@ -183,21 +169,35 @@ url = "https://github.com/szk302/drawio-png-cli/releases/download/v0.1.0/dip-0.1
 url_api = "https://api.github.com/repos/szk302/drawio-png-cli/releases/assets/610979624"
 provenance = "github-attestations"
 
+[[tools."github:szk302/drawio-png-cli"]]
+version = "0.1.0"
+backend = "github:szk302/drawio-png-cli"
+specifiers = ["0.1.0"]
+
+[tools."github:szk302/drawio-png-cli".options]
+asset_pattern = "dip-*-aarch64-unknown-linux-musl.tar.gz"
+
+[tools."github:szk302/drawio-png-cli"."platforms.linux-arm64"]
+checksum = "sha256:0ff21201559ace0f3513f7d6101cf9919806b188e684e76d6aedf2f1d2e31283"
+url = "https://github.com/szk302/drawio-png-cli/releases/download/v0.1.0/dip-0.1.0-aarch64-unknown-linux-musl.tar.gz"
+url_api = "https://api.github.com/repos/szk302/drawio-png-cli/releases/assets/610979601"
+provenance = "github-attestations"
+
 [[tools."http:kiro-cli"]]
-version = "2.31.0"
+version = "2.31.1"
 backend = "http:kiro-cli"
-specifiers = ["2.31.0"]
+specifiers = ["2.31.1"]
 
 [tools."http:kiro-cli".options]
 strip_components = "1"
 
 [tools."http:kiro-cli"."platforms.linux-arm64"]
-checksum = "sha256:4b00b411437520298d28ae8a1c51f63f4bfdb490c07170b4d5ae91cbeadabc0f"
-url = "https://desktop-release.q.us-east-1.amazonaws.com/2.31.0/kirocli-aarch64-linux.tar.gz"
+checksum = "sha256:cf3fc7681cca9677e18c0d22371fe60d7921ca73ea9d751d78f9cb470c0dce6d"
+url = "https://desktop-release.q.us-east-1.amazonaws.com/2.31.1/kirocli-aarch64-linux.tar.gz"
 
 [tools."http:kiro-cli"."platforms.linux-x64"]
-checksum = "sha256:8b3a8c3b032178e2662a6a530fa0bb7ee92e223528613f8f03b51d18b23a5e11"
-url = "https://desktop-release.q.us-east-1.amazonaws.com/2.31.0/kirocli-x86_64-linux.tar.gz"
+checksum = "sha256:22eef4c19c42782316b0e24cdd3399024760eec9056b4298751cb99f33795ace"
+url = "https://desktop-release.q.us-east-1.amazonaws.com/2.31.1/kirocli-x86_64-linux.tar.gz"
 
 [[tools."npm:@playwright/cli"]]
 version = "0.1.22"
