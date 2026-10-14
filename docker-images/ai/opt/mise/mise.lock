@@ -50,19 +50,19 @@ url_api = "https://api.github.com/repos/dyoshikawa/rulesync/releases/assets/6326
 provenance = "github-attestations"
 
 [[tools."aqua:github/copilot-cli"]]
-version = "1.0.96"
+version = "1.0.97"
 backend = "aqua:github/copilot-cli"
-specifiers = ["1.0.96"]
+specifiers = ["1.0.97"]
 
 [tools."aqua:github/copilot-cli"."platforms.linux-arm64"]
-checksum = "sha256:5073e1ee39fab0c724d10e6fc852977830b5196aa9b66cde934a65faa8010d6b"
-url = "https://github.com/github/copilot-cli/releases/download/v1.0.96/copilot-linux-arm64.tar.gz"
-url_api = "https://api.github.com/repos/github/copilot-cli/releases/assets/634671337"
+checksum = "sha256:2cd044c6629f14b04e2bdc6791a71b43a8c3dc9cbcad529128ee6983764db349"
+url = "https://github.com/github/copilot-cli/releases/download/v1.0.97/copilot-linux-arm64.tar.gz"
+url_api = "https://api.github.com/repos/github/copilot-cli/releases/assets/637909772"
 
 [tools."aqua:github/copilot-cli"."platforms.linux-x64"]
-checksum = "sha256:66b60b58b14d72390f30d6d7f8480d18a0f05c111d132e4ff8f92ae637d413f8"
-url = "https://github.com/github/copilot-cli/releases/download/v1.0.96/copilot-linux-x64.tar.gz"
-url_api = "https://api.github.com/repos/github/copilot-cli/releases/assets/634671736"
+checksum = "sha256:07f3f63cb361e911268e8a4b010e06eeced8d4f2d898d13a8180273e34aeff3f"
+url = "https://github.com/github/copilot-cli/releases/download/v1.0.97/copilot-linux-x64.tar.gz"
+url_api = "https://api.github.com/repos/github/copilot-cli/releases/assets/637909931"
 
 [[tools."aqua:github/copilot-language-server-release"]]
 version = "1.553.0"
@@ -80,34 +80,34 @@ url = "https://github.com/github/copilot-language-server-release/releases/downlo
 url_api = "https://api.github.com/repos/github/copilot-language-server-release/releases/assets/634832612"
 
 [[tools."aqua:google-antigravity/antigravity-cli"]]
-version = "1.3.3"
+version = "1.3.4"
 backend = "aqua:google-antigravity/antigravity-cli"
-specifiers = ["1.3.3"]
+specifiers = ["1.3.4"]
 
 [tools."aqua:google-antigravity/antigravity-cli"."platforms.linux-arm64"]
-checksum = "sha256:a9d23fe1d7e5c8471881ab37723571a8d3f24e6ecace8fe082f8c0c8d90f41ca"
-url = "https://github.com/google-antigravity/antigravity-cli/releases/download/1.3.3/agy_cli_linux_arm64.tar.gz"
-url_api = "https://api.github.com/repos/google-antigravity/antigravity-cli/releases/assets/626854050"
+checksum = "sha256:56161a1849eff501fead19bc7c477ee80f26776bf470fda01c119cc345a1818c"
+url = "https://github.com/google-antigravity/antigravity-cli/releases/download/1.3.4/agy_cli_linux_arm64.tar.gz"
+url_api = "https://api.github.com/repos/google-antigravity/antigravity-cli/releases/assets/635961761"
 
 [tools."aqua:google-antigravity/antigravity-cli"."platforms.linux-x64"]
-checksum = "sha256:8ee3ca32574c431285efbf4d4732f7f8d53e959370bc4a61646e4fa496f7f2b6"
-url = "https://github.com/google-antigravity/antigravity-cli/releases/download/1.3.3/agy_cli_linux_x64.tar.gz"
-url_api = "https://api.github.com/repos/google-antigravity/antigravity-cli/releases/assets/626854055"
+checksum = "sha256:db5e81e8dee72d282cb1fb5fcd98dc5a43680730d71e3d637a67c874ec077ad3"
+url = "https://github.com/google-antigravity/antigravity-cli/releases/download/1.3.4/agy_cli_linux_x64.tar.gz"
+url_api = "https://api.github.com/repos/google-antigravity/antigravity-cli/releases/assets/635961759"
 
 [[tools."aqua:vercel-labs/agent-browser"]]
-version = "0.39.0"
+version = "0.39.1"
 backend = "aqua:vercel-labs/agent-browser"
-specifiers = ["0.39.0"]
+specifiers = ["0.39.1"]
 
 [tools."aqua:vercel-labs/agent-browser"."platforms.linux-arm64"]
-checksum = "sha256:54eedbcaedcbd8b49f840098ea85dda653af0a036e28609b526ece068de6c0ab"
-url = "https://github.com/vercel-labs/agent-browser/releases/download/v0.39.0/agent-browser-linux-arm64"
-url_api = "https://api.github.com/repos/vercel-labs/agent-browser/releases/assets/625880287"
+checksum = "sha256:9d8fdc586056df65747927ae166157c83af91b52cea287175e5544afd2591d33"
+url = "https://github.com/vercel-labs/agent-browser/releases/download/v0.39.1/agent-browser-linux-arm64"
+url_api = "https://api.github.com/repos/vercel-labs/agent-browser/releases/assets/638085653"
 
 [tools."aqua:vercel-labs/agent-browser"."platforms.linux-x64"]
-checksum = "sha256:6adeb7e2466f0d9ea4ef562222e221bfdd067f5545d7b052dc64fb13ba250f48"
-url = "https://github.com/vercel-labs/agent-browser/releases/download/v0.39.0/agent-browser-linux-musl-x64"
-url_api = "https://api.github.com/repos/vercel-labs/agent-browser/releases/assets/625880294"
+checksum = "sha256:74507cdab98aa91bdc14346c545aff974640a225e43f8c3d6c23164f8c0f9bb9"
+url = "https://github.com/vercel-labs/agent-browser/releases/download/v0.39.1/agent-browser-linux-musl-x64"
+url_api = "https://api.github.com/repos/vercel-labs/agent-browser/releases/assets/638085650"
 
 [[tools."github:mondeja/simple-icons-drawio"]]
 version = "16.35.0"
@@ -206,7 +206,7 @@ backend = "npm:@playwright/cli"
 specifiers = ["0.1.22"]
 
 [[tools."npm:ctx7"]]
-version = "0.6.0"
-aube = { path = ".mise/locks/npm-ctx7/0.6.0", digest = "sha256:142451863263d1fc0954595090cdc96d0b6a3de3b552db1440182dac6c3abe62" }
+version = "0.6.1"
+aube = { path = ".mise/locks/npm-ctx7/0.6.1", digest = "sha256:7ddfd97e206303bc0a6cb4839d4a7b2352073d7397569867c3759005590d1bf9" }
 backend = "npm:ctx7"
-specifiers = ["0.6.0"]
+specifiers = ["0.6.1"]
