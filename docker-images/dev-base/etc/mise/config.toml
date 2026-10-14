@@ -67,12 +67,23 @@ linux-arm64 = { asset_pattern = "lmm-*-aarch64-unknown-linux-musl.tar.gz" }
 # raw: Worktrunk の対話入力と出力を直接端末へ接続する。
 # raw_args: --help なども Worktrunk へ渡す。hooks の承認は自動化しない。
 [tasks."wt:add"]
-description = "[global] Worktrunk で新しいブランチと worktree を作る（移動しない）"
+description = "[global] 現在の HEAD から新しいブランチと worktree を作る（移動しない）"
 dir = "{{cwd}}"
 raw = true
 raw_args = true
 quiet = true
-run = "wt switch --create --no-cd"
+run = '''
+#!/usr/bin/env bash
+# --base の重複は Worktrunk が拒否するため、指定がない場合だけ HEAD を補う。
+for arg in "$@"; do
+  [[ "$arg" == -- ]] && break # 以降は --execute 先の引数。
+  # -bmain や -vb main のような短縮オプションの指定も認識する。
+  if [[ "$arg" == --base || "$arg" == --base=* || "$arg" =~ ^-[chvy]*b ]]; then
+    exec wt switch --create --no-cd "$@"
+  fi
+done
+exec wt switch --create --no-cd --base HEAD "$@"
+'''
 
 [tasks."wt:switch"]
 description = "[global] Worktrunk で既存ブランチの worktree を用意・選択する（移動しない）"

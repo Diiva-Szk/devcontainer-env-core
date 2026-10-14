@@ -224,15 +224,15 @@ flowchart LR
 `user` / `ai` の両方のコンテナに [Worktrunk](https://worktrunk.dev/)（`wt`）が入っており、`.worktrees/` に git worktree を作る mise タスクが使えます（定義は [docker-images/dev-base/etc/mise/config.toml](docker-images/dev-base/etc/mise/config.toml)）。タスク名の後の引数・オプションは、そのまま Worktrunk に渡します。
 
 ```sh
-mise run wt:add feat/foo                    # 新しいブランチ feat/foo と .worktrees/feat-foo を作る
-mise run wt:add feat/foo -b dev             # 分岐元を指定する（省略時はデフォルトブランチ）
+mise run wt:add feat/foo                    # 現在のブランチ（HEAD）から feat/foo と .worktrees/feat-foo を作る
+mise run wt:add feat/foo -b dev             # 分岐元を指定する（省略時は現在の HEAD）
 mise run wt:switch feat/foo                 # 既存のブランチの worktree を用意する（無ければ作る）
 mise run wt:list                            # worktree と変更状況の一覧
 mise run wt:rm feat/foo                     # worktree を削除し、統合済みならブランチも削除する
 mise run wt:rm feat/foo --no-delete-branch  # worktree だけを削除し、ブランチを残す
 ```
 
-- `wt:add` は `wt switch --create --no-cd`、`wt:switch` は `wt switch --no-cd`、`wt:list` は `wt list`、`wt:rm` は `wt remove --foreground` を実行します。`mise run wt:add --help` のように、Worktrunk のヘルプも表示できます。
+- `wt:add` は `wt switch --create --no-cd` に、`-b` / `--base` の指定がない場合だけ `--base HEAD` を付けて実行します。`wt:switch` は `wt switch --no-cd`、`wt:list` は `wt list`、`wt:rm` は `wt remove --foreground` を実行します。`mise run wt:add --help` のように、Worktrunk のヘルプも表示できます。
 - **mise タスクは親シェルのディレクトリを変更できません。** 作った worktree へは `cd .worktrees/feat-foo` のように移動してください。
 - 配置先の既定値は `.worktrees/{{ branch | sanitize }}` です。`feat/foo` は `.worktrees/feat-foo` となり、worktree 同士が入れ子になりません。リポジトリ内のどのディレクトリ（worktree の中を含む）で実行しても、メインの worktree 直下の `.worktrees/` を使います。設定は `/etc/xdg/worktrunk/config.toml` にあり、`~/.config/worktrunk/config.toml` で上書きできます。以前のタスクで作った `.worktrees/feat/foo` も Git の登録情報から見つけるため、そのまま `wt:switch` / `wt:rm` で扱えます。
 - 既存のブランチ（ローカル・`origin`）には `wt:add` ではなく `wt:switch` を使います。他の人が push したブランチを使うときは、先に `git fetch` してください。

@@ -74,6 +74,57 @@ class WorktrunkMiseTest(unittest.TestCase):
             self.assertNotEqual(result.returncode, 0, f'unexpected success: {args}')
         return result
 
+    def test_add_defaults_to_current_head(self):
+        self.run_cmd("git", "switch", "-c", "feat/current")
+        self.run_cmd("git", "-c", "user.name=Test", "-c", "user.email=test@example.com",
+                     "commit", "--allow-empty", "-m", "current branch commit")
+        head = self.run_cmd("git", "rev-parse", "HEAD").stdout.strip()
+        self.assertNotEqual(head, self.run_cmd("git", "rev-parse", "main").stdout.strip())
+        subdir = self.repo / "src"
+        subdir.mkdir()
+
+        self.run_cmd("mise", "wt:add", "feat/child", "--no-hooks", cwd=subdir)
+        wt = self.repo / ".worktrees/feat-child"
+        self.assertEqual(self.run_cmd("git", "rev-parse", "HEAD", cwd=wt).stdout.strip(), head)
+        self.assertEqual(self.run_cmd("git", "branch", "--show-current").stdout.strip(), "feat/current")
+        self.assertFalse((subdir / ".worktrees").exists())
+
+        # A linked worktree must use its own HEAD, even from a subdirectory.
+        self.run_cmd("git", "-c", "user.name=Test", "-c", "user.email=test@example.com",
+                     "commit", "--allow-empty", "-m", "linked worktree commit", cwd=wt)
+        linked_head = self.run_cmd("git", "rev-parse", "HEAD", cwd=wt).stdout.strip()
+        linked_subdir = wt / "src"
+        linked_subdir.mkdir()
+        self.run_cmd("mise", "wt:add", "feat/grandchild", "--no-hooks", cwd=linked_subdir)
+        grandchild = self.repo / ".worktrees/feat-grandchild"
+        self.assertEqual(self.run_cmd("git", "rev-parse", "HEAD", cwd=grandchild).stdout.strip(), linked_head)
+        self.assertFalse((wt / ".worktrees").exists())
+
+    def test_add_honors_explicit_base(self):
+        self.run_cmd("git", "switch", "-c", "feat/current")
+        self.run_cmd("git", "-c", "user.name=Test", "-c", "user.email=test@example.com",
+                     "commit", "--allow-empty", "-m", "current branch commit")
+        base = self.run_cmd("git", "rev-parse", "main").stdout.strip()
+        for index, args in enumerate((("-b", "main"), ("--base", "main"),
+                                      ("--base=main",), ("-bmain",), ("-b=main",),
+                                      ("-vbmain",), ("-vb", "main"))):
+            with self.subTest(args=args):
+                branch = f"feat/explicit-{index}"
+                self.run_cmd("mise", "run", "wt:add", branch, *args, "--no-hooks")
+                self.assertEqual(self.run_cmd("git", "rev-parse", branch).stdout.strip(), base)
+
+    def test_add_from_detached_head_preserves_execute_arguments(self):
+        self.run_cmd("git", "switch", "--detach")
+        self.run_cmd("git", "-c", "user.name=Test", "-c", "user.email=test@example.com",
+                     "commit", "--allow-empty", "-m", "detached commit")
+        head = self.run_cmd("git", "rev-parse", "HEAD").stdout.strip()
+        self.run_cmd("mise", "run", "wt:add", "--", "feat/detached", "--no-hooks",
+                     "--execute", "/bin/sh", "--", "-c", 'printf "%s\\n" "$@" > forwarded.txt',
+                     "sh", "--base=main", "-bmain")
+        wt = self.repo / ".worktrees/feat-detached"
+        self.assertEqual(self.run_cmd("git", "rev-parse", "HEAD", cwd=wt).stdout.strip(), head)
+        self.assertEqual((wt / "forwarded.txt").read_text(), "--base=main\n-bmain\n")
+
     def test_tasks_forward_arguments_and_preserve_work(self):
         subdir = self.repo / "src"
         subdir.mkdir()
@@ -86,6 +137,8 @@ class WorktrunkMiseTest(unittest.TestCase):
         self.assertIn(str(wt), [item["worktree"]["path"] for item in listing["items"]])
         help_text = self.run_cmd("mise", "run", "wt:switch", "--help").stdout
         self.assertIn("Usage: wt switch", help_text)
+        add_help = self.run_cmd("mise", "run", "wt:add", "--help").stdout
+        self.assertIn("Usage: wt switch", add_help)
         (wt / "keep.txt").write_text("keep my work\n")
         self.run_cmd("mise", "run", "wt:rm", str(wt), "--no-hooks", success=False)
         self.assertEqual((wt / "keep.txt").read_text(), "keep my work\n")
