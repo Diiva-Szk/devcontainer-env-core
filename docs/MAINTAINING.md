@@ -141,7 +141,9 @@ Worktrunk は dev-base の mise 設定で `aqua:max-sixty/worktrunk` のバー�
 
 dev-base の mise 設定には `wt:add`・`wt:switch`・`wt:list`・`wt:rm` を定義しています。`dir = "{{cwd}}"` と `raw_args = true` で、呼び出したディレクトリと引数（`--help` を含む）を Worktrunk に渡します。タスクは親シェルを移動できないため switch には `--no-cd`、削除の完了を待つため remove には `--foreground` を付けます。hooks の承認を自動で行う指定は付けません。
 
-`scripts/test-worktrunk-mise.py` は、既存の Worktrunk を隔離した mise 環境に登録し、実際の shim とタスクで一時的な Git リポジトリを操作します。サブディレクトリからの作成、引数の転送、未コミットの変更がある worktree の削除保護、ブランチを残す削除と再作成を検証します。`mise`・`wt`・`git`・`python3` が必要です。Build images ワークフローでも、ビルドした user イメージで実行します。
+`wt:add` は分岐元を省略すると現在の `HEAD` から作成します。Worktrunk は `--base` の重複を拒否するため、タスク内の Bash スクリプトで `-b` / `--base` の指定を確認し、指定がない場合だけ `--base HEAD` を補います。`--` 以降は `--execute` 先の引数として扱います。
+
+`scripts/test-worktrunk-mise.py` は、既存の Worktrunk を隔離した mise 環境に登録し、実際の shim とタスクで一時的な Git リポジトリを操作します。現在の HEAD からの作成（別 worktree 内を含む）、明示した分岐元の優先、サブディレクトリからの作成、引数の転送、未コミットの変更がある worktree の削除保護、ブランチを残す削除と再作成を検証します。`mise`・`wt`・`git`・`python3` が必要です。Build images ワークフローでも、ビルドした user イメージで実行します。
 
 ```sh
 python3 scripts/test-worktrunk-mise.py
