@@ -250,11 +250,11 @@ backend = "core:python"
 specifiers = ["3.14.8"]
 
 [tools.python."platforms.linux-arm64"]
-checksum = "sha256:54f9cd13b97add6bbd077175b6d89f974cc582ece1c40ace1893067582edaf0e"
-url = "https://github.com/astral-sh/python-build-standalone/releases/download/20261009/cpython-3.14.8+20261009-aarch64-unknown-linux-gnu-install_only_stripped.tar.gz"
+checksum = "sha256:d8ae14f303d3971431184cf423ae5467202de2bc19bf6491a490250b87647d4b"
+url = "https://github.com/astral-sh/python-build-standalone/releases/download/20261013/cpython-3.14.8+20261013-aarch64-unknown-linux-gnu-install_only_stripped.tar.gz"
 provenance = "github-attestations"
 
 [tools.python."platforms.linux-x64"]
-checksum = "sha256:ddc902fd26460f728758c67d80417c1031edf97589f1f162c4ba3aa158a35998"
-url = "https://github.com/astral-sh/python-build-standalone/releases/download/20261009/cpython-3.14.8+20261009-x86_64-unknown-linux-gnu-install_only_stripped.tar.gz"
+checksum = "sha256:d8faa1b588506b9e3e5a3f57807bb056d534a1641a6b10d15b6ea3f0b413b960"
+url = "https://github.com/astral-sh/python-build-standalone/releases/download/20261013/cpython-3.14.8+20261013-x86_64-unknown-linux-gnu-install_only_stripped.tar.gz"
 provenance = "github-attestations"
