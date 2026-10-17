@@ -4,7 +4,7 @@
     "vercel-labs/agent-browser": {
       "requestedRef": "v0.39.1",
       "resolvedRef": "1165952d74ceed98fdc2dd97190ad41f44dd0e24",
-      "resolvedAt": "2026-10-14T22:13:44.963Z",
+      "resolvedAt": "2026-10-17T21:25:42.529Z",
       "skills": {
         "agent-browser": {
           "integrity": "sha256-80161e6836b3b40f4e83730a290deb40ac14d877d38c97ad5f6d71be37ce74c3"
@@ -12,7 +12,8 @@
       },
       "skillSelection": [
         "agent-browser"
-      ]
+      ],
+      "skillsPath": "skills"
     }
   }
 }
