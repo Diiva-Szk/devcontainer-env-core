@@ -3,34 +3,34 @@
 lockfile_version = 2
 
 [[tools."aqua:anthropics/claude-code"]]
-version = "2.1.302"
+version = "2.1.303"
 backend = "aqua:anthropics/claude-code"
-specifiers = ["2.1.302"]
+specifiers = ["2.1.303"]
 
 [tools."aqua:anthropics/claude-code"."platforms.linux-arm64"]
-checksum = "sha256:812a10792bf91bccba6de57b86c2ff055264037b99011cfd558db8e6967760c3"
-url = "https://github.com/anthropics/claude-code/releases/download/v2.1.302/claude-linux-arm64.tar.gz"
-url_api = "https://api.github.com/repos/anthropics/claude-code/releases/assets/647955914"
+checksum = "sha256:0c219f6d5fadf1ce5771f7976fe18d6a57a9b8267def5198b58d3e121eeb98c1"
+url = "https://github.com/anthropics/claude-code/releases/download/v2.1.303/claude-linux-arm64.tar.gz"
+url_api = "https://api.github.com/repos/anthropics/claude-code/releases/assets/654495513"
 
 [tools."aqua:anthropics/claude-code"."platforms.linux-x64"]
-checksum = "sha256:0d865f10fe49f2e731ab9d4f7bdcce082cad4f7bbf71d2cbbf7be47b9d8ae5dc"
-url = "https://github.com/anthropics/claude-code/releases/download/v2.1.302/claude-linux-x64.tar.gz"
-url_api = "https://api.github.com/repos/anthropics/claude-code/releases/assets/647956172"
+checksum = "sha256:9ef730488e8b75d47f23c156282a73c89db3342aaf756ed7ec0b78a88fb31f3e"
+url = "https://github.com/anthropics/claude-code/releases/download/v2.1.303/claude-linux-x64.tar.gz"
+url_api = "https://api.github.com/repos/anthropics/claude-code/releases/assets/654495696"
 
 [[tools."aqua:dagucloud/dagu"]]
-version = "2.20.1"
+version = "2.21.0"
 backend = "aqua:dagucloud/dagu"
-specifiers = ["2.20.1"]
+specifiers = ["2.21.0"]
 
 [tools."aqua:dagucloud/dagu"."platforms.linux-arm64"]
-checksum = "sha256:eab7377c1b1993f8eb4c272f9383174effdf4caee0bf7e00def7f2e644fe3186"
-url = "https://github.com/dagucloud/dagu/releases/download/v2.20.1/dagu_2.20.1_linux_arm64.tar.gz"
-url_api = "https://api.github.com/repos/dagucloud/dagu/releases/assets/640368530"
+checksum = "sha256:a03d1ab129d25323002e32b161870081b9db6e09d4bc455705725ccf9d846e74"
+url = "https://github.com/dagucloud/dagu/releases/download/v2.21.0/dagu_2.21.0_linux_arm64.tar.gz"
+url_api = "https://api.github.com/repos/dagucloud/dagu/releases/assets/652504261"
 
 [tools."aqua:dagucloud/dagu"."platforms.linux-x64"]
-checksum = "sha256:0d5c1612cd842931fe6d4e598fc2e43fb912a94122e571c62a8f73691ea49837"
-url = "https://github.com/dagucloud/dagu/releases/download/v2.20.1/dagu_2.20.1_linux_amd64.tar.gz"
-url_api = "https://api.github.com/repos/dagucloud/dagu/releases/assets/640368359"
+checksum = "sha256:4004de798006e4b70d8002f287f0389f34a8271baec380bccf60b710f0ae0f75"
+url = "https://github.com/dagucloud/dagu/releases/download/v2.21.0/dagu_2.21.0_linux_amd64.tar.gz"
+url_api = "https://api.github.com/repos/dagucloud/dagu/releases/assets/652504050"
 
 [[tools."aqua:dyoshikawa/rulesync"]]
 version = "33.0.0"
@@ -65,34 +65,34 @@ url = "https://github.com/github/copilot-cli/releases/download/v1.0.98/copilot-l
 url_api = "https://api.github.com/repos/github/copilot-cli/releases/assets/641478341"
 
 [[tools."aqua:github/copilot-language-server-release"]]
-version = "1.554.0"
+version = "1.555.0"
 backend = "aqua:github/copilot-language-server-release"
-specifiers = ["1.554.0"]
+specifiers = ["1.555.0"]
 
 [tools."aqua:github/copilot-language-server-release"."platforms.linux-arm64"]
-checksum = "sha256:12b6b2df64987ffb42c79cab409cdc6f0e239b56d04569a2e29cc0d107febfc3"
-url = "https://github.com/github/copilot-language-server-release/releases/download/1.554.0/copilot-language-server-linux-arm64-1.554.0.zip"
-url_api = "https://api.github.com/repos/github/copilot-language-server-release/releases/assets/639241491"
+checksum = "sha256:3bac5bd8866f0a87efc91093b7bf84bff4cdcf1993238887415da71f566999e7"
+url = "https://github.com/github/copilot-language-server-release/releases/download/1.555.0/copilot-language-server-linux-arm64-1.555.0.zip"
+url_api = "https://api.github.com/repos/github/copilot-language-server-release/releases/assets/654256624"
 
 [tools."aqua:github/copilot-language-server-release"."platforms.linux-x64"]
-checksum = "sha256:f87d67b12986bfb8106cd19fef79b80a423bc1012975c8f380bcd164a753b541"
-url = "https://github.com/github/copilot-language-server-release/releases/download/1.554.0/copilot-language-server-linux-x64-1.554.0.zip"
-url_api = "https://api.github.com/repos/github/copilot-language-server-release/releases/assets/639241490"
+checksum = "sha256:8ef421180bb488ba2a5ac91322fdb59ab912c0150b82891378f1e258005785c7"
+url = "https://github.com/github/copilot-language-server-release/releases/download/1.555.0/copilot-language-server-linux-x64-1.555.0.zip"
+url_api = "https://api.github.com/repos/github/copilot-language-server-release/releases/assets/654256623"
 
 [[tools."aqua:google-antigravity/antigravity-cli"]]
-version = "1.4.0"
+version = "1.4.2"
 backend = "aqua:google-antigravity/antigravity-cli"
-specifiers = ["1.4.0"]
+specifiers = ["1.4.2"]
 
 [tools."aqua:google-antigravity/antigravity-cli"."platforms.linux-arm64"]
-checksum = "sha256:cf953adcc69f87d00d71f97c3f35dc723a8669a350accf9a199df781f0523f56"
-url = "https://github.com/google-antigravity/antigravity-cli/releases/download/1.4.0/agy_cli_linux_arm64.tar.gz"
-url_api = "https://api.github.com/repos/google-antigravity/antigravity-cli/releases/assets/646245207"
+checksum = "sha256:08dd4a2ca52d531fef1dfae4ec2fbafcd56342bfa694c8193a60da2b26fb1898"
+url = "https://github.com/google-antigravity/antigravity-cli/releases/download/1.4.2/agy_cli_linux_arm64.tar.gz"
+url_api = "https://api.github.com/repos/google-antigravity/antigravity-cli/releases/assets/652019035"
 
 [tools."aqua:google-antigravity/antigravity-cli"."platforms.linux-x64"]
-checksum = "sha256:fd96967583c1eed94733c039638fa59b71ddbd823c75ebc8dd0e677463565aad"
-url = "https://github.com/google-antigravity/antigravity-cli/releases/download/1.4.0/agy_cli_linux_x64.tar.gz"
-url_api = "https://api.github.com/repos/google-antigravity/antigravity-cli/releases/assets/646245209"
+checksum = "sha256:6395837ac0e193dd3fe50f1228e1c4aea345ca99636d54404ab7e74397d4091c"
+url = "https://github.com/google-antigravity/antigravity-cli/releases/download/1.4.2/agy_cli_linux_x64.tar.gz"
+url_api = "https://api.github.com/repos/google-antigravity/antigravity-cli/releases/assets/652019030"
 
 [[tools."aqua:vercel-labs/agent-browser"]]
 version = "0.39.1"

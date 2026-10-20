@@ -9,15 +9,15 @@
 
 [tools]
 # ai tools
-"aqua:anthropics/claude-code" = "2.1.302"
+"aqua:anthropics/claude-code" = "2.1.303"
 "aqua:github/copilot-cli" = "1.0.98"
-"aqua:github/copilot-language-server-release" = "1.554.0"
-"aqua:google-antigravity/antigravity-cli" = "1.4.0"
+"aqua:github/copilot-language-server-release" = "1.555.0"
+"aqua:google-antigravity/antigravity-cli" = "1.4.2"
 # AI エージェント向けのルール・設定を各ツールの形式で生成する CLI
 "aqua:dyoshikawa/rulesync" = "33.0.0"
 
 # Dagu（YAML で定義したワークフロー（DAG）を実行するエンジン）
-"aqua:dagucloud/dagu" = "2.20.1"
+"aqua:dagucloud/dagu" = "2.21.0"
 
 # agent-browser（コーディングエージェント向けのブラウザ操作 CLI）
 #   npm でも配布されているが、そちらは全プラットフォームのバイナリを1パッケージに同梱するため
