@@ -3,19 +3,19 @@
 lockfile_version = 2
 
 [[tools."aqua:anthropics/claude-code"]]
-version = "2.1.303"
+version = "2.1.305"
 backend = "aqua:anthropics/claude-code"
-specifiers = ["2.1.303"]
+specifiers = ["2.1.305"]
 
 [tools."aqua:anthropics/claude-code"."platforms.linux-arm64"]
-checksum = "sha256:0c219f6d5fadf1ce5771f7976fe18d6a57a9b8267def5198b58d3e121eeb98c1"
-url = "https://github.com/anthropics/claude-code/releases/download/v2.1.303/claude-linux-arm64.tar.gz"
-url_api = "https://api.github.com/repos/anthropics/claude-code/releases/assets/654495513"
+checksum = "sha256:045a138e9b0239743f41d5195ad070e6262a4f7ee9c1078916f44bce007b3e52"
+url = "https://github.com/anthropics/claude-code/releases/download/v2.1.305/claude-linux-arm64.tar.gz"
+url_api = "https://api.github.com/repos/anthropics/claude-code/releases/assets/660257275"
 
 [tools."aqua:anthropics/claude-code"."platforms.linux-x64"]
-checksum = "sha256:9ef730488e8b75d47f23c156282a73c89db3342aaf756ed7ec0b78a88fb31f3e"
-url = "https://github.com/anthropics/claude-code/releases/download/v2.1.303/claude-linux-x64.tar.gz"
-url_api = "https://api.github.com/repos/anthropics/claude-code/releases/assets/654495696"
+checksum = "sha256:7f5a0b346e6237a08de0aa447f0f6da04b8a862152ce1effa19f576d7b480e07"
+url = "https://github.com/anthropics/claude-code/releases/download/v2.1.305/claude-linux-x64.tar.gz"
+url_api = "https://api.github.com/repos/anthropics/claude-code/releases/assets/660257758"
 
 [[tools."aqua:dagucloud/dagu"]]
 version = "2.21.0"
@@ -50,49 +50,49 @@ url_api = "https://api.github.com/repos/dyoshikawa/rulesync/releases/assets/6326
 provenance = "github-attestations"
 
 [[tools."aqua:github/copilot-cli"]]
-version = "1.0.98"
+version = "1.0.101"
 backend = "aqua:github/copilot-cli"
-specifiers = ["1.0.98"]
+specifiers = ["1.0.101"]
 
 [tools."aqua:github/copilot-cli"."platforms.linux-arm64"]
-checksum = "sha256:a7509dcac0e5f22886788ba4c1e2f8b9b07367e84714e42b9e7cee4d8f9fa5f2"
-url = "https://github.com/github/copilot-cli/releases/download/v1.0.98/copilot-linux-arm64.tar.gz"
-url_api = "https://api.github.com/repos/github/copilot-cli/releases/assets/641478156"
+checksum = "sha256:14f7a68725866eac987f813b6b485595c280ea58b4ad351e08b0051de40794de"
+url = "https://github.com/github/copilot-cli/releases/download/v1.0.101/copilot-linux-arm64.tar.gz"
+url_api = "https://api.github.com/repos/github/copilot-cli/releases/assets/660175618"
 
 [tools."aqua:github/copilot-cli"."platforms.linux-x64"]
-checksum = "sha256:87ddb4b3f98462b7cb13c0a6857c68ee410ec9673e2e5f64ee5bedad45825b05"
-url = "https://github.com/github/copilot-cli/releases/download/v1.0.98/copilot-linux-x64.tar.gz"
-url_api = "https://api.github.com/repos/github/copilot-cli/releases/assets/641478341"
+checksum = "sha256:5fc08295c464e4c7de763fbb29c5d4cf4720d8265d3ded3781a2be655f554f74"
+url = "https://github.com/github/copilot-cli/releases/download/v1.0.101/copilot-linux-x64.tar.gz"
+url_api = "https://api.github.com/repos/github/copilot-cli/releases/assets/660176204"
 
 [[tools."aqua:github/copilot-language-server-release"]]
-version = "1.555.0"
+version = "1.556.0"
 backend = "aqua:github/copilot-language-server-release"
-specifiers = ["1.555.0"]
+specifiers = ["1.556.0"]
 
 [tools."aqua:github/copilot-language-server-release"."platforms.linux-arm64"]
-checksum = "sha256:3bac5bd8866f0a87efc91093b7bf84bff4cdcf1993238887415da71f566999e7"
-url = "https://github.com/github/copilot-language-server-release/releases/download/1.555.0/copilot-language-server-linux-arm64-1.555.0.zip"
-url_api = "https://api.github.com/repos/github/copilot-language-server-release/releases/assets/654256624"
+checksum = "sha256:6d215b4796a88efafa4f580af66204aaf3e7735e39c5727864b3394cd34a42ad"
+url = "https://github.com/github/copilot-language-server-release/releases/download/1.556.0/copilot-language-server-linux-arm64-1.556.0.zip"
+url_api = "https://api.github.com/repos/github/copilot-language-server-release/releases/assets/658031003"
 
 [tools."aqua:github/copilot-language-server-release"."platforms.linux-x64"]
-checksum = "sha256:8ef421180bb488ba2a5ac91322fdb59ab912c0150b82891378f1e258005785c7"
-url = "https://github.com/github/copilot-language-server-release/releases/download/1.555.0/copilot-language-server-linux-x64-1.555.0.zip"
-url_api = "https://api.github.com/repos/github/copilot-language-server-release/releases/assets/654256623"
+checksum = "sha256:714087834355debe4bdc973e40d4eebb28ebbd405a5a3a824b6dff59aada1e15"
+url = "https://github.com/github/copilot-language-server-release/releases/download/1.556.0/copilot-language-server-linux-x64-1.556.0.zip"
+url_api = "https://api.github.com/repos/github/copilot-language-server-release/releases/assets/658031004"
 
 [[tools."aqua:google-antigravity/antigravity-cli"]]
-version = "1.4.2"
+version = "1.4.3"
 backend = "aqua:google-antigravity/antigravity-cli"
-specifiers = ["1.4.2"]
+specifiers = ["1.4.3"]
 
 [tools."aqua:google-antigravity/antigravity-cli"."platforms.linux-arm64"]
-checksum = "sha256:08dd4a2ca52d531fef1dfae4ec2fbafcd56342bfa694c8193a60da2b26fb1898"
-url = "https://github.com/google-antigravity/antigravity-cli/releases/download/1.4.2/agy_cli_linux_arm64.tar.gz"
-url_api = "https://api.github.com/repos/google-antigravity/antigravity-cli/releases/assets/652019035"
+checksum = "sha256:045aa7112f574ef97f8320a65d30a555c4ce9bdd5e3d56d40fce7e262ca98cda"
+url = "https://github.com/google-antigravity/antigravity-cli/releases/download/1.4.3/agy_cli_linux_arm64.tar.gz"
+url_api = "https://api.github.com/repos/google-antigravity/antigravity-cli/releases/assets/658258711"
 
 [tools."aqua:google-antigravity/antigravity-cli"."platforms.linux-x64"]
-checksum = "sha256:6395837ac0e193dd3fe50f1228e1c4aea345ca99636d54404ab7e74397d4091c"
-url = "https://github.com/google-antigravity/antigravity-cli/releases/download/1.4.2/agy_cli_linux_x64.tar.gz"
-url_api = "https://api.github.com/repos/google-antigravity/antigravity-cli/releases/assets/652019030"
+checksum = "sha256:319b2cb3240d244930bd077033b466941fd7ba6f0881d783eee801dbd2fb9371"
+url = "https://github.com/google-antigravity/antigravity-cli/releases/download/1.4.3/agy_cli_linux_x64.tar.gz"
+url_api = "https://api.github.com/repos/google-antigravity/antigravity-cli/releases/assets/658258713"
 
 [[tools."aqua:vercel-labs/agent-browser"]]
 version = "0.39.1"
@@ -133,20 +133,6 @@ backend = "github:openai/codex"
 specifiers = ["0.163.0"]
 
 [tools."github:openai/codex".options]
-asset_pattern = "codex-package-x86_64-unknown-linux-musl.tar.gz"
-version_prefix = "rust-v"
-
-[tools."github:openai/codex"."platforms.linux-x64"]
-checksum = "sha256:582646c6bf0561eb0de540f7fc85b9121b0091a826bc6e96830b7f1722122182"
-url = "https://github.com/openai/codex/releases/download/rust-v0.163.0/codex-package-x86_64-unknown-linux-musl.tar.gz"
-url_api = "https://api.github.com/repos/openai/codex/releases/assets/645227523"
-
-[[tools."github:openai/codex"]]
-version = "0.163.0"
-backend = "github:openai/codex"
-specifiers = ["0.163.0"]
-
-[tools."github:openai/codex".options]
 asset_pattern = "codex-package-aarch64-unknown-linux-musl.tar.gz"
 version_prefix = "rust-v"
 
@@ -154,6 +140,20 @@ version_prefix = "rust-v"
 checksum = "sha256:9d8ecf2d19d3e184877983902d6c85de48b3888dcb72c382a8a0c975845927fb"
 url = "https://github.com/openai/codex/releases/download/rust-v0.163.0/codex-package-aarch64-unknown-linux-musl.tar.gz"
 url_api = "https://api.github.com/repos/openai/codex/releases/assets/645213921"
+
+[[tools."github:openai/codex"]]
+version = "0.163.0"
+backend = "github:openai/codex"
+specifiers = ["0.163.0"]
+
+[tools."github:openai/codex".options]
+asset_pattern = "codex-package-x86_64-unknown-linux-musl.tar.gz"
+version_prefix = "rust-v"
+
+[tools."github:openai/codex"."platforms.linux-x64"]
+checksum = "sha256:582646c6bf0561eb0de540f7fc85b9121b0091a826bc6e96830b7f1722122182"
+url = "https://github.com/openai/codex/releases/download/rust-v0.163.0/codex-package-x86_64-unknown-linux-musl.tar.gz"
+url_api = "https://api.github.com/repos/openai/codex/releases/assets/645227523"
 
 [[tools."github:szk302/drawio-png-cli"]]
 version = "0.1.0"
@@ -184,20 +184,20 @@ url_api = "https://api.github.com/repos/szk302/drawio-png-cli/releases/assets/61
 provenance = "github-attestations"
 
 [[tools."http:kiro-cli"]]
-version = "2.32.0"
+version = "2.33.1"
 backend = "http:kiro-cli"
-specifiers = ["2.32.0"]
+specifiers = ["2.33.1"]
 
 [tools."http:kiro-cli".options]
 strip_components = "1"
 
 [tools."http:kiro-cli"."platforms.linux-arm64"]
-checksum = "sha256:98e5b923c7ed8bf589eb9b9d823e6611cba96f26c719cdb053959897738623ec"
-url = "https://desktop-release.q.us-east-1.amazonaws.com/2.32.0/kirocli-aarch64-linux.tar.gz"
+checksum = "sha256:b0e002b8fb512cbeb697a224ebe8ee9e0f15b3ab0427062205422c0b37b35f66"
+url = "https://desktop-release.q.us-east-1.amazonaws.com/2.33.1/kirocli-aarch64-linux.tar.gz"
 
 [tools."http:kiro-cli"."platforms.linux-x64"]
-checksum = "sha256:05989f9bfe465b304e8d1b2dba50aec2b84fcc1deaa4c0773af3f539d6e0d312"
-url = "https://desktop-release.q.us-east-1.amazonaws.com/2.32.0/kirocli-x86_64-linux.tar.gz"
+checksum = "sha256:5993158abeb1a3086a591d5c7dd77e3db3c889a3c0d8b41418bc6a1af79400fb"
+url = "https://desktop-release.q.us-east-1.amazonaws.com/2.33.1/kirocli-x86_64-linux.tar.gz"
 
 [[tools."npm:@playwright/cli"]]
 version = "0.1.22"
@@ -206,7 +206,7 @@ backend = "npm:@playwright/cli"
 specifiers = ["0.1.22"]
 
 [[tools."npm:ctx7"]]
-version = "0.8.0"
-aube = { path = ".mise/locks/npm-ctx7/0.8.0", digest = "sha256:8353ec15715b69969e8c7138164dc499436770e3e9c102f7be105ca733e782b7" }
+version = "0.8.1"
+aube = { path = ".mise/locks/npm-ctx7/0.8.1", digest = "sha256:11d584d4481f7f8ec4fadb9edf7ec5882838472ea2346807fac75a4416248bfc" }
 backend = "npm:ctx7"
-specifiers = ["0.8.0"]
+specifiers = ["0.8.1"]
