@@ -9,22 +9,22 @@
 
 [tools]
 # ai tools
-"aqua:anthropics/claude-code" = "2.1.306"
-"aqua:github/copilot-cli" = "1.0.102"
-"aqua:github/copilot-language-server-release" = "1.556.0"
-"aqua:google-antigravity/antigravity-cli" = "1.4.4"
+"aqua:anthropics/claude-code" = "2.1.308"
+"aqua:github/copilot-cli" = "1.0.103"
+"aqua:github/copilot-language-server-release" = "1.558.0"
+"aqua:google-antigravity/antigravity-cli" = "1.4.5"
 # AI エージェント向けのルール・設定を各ツールの形式で生成する CLI
 "aqua:dyoshikawa/rulesync" = "33.0.0"
 
 # Dagu（YAML で定義したワークフロー（DAG）を実行するエンジン）
-"aqua:dagucloud/dagu" = "2.21.0"
+"aqua:dagucloud/dagu" = "2.22.0"
 
 # agent-browser（コーディングエージェント向けのブラウザ操作 CLI）
 #   npm でも配布されているが、そちらは全プラットフォームのバイナリを1パッケージに同梱するため
 #   展開後 119MB になる。aqua backend なら単一バイナリ（linux-x64 は静的リンクの musl 版）で済む。
 #   ブラウザは Google Chrome を使う（Dockerfile の AGENT_BROWSER_EXECUTABLE_PATH）。
 #   `agent-browser install` による Chrome for Testing のダウンロードは不要。
-"aqua:vercel-labs/agent-browser" = "0.39.1"
+"aqua:vercel-labs/agent-browser" = "0.39.2"
 
 # Playwright CLI（コーディングエージェント向けのブラウザ操作 CLI）
 #   npm でのみ配布されているため npm backend で入れる。mise lock が依存グラフを
