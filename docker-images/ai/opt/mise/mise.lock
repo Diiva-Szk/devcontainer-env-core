@@ -33,20 +33,20 @@ url = "https://github.com/dagucloud/dagu/releases/download/v2.21.0/dagu_2.21.0_l
 url_api = "https://api.github.com/repos/dagucloud/dagu/releases/assets/652504050"
 
 [[tools."aqua:dyoshikawa/rulesync"]]
-version = "33.0.0"
+version = "41.0.0"
 backend = "aqua:dyoshikawa/rulesync"
-specifiers = ["33.0.0"]
+specifiers = ["41.0.0"]
 
 [tools."aqua:dyoshikawa/rulesync"."platforms.linux-arm64"]
-checksum = "sha256:d179b3e4071b10349262c380d555ca4781e01f176c93f4a4a70b4c529fa93f3b"
-url = "https://github.com/dyoshikawa/rulesync/releases/download/v33.0.0/rulesync-linux-arm64"
-url_api = "https://api.github.com/repos/dyoshikawa/rulesync/releases/assets/632619099"
+checksum = "sha256:3bc83122250d12c027aac9acfb7243092ed29aa27e52f3a9a62aa0ae33e30a3c"
+url = "https://github.com/dyoshikawa/rulesync/releases/download/v41.0.0/rulesync-linux-arm64"
+url_api = "https://api.github.com/repos/dyoshikawa/rulesync/releases/assets/672017109"
 provenance = "github-attestations"
 
 [tools."aqua:dyoshikawa/rulesync"."platforms.linux-x64"]
-checksum = "sha256:c691b2c210bd6cc27abe60338164b2158c8523b965df08760658890aad1600db"
-url = "https://github.com/dyoshikawa/rulesync/releases/download/v33.0.0/rulesync-linux-x64"
-url_api = "https://api.github.com/repos/dyoshikawa/rulesync/releases/assets/632619103"
+checksum = "sha256:6598756e1f57959645589de9c2ce7b686018eb754bf1c994e8137ea2fba80ed6"
+url = "https://github.com/dyoshikawa/rulesync/releases/download/v41.0.0/rulesync-linux-x64"
+url_api = "https://api.github.com/repos/dyoshikawa/rulesync/releases/assets/672017110"
 provenance = "github-attestations"
 
 [[tools."aqua:github/copilot-cli"]]
@@ -133,20 +133,6 @@ backend = "github:openai/codex"
 specifiers = ["0.163.0"]
 
 [tools."github:openai/codex".options]
-asset_pattern = "codex-package-aarch64-unknown-linux-musl.tar.gz"
-version_prefix = "rust-v"
-
-[tools."github:openai/codex"."platforms.linux-arm64"]
-checksum = "sha256:9d8ecf2d19d3e184877983902d6c85de48b3888dcb72c382a8a0c975845927fb"
-url = "https://github.com/openai/codex/releases/download/rust-v0.163.0/codex-package-aarch64-unknown-linux-musl.tar.gz"
-url_api = "https://api.github.com/repos/openai/codex/releases/assets/645213921"
-
-[[tools."github:openai/codex"]]
-version = "0.163.0"
-backend = "github:openai/codex"
-specifiers = ["0.163.0"]
-
-[tools."github:openai/codex".options]
 asset_pattern = "codex-package-x86_64-unknown-linux-musl.tar.gz"
 version_prefix = "rust-v"
 
@@ -155,19 +141,19 @@ checksum = "sha256:582646c6bf0561eb0de540f7fc85b9121b0091a826bc6e96830b7f1722122
 url = "https://github.com/openai/codex/releases/download/rust-v0.163.0/codex-package-x86_64-unknown-linux-musl.tar.gz"
 url_api = "https://api.github.com/repos/openai/codex/releases/assets/645227523"
 
-[[tools."github:szk302/drawio-png-cli"]]
-version = "0.1.0"
-backend = "github:szk302/drawio-png-cli"
-specifiers = ["0.1.0"]
+[[tools."github:openai/codex"]]
+version = "0.163.0"
+backend = "github:openai/codex"
+specifiers = ["0.163.0"]
 
-[tools."github:szk302/drawio-png-cli".options]
-asset_pattern = "dip-*-x86_64-unknown-linux-musl.tar.gz"
+[tools."github:openai/codex".options]
+asset_pattern = "codex-package-aarch64-unknown-linux-musl.tar.gz"
+version_prefix = "rust-v"
 
-[tools."github:szk302/drawio-png-cli"."platforms.linux-x64"]
-checksum = "sha256:24e28578175dbe5a038afdfd6ace5cb71eb867891f4b29a1566d28dd20103543"
-url = "https://github.com/szk302/drawio-png-cli/releases/download/v0.1.0/dip-0.1.0-x86_64-unknown-linux-musl.tar.gz"
-url_api = "https://api.github.com/repos/szk302/drawio-png-cli/releases/assets/610979624"
-provenance = "github-attestations"
+[tools."github:openai/codex"."platforms.linux-arm64"]
+checksum = "sha256:9d8ecf2d19d3e184877983902d6c85de48b3888dcb72c382a8a0c975845927fb"
+url = "https://github.com/openai/codex/releases/download/rust-v0.163.0/codex-package-aarch64-unknown-linux-musl.tar.gz"
+url_api = "https://api.github.com/repos/openai/codex/releases/assets/645213921"
 
 [[tools."github:szk302/drawio-png-cli"]]
 version = "0.1.0"
@@ -181,6 +167,20 @@ asset_pattern = "dip-*-aarch64-unknown-linux-musl.tar.gz"
 checksum = "sha256:0ff21201559ace0f3513f7d6101cf9919806b188e684e76d6aedf2f1d2e31283"
 url = "https://github.com/szk302/drawio-png-cli/releases/download/v0.1.0/dip-0.1.0-aarch64-unknown-linux-musl.tar.gz"
 url_api = "https://api.github.com/repos/szk302/drawio-png-cli/releases/assets/610979601"
+provenance = "github-attestations"
+
+[[tools."github:szk302/drawio-png-cli"]]
+version = "0.1.0"
+backend = "github:szk302/drawio-png-cli"
+specifiers = ["0.1.0"]
+
+[tools."github:szk302/drawio-png-cli".options]
+asset_pattern = "dip-*-x86_64-unknown-linux-musl.tar.gz"
+
+[tools."github:szk302/drawio-png-cli"."platforms.linux-x64"]
+checksum = "sha256:24e28578175dbe5a038afdfd6ace5cb71eb867891f4b29a1566d28dd20103543"
+url = "https://github.com/szk302/drawio-png-cli/releases/download/v0.1.0/dip-0.1.0-x86_64-unknown-linux-musl.tar.gz"
+url_api = "https://api.github.com/repos/szk302/drawio-png-cli/releases/assets/610979624"
 provenance = "github-attestations"
 
 [[tools."http:kiro-cli"]]
