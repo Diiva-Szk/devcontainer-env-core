@@ -310,17 +310,18 @@ RUN apt-get update && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
-# draw.io の Web 資材（dip が AWS・Google Cloud・Azure などの draw.io 図形を描くのに使う。DIP_DRAWIO_WEB_PATH）
-#   dip の同梱資材は基本図形だけで、draw.io の図形（mxgraph.*）や画像で描く図形（image=img/lib/...）は
+# draw.io の Web 資材（d-png-cli が AWS・Google Cloud・Azure などの draw.io 図形を描くのに使う。D_PNG_DRAWIO_WEB_PATH）
+#   d-png-cli の同梱資材は基本図形だけで、draw.io の図形（mxgraph.*）や画像で描く図形（image=img/lib/...）は
 #   draw.io 本体の資材が無いと描けない。jgraph/drawio の webapp 全体は 100MB を超えるため、
-#   dip の vscode モード（既定）での描画に必要なパス（約31MB）だけを取得する。
+#   d-png-cli の vscode レンダラー（既定）での描画に必要なパス（約31MB）だけを取得する。
+#   下の d-png-cli のライブラリ（@drawio/*）も、この資材のサイドバーのコードから作る。
 #   取得するパスは ai/opt/drawio-webapp/sparse-checkout に書き、git の sparse checkout と
 #   partial clone（--filter=blob:none）で固定したコミットの該当ファイルだけを取り出す。
 #   中身はコミット SHA で固定され、git がオブジェクトのハッシュを検証する。取得後に HEAD が
 #   DRAWIO_WEBAPP_COMMIT と一致することも確かめる。
-#   DRAWIO_WEBAPP_COMMIT は dip の vscode モードが互換性を確認した上流コミット（draw.io 26.0.2。
-#   VS Code の draw.io 拡張 1.9.0 と同じ）。dip の README の記載に合わせて手で更新する
-#   （Renovate の対象外。パスを選んだ経緯・更新手順・raw / desktop モードでの制限は docs/MAINTAINING.md）。
+#   DRAWIO_WEBAPP_COMMIT は d-png-cli の vscode レンダラーが互換性を確認した上流コミット（draw.io 26.0.2。
+#   VS Code の draw.io 拡張 1.9.0 と同じ）。d-png-cli の README の記載に合わせて手で更新する
+#   （Renovate の対象外。パスを選んだ経緯・更新手順・raw / desktop-compat での制限は docs/MAINTAINING.md）。
 #   版の固定された資材で、更新の早い AI ツール（mise install）より前に置く。
 ARG DRAWIO_WEBAPP_COMMIT="96a916a337d13fc8bf622c8a67d422bd284eabe5"
 COPY --chown=root:root ai/opt/drawio-webapp/sparse-checkout /tmp/drawio-webapp.sparse-checkout
@@ -364,21 +365,22 @@ ENV DISPLAY=:1 \
 #   CTX7_TELEMETRY_DISABLED: ctx7（Context7 CLI）が ctx7.com へ送るテレメトリを止める。
 #     NO_UPDATE_NOTIFIER と同じ考え方。ctx7 の更新通知（npm レジストリへの問い合わせ）は
 #     環境変数では止められない（対話端末のときだけ動くため、エージェントの実行では通常出ない）。
-#   DIP_CHROME_PATH / DIP_CHROME_ARGS: dip（drawio-png-cli）が .drawio.png を描画する Chrome。
-#     dip は PATH の google-chrome（ラッパー）を先に見つけるが、ラッパーの --remote-debugging-port や
+#   D_PNG_CHROME_PATH / D_PNG_CHROME_ARGS: d-png-cli が .drawio.png を描画する Chrome。
+#     d-png-cli は PATH の google-chrome（ラッパー）を先に見つけるが、ラッパーの --remote-debugging-port や
 #     --user-data-dir はデスクトップの Chrome と衝突するため、ほかと同じく実体を直接指定する。
 #     実体を直接起動するとラッパーの起動オプションが付かないため、コンテナで必要なものを渡す
-#     （--no-sandbox が無いと SUID サンドボックスの検査で起動直後に落ちる）。
-#     dip は自前でヘッドレス・専用プロファイル・ループバック限定のデバッグポートを付ける。
-#   DIP_DRAWIO_WEB_PATH: dip が描画に使う draw.io の Web 資材（上で配置した /opt/drawio-webapp）。
-#     vscode モード（既定）用の資材のため、--chromium-mode raw / desktop では AWS などの図形を描けない。
+#     （d-png-cli は sandbox を自動で無効にしない。--no-sandbox が無いと SUID サンドボックスの検査で
+#     起動直後に落ちる）。
+#     d-png-cli は自前でヘッドレス・専用プロファイル・ループバック限定のデバッグポートを付ける。
+#   D_PNG_DRAWIO_WEB_PATH: d-png-cli が描画に使う draw.io の Web 資材（上で配置した /opt/drawio-webapp）。
+#     vscode レンダラー（既定）用の資材のため、--renderer raw / desktop-compat では AWS などの図形を描けない。
 ENV AGENT_BROWSER_EXECUTABLE_PATH=/opt/google/chrome/chrome \
     PLAYWRIGHT_MCP_EXECUTABLE_PATH=/opt/google/chrome/chrome \
     NO_UPDATE_NOTIFIER=1 \
     CTX7_TELEMETRY_DISABLED=1 \
-    DIP_CHROME_PATH=/opt/google/chrome/chrome \
-    DIP_CHROME_ARGS="--no-sandbox --disable-dev-shm-usage --disable-gpu" \
-    DIP_DRAWIO_WEB_PATH=/opt/drawio-webapp
+    D_PNG_CHROME_PATH=/opt/google/chrome/chrome \
+    D_PNG_CHROME_ARGS="--no-sandbox --disable-dev-shm-usage --disable-gpu" \
+    D_PNG_DRAWIO_WEB_PATH=/opt/drawio-webapp
 
 # デスクトップと ssh サーバーを起動してから共通の entrypoint.sh に処理を渡す。
 ENTRYPOINT ["/usr/local/bin/ai-entrypoint.sh"]
@@ -393,7 +395,7 @@ RUN chmod -R u=rwX,go=rX /opt/mise
 USER ${USER_NAME}
 
 # ai 専用ツールをインストール（Kiro CLI / Antigravity CLI / rulesync / Playwright CLI /
-# Context7 CLI / drawio-png-cli（dip）/ Dagu を含む）
+# Context7 CLI / d-png-cli / Dagu を含む）
 #   バイナリの取得・検証は mise が行う。各 CLI の付属のセットアップコマンドは実行しない。
 #
 # Kiro CLI: `kiro-cli setup` は実行しない（シェル統合を入れない）。
@@ -414,37 +416,42 @@ RUN mise install && \
     rulesync --version && \
     playwright-cli --version && \
     ctx7 --version && \
-    dip --version && \
+    d-png-cli --version && \
     dagu version
 
 # Dagu: 初回起動時に DAG ディレクトリ（~/.config/dagu/dags）へサンプルの DAG を書き出させない。
 ENV DAGU_SKIP_EXAMPLES=true
 
-# draw.io のカスタムライブラリ（dip library / dip insert で使う図形・アイコン）
-#   ライブラリの XML は mise で取得し（ai/opt/mise/config.toml。lock がチェックサムを固定する）、
-#   版に依存しない場所（/opt/drawio-libraries）へコピーして DIP_LIBRARY_PATH で指す。
-#   dip はこのディレクトリ直下の *.xml を読み、ファイル名（.xml を除く）がライブラリ名になる。
-#   取得元はライセンス表記のファイルをリリースに含めないため、リポジトリの LICENSE を
-#   ai/opt/drawio-libraries/ に置いて一緒に配置する（*.xml ではないので dip は読まない）。
+# d-png-cli のライブラリの取得元（file:/opt/d-png-libraries）
+#   d-png-cli はライブラリ（図形・アイコン）を同梱せず、各プロジェクトの .d-png/ に取り込んだものだけを
+#   参照する。リポジトリにはライブラリを置かず、ここで取得元を作り、ユーザーの config.toml
+#   （ai/home-config/.config/d-png-cli/config.toml）でスコープに割り当てる。プロジェクトでは
+#   `d-png-cli library install @drawio/aws4-compute` などで取り込む（版は lock.json に記録される）。
+#   @drawio/<パレット>: draw.io のサイドバーの図形（VS Code の draw.io 拡張の図形パレットと同じもの）。
+#     上で配置した Web 資材（拡張 1.9.0 と同じ draw.io 26.0.2）のサイドバーのコードを Chrome で動かし、
+#     パレットごとにライブラリにする（ai/opt/d-png-libraries/build-drawio-libraries.py。約30秒）。
+#     版は draw.io の版。draw.io のライセンス（Apache-2.0）を LICENSE-drawio として一緒に置く。
+#   @simple-icons/simple-icons: Simple Icons の draw.io ライブラリ（mise で取得し、lock がチェックサムを
+#     固定する）。版は mise の版。取得元はライセンス表記のファイルをリリースに含めないため、
+#     リポジトリの LICENSE を ai/opt/d-png-libraries/ に置いて一緒に配置する。
 #   配置中だけ一般ユーザーに書き込みを許可し、スキルの配置後に root 所有・読み取り専用へ戻す。
-#   あわせて、AWS の図形（Lambda）、Azure のアイコン（img/lib の画像）、MathJax の拡張を遅延ロードする
-#   数式（\color）を含む図を Chrome で描き、draw.io の Web 資材（/opt/drawio-webapp）で足りることを
-#   確かめる（資材が欠けていると dip が 404 を検出して失敗する）。
-ENV DIP_LIBRARY_PATH="/opt/drawio-libraries"
-
+#   home-config（ユーザーの config.toml）より前に置き、設定の変更で作り直されないようにする。
 USER root
-RUN install -d -m 0755 -o "${USER_NAME}" -g "${USER_NAME}" "${DIP_LIBRARY_PATH}"
+RUN install -d -m 0755 -o "${USER_NAME}" -g "${USER_NAME}" /opt/d-png-libraries
 USER ${USER_NAME}
 
-COPY --chown=${USER_NAME}:${USER_NAME} ai/opt/drawio-libraries /opt/drawio-libraries
+COPY --chown=${USER_NAME}:${USER_NAME} ai/opt/d-png-libraries /tmp/d-png-libraries
 RUN set -eu; \
-    install -m 0644 "$(mise where github:mondeja/simple-icons-drawio)/simple-icons.xml" \
-      "${DIP_LIBRARY_PATH}/simple-icons.xml"; \
-    dip library list | grep -q '^simple-icons[[:space:]]'; \
-    check_dir="$(mktemp -d)"; \
-    printf '%s' '<mxfile><diagram id="p" name="p"><mxGraphModel math="1"><root><mxCell id="0"/><mxCell id="1" parent="0"/><mxCell id="2" style="shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.lambda;" vertex="1" parent="1"><mxGeometry width="60" height="60" as="geometry"/></mxCell><mxCell id="3" style="image;html=1;image=img/lib/azure2/compute/Function_Apps.svg;" vertex="1" parent="1"><mxGeometry x="80" width="64" height="56" as="geometry"/></mxCell><mxCell id="4" value="$$\color{red}{x+y}$$" style="text;html=1;" vertex="1" parent="1"><mxGeometry x="160" width="80" height="40" as="geometry"/></mxCell></root></mxGraphModel></diagram></mxfile>' \
-      | dip embed --renderer chromium -o "${check_dir}/check.drawio.png" > /dev/null; \
-    rm -rf "${check_dir}"
+    python3 -I /tmp/d-png-libraries/build-drawio-libraries.py \
+      --webapp /opt/drawio-webapp --chrome /opt/google/chrome/chrome \
+      --scope drawio --to /opt/d-png-libraries; \
+    simple_icons="$(mise where github:mondeja/simple-icons-drawio)"; \
+    d-png-cli library pack "${simple_icons}/simple-icons.xml" \
+      --name @simple-icons/simple-icons --version "$(basename "${simple_icons}")" \
+      --to /opt/d-png-libraries > /dev/null; \
+    install -m 0644 /opt/drawio-webapp/LICENSE /opt/d-png-libraries/LICENSE-drawio; \
+    install -m 0644 /tmp/d-png-libraries/LICENSE-simple-icons-drawio.md /opt/d-png-libraries/; \
+    rm -rf /tmp/d-png-libraries
 
 # ai 用の home 初期ファイル（AI ツールの設定と、デスクトップ（Openbox / idesk / KasmVNC）の設定）
 #   【注意】このうち AI ツールの設定（.claude / .codex / .kiro / .gemini 配下）は、
@@ -455,6 +462,24 @@ RUN set -eu; \
 #   イメージを作り直せばそのまま反映される。
 COPY --chown=${USER_NAME}:${USER_NAME} ai/home-config "/home/${USER_NAME}"
 RUN chmod 0755 "/home/${USER_NAME}/.vnc/xstartup"
+
+# d-png-cli のライブラリと draw.io の Web 資材の確認
+#   一時的なプロジェクトに、ユーザーの config.toml のスコープを通して取得元からライブラリを取り込み、
+#   参照（dpng-ref）で置いた図を Chrome で描く。図は、AWS の図形（Lambda）、Azure のアイコン（img/lib の画像）、
+#   Google Cloud のアイコン（図に埋め込まれた data: の画像）、Misc のアイコン（img/clipart の画像）、
+#   Simple Icons のアイコン、MathJax の拡張を遅延ロードする数式（\color）を含む。
+#   ライブラリの参照・取り込みと、draw.io の Web 資材（/opt/drawio-webapp）で足りることを確かめる
+#   （資材が欠けていると d-png-cli が ASSET_MISSING などで失敗する）。
+#   取得元のキャッシュ（D_PNG_CACHE）も一時ディレクトリに置き、イメージに残さない。
+RUN set -eu; \
+    check_dir="$(mktemp -d)"; \
+    export D_PNG_PROJECT="${check_dir}" D_PNG_CACHE="${check_dir}/cache"; \
+    d-png-cli init "${check_dir}" > /dev/null; \
+    d-png-cli library install @drawio/aws4-compute @drawio/azure2-compute @drawio/gcp2-compute \
+      @drawio/misc @simple-icons/simple-icons > /dev/null; \
+    printf '%s' '<mxfile><diagram id="p" name="p"><mxGraphModel math="1"><root><mxCell id="0"/><mxCell id="1" parent="0"/><mxCell id="aws" parent="1" dpng-ref="@drawio/aws4-compute/lambda"><mxGeometry as="geometry"/></mxCell><mxCell id="azure" parent="1" dpng-ref="@drawio/azure2-compute/function-apps"><mxGeometry x="100" as="geometry"/></mxCell><mxCell id="gcp" parent="1" dpng-ref="@drawio/gcp2-compute/compute-engine"><mxGeometry x="200" as="geometry"/></mxCell><mxCell id="misc" parent="1" dpng-ref="@drawio/misc/icon"><mxGeometry x="360" as="geometry"/></mxCell><mxCell id="si" parent="1" dpng-ref="@simple-icons/simple-icons/postgresql"><mxGeometry x="440" width="48" as="geometry"/></mxCell><mxCell id="math" value="$$\color{red}{x+y}$$" style="text;html=1;" vertex="1" parent="1"><mxGeometry x="520" width="80" height="40" as="geometry"/></mxCell></root></mxGraphModel></diagram></mxfile>' \
+      | d-png-cli write -o "${check_dir}/check.drawio.png" > /dev/null; \
+    rm -rf "${check_dir}"
 
 # AI エージェント向けのスキルを、各 AI エージェントのグローバル設定へ展開する。
 #   スキルの内容は自分では書かない。各 CLI・公式リポジトリが配布しているものをそのまま使い、
@@ -480,11 +505,11 @@ RUN chmod 0755 "/home/${USER_NAME}/.vnc/xstartup"
 #     ビルドを落とす（CLI の版だけが Renovate で上がり、スキルが古いまま残って
 #     気づけない事態を防ぐ）。Renovate の PR では update-find-docs-skill ワークフローが
 #     同じ版のタグからスキルを作り直して push し、この照合を通す。
-#   drawio-png（dip）: find-docs と同じく、リリースタグ（v<版>）が注釈付きタグのため
-#     rulesync で取得できず、ai/opt/rulesync/.rulesync/skills/drawio-png/ に SKILL.md と
+#   d-png（d-png-cli）: find-docs と同じく、リリースタグ（v<版>）が注釈付きタグのため
+#     rulesync で取得できず、ai/opt/rulesync/.rulesync/skills/d-png/ に SKILL.md と
 #     LICENSE（MIT）を vendoring している。SKILL.md は案内だけで、手順の本文は
-#     `dip skill` がインストール済みの dip から出力する（版によって変わらない作り）。
-#     そのため版の照合はせず、下の RUN で `dip skill` が使えることだけを確かめる。
+#     `d-png-cli skill` がインストール済みの d-png-cli から出力する（版によって変わらない作り）。
+#     そのため版の照合はせず、下の RUN で `d-png-cli skill` が使えることだけを確かめる。
 #
 #   取得は rulesync の宣言的ソースで行い、rulesync.lock がコミット SHA と
 #   成果物ごとのハッシュを固定する。--frozen により lock とズレたらビルドを落とす。
@@ -527,9 +552,8 @@ RUN set -eu; \
     test -f "/home/${USER_NAME}/.claude/skills/agent-browser/SKILL.md"; \
     test -f "/home/${USER_NAME}/.claude/skills/playwright-cli/SKILL.md"; \
     test -f "/home/${USER_NAME}/.claude/skills/find-docs/SKILL.md"; \
-    test -f "/home/${USER_NAME}/.claude/skills/drawio-png/SKILL.md"; \
-    dip skill > /dev/null; \
-    dip skill --full > /dev/null; \
+    test -f "/home/${USER_NAME}/.claude/skills/d-png/SKILL.md"; \
+    d-png-cli skill > /dev/null; \
     if grep -qE 'npx ctx7|ctx7@latest|npm install -g' "/home/${USER_NAME}/.claude/skills/find-docs/SKILL.md"; then \
       echo "find-docs/SKILL.md に npx ctx7 / ctx7@latest / npm install -g が残っています（置換漏れ）。" >&2; \
       exit 1; \
@@ -540,8 +564,8 @@ WORKDIR "/home/${USER_NAME}"
 
 # 生成が済んだら、他の /opt 配下と同じく root 所有・読み取り専用にする。
 USER root
-RUN chown -R root:root /opt/rulesync /opt/agent-browser-skills /opt/agent-browser /opt/drawio-libraries && \
-    chmod -R u=rwX,go=rX /opt/rulesync /opt/agent-browser-skills /opt/agent-browser /opt/drawio-libraries
+RUN chown -R root:root /opt/rulesync /opt/agent-browser-skills /opt/agent-browser /opt/d-png-libraries && \
+    chmod -R u=rwX,go=rX /opt/rulesync /opt/agent-browser-skills /opt/agent-browser /opt/d-png-libraries
 
 # イメージが管理するホーム配下の設定の「原本」。
 #   各 AI ツールのディレクトリは compose.yml で volume にしており、認証情報や

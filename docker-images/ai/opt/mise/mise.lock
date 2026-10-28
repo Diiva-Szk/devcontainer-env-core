@@ -133,20 +133,6 @@ backend = "github:openai/codex"
 specifiers = ["0.163.0"]
 
 [tools."github:openai/codex".options]
-asset_pattern = "codex-package-x86_64-unknown-linux-musl.tar.gz"
-version_prefix = "rust-v"
-
-[tools."github:openai/codex"."platforms.linux-x64"]
-checksum = "sha256:582646c6bf0561eb0de540f7fc85b9121b0091a826bc6e96830b7f1722122182"
-url = "https://github.com/openai/codex/releases/download/rust-v0.163.0/codex-package-x86_64-unknown-linux-musl.tar.gz"
-url_api = "https://api.github.com/repos/openai/codex/releases/assets/645227523"
-
-[[tools."github:openai/codex"]]
-version = "0.163.0"
-backend = "github:openai/codex"
-specifiers = ["0.163.0"]
-
-[tools."github:openai/codex".options]
 asset_pattern = "codex-package-aarch64-unknown-linux-musl.tar.gz"
 version_prefix = "rust-v"
 
@@ -155,32 +141,46 @@ checksum = "sha256:9d8ecf2d19d3e184877983902d6c85de48b3888dcb72c382a8a0c97584592
 url = "https://github.com/openai/codex/releases/download/rust-v0.163.0/codex-package-aarch64-unknown-linux-musl.tar.gz"
 url_api = "https://api.github.com/repos/openai/codex/releases/assets/645213921"
 
-[[tools."github:szk302/drawio-png-cli"]]
-version = "0.1.0"
-backend = "github:szk302/drawio-png-cli"
-specifiers = ["0.1.0"]
+[[tools."github:openai/codex"]]
+version = "0.163.0"
+backend = "github:openai/codex"
+specifiers = ["0.163.0"]
 
-[tools."github:szk302/drawio-png-cli".options]
-asset_pattern = "dip-*-aarch64-unknown-linux-musl.tar.gz"
+[tools."github:openai/codex".options]
+asset_pattern = "codex-package-x86_64-unknown-linux-musl.tar.gz"
+version_prefix = "rust-v"
 
-[tools."github:szk302/drawio-png-cli"."platforms.linux-arm64"]
-checksum = "sha256:0ff21201559ace0f3513f7d6101cf9919806b188e684e76d6aedf2f1d2e31283"
-url = "https://github.com/szk302/drawio-png-cli/releases/download/v0.1.0/dip-0.1.0-aarch64-unknown-linux-musl.tar.gz"
-url_api = "https://api.github.com/repos/szk302/drawio-png-cli/releases/assets/610979601"
+[tools."github:openai/codex"."platforms.linux-x64"]
+checksum = "sha256:582646c6bf0561eb0de540f7fc85b9121b0091a826bc6e96830b7f1722122182"
+url = "https://github.com/openai/codex/releases/download/rust-v0.163.0/codex-package-x86_64-unknown-linux-musl.tar.gz"
+url_api = "https://api.github.com/repos/openai/codex/releases/assets/645227523"
+
+[[tools."github:szk302/d-png-cli"]]
+version = "0.2.0"
+backend = "github:szk302/d-png-cli"
+specifiers = ["0.2.0"]
+
+[tools."github:szk302/d-png-cli".options]
+asset_pattern = "d-png-cli-*-aarch64-unknown-linux-musl.tar.gz"
+
+[tools."github:szk302/d-png-cli"."platforms.linux-arm64"]
+checksum = "sha256:8222ecb6c9896de4360f2a40730f29072430691839a987f23611b31129f1e274"
+url = "https://github.com/szk302/d-png-cli/releases/download/v0.2.0/d-png-cli-0.2.0-aarch64-unknown-linux-musl.tar.gz"
+url_api = "https://api.github.com/repos/szk302/d-png-cli/releases/assets/684810011"
 provenance = "github-attestations"
 
-[[tools."github:szk302/drawio-png-cli"]]
-version = "0.1.0"
-backend = "github:szk302/drawio-png-cli"
-specifiers = ["0.1.0"]
+[[tools."github:szk302/d-png-cli"]]
+version = "0.2.0"
+backend = "github:szk302/d-png-cli"
+specifiers = ["0.2.0"]
 
-[tools."github:szk302/drawio-png-cli".options]
-asset_pattern = "dip-*-x86_64-unknown-linux-musl.tar.gz"
+[tools."github:szk302/d-png-cli".options]
+asset_pattern = "d-png-cli-*-x86_64-unknown-linux-musl.tar.gz"
 
-[tools."github:szk302/drawio-png-cli"."platforms.linux-x64"]
-checksum = "sha256:24e28578175dbe5a038afdfd6ace5cb71eb867891f4b29a1566d28dd20103543"
-url = "https://github.com/szk302/drawio-png-cli/releases/download/v0.1.0/dip-0.1.0-x86_64-unknown-linux-musl.tar.gz"
-url_api = "https://api.github.com/repos/szk302/drawio-png-cli/releases/assets/610979624"
+[tools."github:szk302/d-png-cli"."platforms.linux-x64"]
+checksum = "sha256:40fa2d357d715ed38f8e08cc94a77ace63c569c92e78591a3ab8f1220de2aacb"
+url = "https://github.com/szk302/d-png-cli/releases/download/v0.2.0/d-png-cli-0.2.0-x86_64-unknown-linux-musl.tar.gz"
+url_api = "https://api.github.com/repos/szk302/d-png-cli/releases/assets/684810039"
 provenance = "github-attestations"
 
 [[tools."http:kiro-cli"]]
@@ -207,6 +207,6 @@ specifiers = ["0.1.22"]
 
 [[tools."npm:ctx7"]]
 version = "0.8.1"
-aube = { path = ".mise/locks/npm-ctx7/0.8.1", digest = "sha256:11d584d4481f7f8ec4fadb9edf7ec5882838472ea2346807fac75a4416248bfc" }
+aube = { path = ".mise/locks/npm-ctx7/0.8.1", digest = "sha256:dd72f7671cd8b483c10e95f7395eff4ee95e164912d52be647a396d11ae54302" }
 backend = "npm:ctx7"
 specifiers = ["0.8.1"]
