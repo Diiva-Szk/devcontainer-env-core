@@ -1,0 +1,12 @@
+# d-png-cli のユーザー設定（ai コンテナ。イメージの docker-images/ai/home-config から配置する）
+#
+# イメージのビルド時に作ったライブラリの取得元（/opt/d-png-libraries）を、スコープに割り当てる。
+#   @drawio/<パレット>           draw.io のサイドバーの図形（VS Code の draw.io 拡張の図形パレット）
+#   @simple-icons/simple-icons   Simple Icons
+# ライブラリはプロジェクトごとに取り込む（d-png-cli はライブラリをユーザー領域に置かない）。
+#   d-png-cli init
+#   d-png-cli library install @drawio/aws4-compute @simple-icons/simple-icons
+# 取り込めるライブラリは ls /opt/d-png-libraries/@drawio/ で一覧できる。
+[scopes]
+drawio = "file:/opt/d-png-libraries"
+simple-icons = "file:/opt/d-png-libraries"

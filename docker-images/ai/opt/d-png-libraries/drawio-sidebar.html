@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<!-- build-drawio-libraries.py が、draw.io の Web 資材を指す <base href> をこの位置に入れる -->
+<script src="js/export-init.js"></script>
+<script src="js/app.min.js"></script>
+<script src="js/stencils.min.js"></script>
+</head>
+<body>
+<pre id="out"></pre>
+<script>
+// draw.io のサイドバー（VS Code の draw.io 拡張の図形パレット）の全エントリーを JSON で書き出す。
+// build-drawio-libraries.py がヘッドレスの Chrome（--dump-dom）で開き、#out の中身を読む。
+// d-png-cli の開発版（v0.2.0 で削除した scripts/shape_catalog.html）と同じ方法で、
+// Sidebar の UI 部分だけを差し替え、パレットを作る関数（initPalettes）をそのまま動かす。
+(function() {
+  var sb = Object.create(Sidebar.prototype);
+  var container = document.createElement('div');
+  document.body.appendChild(container);
+  sb.graph = new Graph(container);
+  sb.container = document.createElement('div');
+  sb.palettes = {};
+  sb.taglist = {};
+  sb.appendChild = function() {};
+  sb.createTitle = function() { return document.createElement('div'); };
+  sb.addFoldingHandler = function() {};
+  sb.editorUi = {editor: {graph: sb.graph}, sidebar: sb};
+  sb.initialDefaultVertexStyle = {};
+  // ステンシルを stencils.min.js から同期的に読む（索引を作る場合は非同期になり、
+  // 下の時点でパレットが空のままになる）。
+  sb.addStencilsToIndex = false;
+  // initPalettes のうち、画面だけに関わる処理。
+  sb.addSearchPalette = function() {};
+  sb.addCustomEntries = function() {};
+  sb.showEntries = function() {};
+  window.sb = sb;
+
+  var seen = {}, palettes = [], cur = null, errors = [];
+
+  function encodeCells(cells) {
+    var model = new mxGraphModel();
+    var layer = model.getChildAt(model.getRoot(), 0);
+    model.beginUpdate();
+    try {
+      for (var i = 0; i < cells.length; i++) model.add(layer, cells[i]);
+    } finally { model.endUpdate(); }
+    var node = new mxCodec().encode(model);
+    var root = node.getElementsByTagName('root')[0];
+    var out = [];
+    var kids = root.childNodes;
+    for (var j = 0; j < kids.length; j++) {
+      var id = kids[j].getAttribute && kids[j].getAttribute('id');
+      if (id === '0' || id === '1') continue;
+      out.push(mxUtils.getXml(kids[j]));
+    }
+    return out.join('');
+  }
+
+  sb.createItem = function(cells, title, showLabel, showTitle, width, height) {
+    if (cur != null && cells != null && cells.length > 0) {
+      // draw.io がサムネイルやドロップのときと同じくグラフに追加してから記録する。
+      // childLayout（stackLayout など）の子の配置は、追加したときに決まるため。
+      var graph = sb.graph;
+      var added = graph.addCells(graph.cloneCells(cells));
+      cur.entries.push({title: typeof title === 'string' ? title : '', w: width, h: height,
+        xml: encodeCells(graph.cloneCells(added))});
+      graph.getModel().clear();
+    }
+    return document.createElement('a');
+  };
+
+  sb.addPalette = function(id, title, expanded, onInit) {
+    var div = document.createElement('div');
+    if (id != null && seen[id]) return div;
+    if (id != null) seen[id] = true;
+    var saved = cur;
+    cur = {id: id, title: title, entries: []};
+    palettes.push(cur);
+    try { onInit(div); } catch (err) { errors.push(id + ': ' + err.message); }
+    cur = saved;
+    return div;
+  };
+
+  // draw.io のサイドバーのパレットを、draw.io が渡す引数のまま作る。
+  try { sb.initPalettes(); } catch (err) { errors.push('initPalettes: ' + err.message); }
+
+  document.getElementById('out').textContent = JSON.stringify(
+    {version: EditorUi.VERSION, palettes: palettes, errors: errors});
+})();
+</script>
+</body>
+</html>

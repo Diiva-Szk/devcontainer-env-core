@@ -42,30 +42,31 @@
 #   作り直す（手元では scripts/update-find-docs-skill.sh）。
 "npm:ctx7" = "0.8.1"
 
-# drawio-png-cli（dip。.drawio.png に埋め込まれた draw.io の XML を抽出・検証・更新する CLI）
+# d-png-cli（.drawio.png に埋め込まれた draw.io の XML を読み書き・検証する CLI。旧 drawio-png-cli / dip）
 #   aqua レジストリに無いため github backend で取得する。静的リンクの musl 版を使う。
-#   アーカイブは直下に dip・LICENSE・assets/（ライセンス通知）を持つため、先頭ディレクトリの
-#   自動除去は働かず、dip は展開先の直下に置かれる（bin_path・strip_components は不要）。
+#   アーカイブは直下に d-png-cli・LICENSE・THIRD_PARTY_NOTICES.md・assets/（ライセンス通知）を持つため、
+#   先頭ディレクトリの自動除去は働かず、d-png-cli は展開先の直下に置かれる（bin_path・strip_components は不要）。
 #   asset_pattern をプラットフォームごとに指定する理由は codex と同じ。
-#   描画には Google Chrome を使う（Dockerfile の DIP_CHROME_PATH / DIP_CHROME_ARGS）。
-#   スキル（drawio-png）は opt/rulesync/.rulesync/skills/drawio-png/SKILL.md に vendoring している
+#   描画には Google Chrome を使う（Dockerfile の D_PNG_CHROME_PATH / D_PNG_CHROME_ARGS）。
+#   ライブラリは同梱されないため、Dockerfile で取得元（/opt/d-png-libraries）を作る。
+#   スキル（d-png）は opt/rulesync/.rulesync/skills/d-png/SKILL.md に vendoring している
 #   （リリースタグが注釈付きタグで、find-docs と同じく rulesync が解決できないため）。
-#   スキルは案内だけで本文は `dip skill` が出力するため、版を上げてもスキルの取り直しは通常不要。
-[tools."github:szk302/drawio-png-cli"]
-version = "0.1.0"
+#   スキルは案内だけで本文は `d-png-cli skill` が出力するため、版を上げてもスキルの取り直しは通常不要。
+[tools."github:szk302/d-png-cli"]
+version = "0.2.0"
 
-[tools."github:szk302/drawio-png-cli".platforms]
-linux-x64 = { asset_pattern = "dip-*-x86_64-unknown-linux-musl.tar.gz" }
-linux-arm64 = { asset_pattern = "dip-*-aarch64-unknown-linux-musl.tar.gz" }
+[tools."github:szk302/d-png-cli".platforms]
+linux-x64 = { asset_pattern = "d-png-cli-*-x86_64-unknown-linux-musl.tar.gz" }
+linux-arm64 = { asset_pattern = "d-png-cli-*-aarch64-unknown-linux-musl.tar.gz" }
 
-# Simple Icons の draw.io カスタムライブラリ（dip の DIP_LIBRARY_PATH で読ませる）
+# Simple Icons の draw.io カスタムライブラリ（d-png-cli のライブラリの取得元に置く）
 #   ツールではなくデータ（<mxlibrary> 形式の XML、1ファイル）だが、lock によるチェックサムの固定と
 #   Renovate の追従（github-releases）を他のツールと同じ仕組みで行うため mise で取得する。
 #   リリースの全アイコン版（simple-icons.xml）を使う。プラットフォームに依存しない。
 #   mise の github backend は単体ファイルを実行ファイルとして扱うため、shim（simple-icons.xml）が
 #   PATH に1つできる（実行しても何も起きず無害）。
-#   dip は mise の配置先（版ごとに変わる）ではなく、Dockerfile で /opt/drawio-libraries へ
-#   root 所有でコピーしたものを読む。
+#   Dockerfile で `d-png-cli library pack` により @simple-icons/simple-icons（版はこの version）として
+#   /opt/d-png-libraries に置く。d-png-cli は mise の配置先を直接読まない。
 [tools."github:mondeja/simple-icons-drawio"]
 version = "16.35.0"
 asset_pattern = "simple-icons.xml"

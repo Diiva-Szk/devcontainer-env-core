@@ -65,20 +65,39 @@ flowchart LR
 
 **`ai` コンテナ** — [docker-images/ai/opt/mise/config.toml](docker-images/ai/opt/mise/config.toml)
 
-Claude Code、OpenAI Codex CLI、GitHub Copilot CLI、GitHub Copilot Language Server、Amazon Kiro CLI、Google Antigravity CLI、rulesync、Dagu（`dagu`。YAML で定義したワークフロー（DAG）を実行する）、Playwright CLI・agent-browser（ブラウザは Google Chrome を使う）、Context7 CLI（ctx7）、drawio-png-cli（dip。`.drawio.png` の図面の抽出・検証・更新。描画には Google Chrome を使う）
+Claude Code、OpenAI Codex CLI、GitHub Copilot CLI、GitHub Copilot Language Server、Amazon Kiro CLI、Google Antigravity CLI、rulesync、Dagu（`dagu`。YAML で定義したワークフロー（DAG）を実行する）、Playwright CLI・agent-browser（ブラウザは Google Chrome を使う）、Context7 CLI（ctx7）、d-png-cli（`.drawio.png` の図面の読み書き・検証。描画には Google Chrome を使う。旧 drawio-png-cli（dip））
 
-dip のライブラリ（`dip library` / `dip insert` で図に入れる図形・アイコン）として、[Simple Icons の draw.io ライブラリ](https://github.com/mondeja/simple-icons-drawio)（`simple-icons`）を `/opt/drawio-libraries` に入れ、`DIP_LIBRARY_PATH` で指しています。ブランドのロゴの利用は、各ブランドの商標の条件に従ってください。
+d-png-cli はライブラリ（図に `dpng-ref` の参照で入れる図形・アイコン）を同梱しないため、次のライブラリをイメージのビルド時に作り、取得元 `/opt/d-png-libraries` に置いています（ライブラリ自体はリポジトリに含めていません）。スコープはユーザーの設定（`~/.config/d-png-cli/config.toml`）で割り当て済みです。
 
-AWS・Google Cloud・Azure などの draw.io 標準の図形（`shape=mxgraph.aws4.*` や `image=img/lib/azure2/...` など）も描画できるよう、draw.io の Web 資材を `/opt/drawio-webapp` に入れ、`DIP_DRAWIO_WEB_PATH` で指しています。dip の既定の描画方式（`vscode` モード）用の資材のため、`--chromium-mode raw` / `desktop` ではこれらの図形は描けません。
+| ライブラリ | 中身 |
+| --- | --- |
+| `@drawio/<パレット>` | VS Code の draw.io 拡張の図形パレット（draw.io のサイドバー）の図形。パレットごとに1つのライブラリで、`general`・`flowchart`・`uml`・`aws4-compute`・`azure2-compute`・`gcp2-compute`・`kubernetes` など488個あります。版は draw.io の版（26.0.2） |
+| `@simple-icons/simple-icons` | [Simple Icons の draw.io ライブラリ](https://github.com/mondeja/simple-icons-drawio)。版は Simple Icons の版 |
 
-VS Code の draw.io 拡張（`hediet.vscode-drawio`）で編集した `.drawio.png` を `ai` コンテナの AI エージェントに修正してもらう使い方を想定しています。資材は拡張（1.9.0）に入っている draw.io と同じ版で、拡張の図形パレットの図形は `ai` 側の dip でも描画できます。ただし次の点に注意してください。
+d-png-cli は、プロジェクトに取り込んだライブラリだけを参照します。使うプロジェクトで次のように取り込んでください（`.d-png/` が作られ、`config.toml` の `[dependencies]` と `lock.json` に記録されます。取り込んだファイルは `.d-png/.gitignore` で Git から除外されます）。
 
-- Web フォント（Google Fonts など）を指定した文字や、URL で参照している画像を含む図は、dip が外部への通信を既定で止めているため描画に失敗します（`--allow-network` が必要というエラーになります）。`dip embed` に `--allow-network` を付けると描画できます。拡張で挿入した画像（貼り付け・ファイルから）や Simple Icons は図に埋め込まれるため、そのまま描画できます。
+```sh
+d-png-cli init
+ls /opt/d-png-libraries/@drawio/        # 取り込めるパレットの一覧
+d-png-cli library install @drawio/aws4-compute @simple-icons/simple-icons
+d-png-cli library search lambda         # 先頭の列が XML に書く参照（@drawio/aws4-compute/lambda）
+d-png-cli library vscode --write        # VS Code 拡張のライブラリ欄にも出す場合（Simple Icons など）
+```
+
+- 取得元は `ai` コンテナの中にあるため、取り込んだライブラリをほかの環境（CI など）で `library install` により復元することはできません。
+- イメージの更新で版が上がると（Simple Icons の更新など）、取得元には新しい版だけが残ります。取り込み済みのファイルはそのまま使えますが、取り込み直す場合は `d-png-cli library update` で新しい版にしてください。
+- 各社のアイコン・ブランドのロゴの利用は、それぞれの商標・利用条件に従ってください。
+
+AWS・Google Cloud・Azure などの draw.io 標準の図形（`shape=mxgraph.aws4.*` や `image=img/lib/azure2/...` など）も描画できるよう、draw.io の Web 資材を `/opt/drawio-webapp` に入れ、`D_PNG_DRAWIO_WEB_PATH` で指しています。d-png-cli の既定のレンダラー（`vscode`）用の資材のため、`--renderer raw` / `desktop-compat` ではこれらの図形は描けません。
+
+VS Code の draw.io 拡張（`hediet.vscode-drawio`）で編集した `.drawio.png` を `ai` コンテナの AI エージェントに修正してもらう使い方を想定しています。資材は拡張（1.9.0）に入っている draw.io と同じ版で、拡張の図形パレットの図形は `ai` 側の d-png-cli でも描画できます。ただし次の点に注意してください。
+
+- Web フォント（Google Fonts など）を指定した文字や、URL で参照している画像を含む図は、d-png-cli が外部への通信を既定で止めているため描画に失敗します（`--allow-network` が必要というエラーになります）。`d-png-cli write` に `--allow-network` を付けると描画できます。拡張で挿入した画像（貼り付け・ファイルから）やライブラリの画像は図に埋め込まれるため、そのまま描画できます。
 - 拡張の画像はホスト側の VS Code が描くため、ホストとコンテナのフォントの違いによる細かな画素の差は残ります。
 
 デスクトップ: KasmVNC、Openbox、Google Chrome、st（ターミナル）、fcitx5-mozc（日本語入力）
 
-Playwright CLI・agent-browser の使い方スキル、Context7 CLI（ctx7）のドキュメント検索スキル（find-docs）、dip の `.drawio.png` 編集スキル（drawio-png）は、各 CLI・公式リポジトリが配布しているものをビルド時に取得し、rulesync で Claude Code・Codex・Copilot・Kiro・Antigravity のグローバル設定へ展開しています。
+Playwright CLI・agent-browser の使い方スキル、Context7 CLI（ctx7）のドキュメント検索スキル（find-docs）、d-png-cli の `.drawio.png` 編集スキル（d-png）は、各 CLI・公式リポジトリが配布しているものをビルド時に取得し、rulesync で Claude Code・Codex・Copilot・Kiro・Antigravity のグローバル設定へ展開しています。drawio-png-cli（dip）の頃から使っているコンテナでは、古いスキル（drawio-png）が volume に残るため、`sync-home-defaults` で入れ替えてください（[イメージが管理する設定の更新](#イメージが管理する設定の更新)）。
 
 **`user` コンテナ** — [docker-images/user/opt/mise/config.toml](docker-images/user/opt/mise/config.toml)
 
@@ -167,7 +186,7 @@ sync-home-defaults  # イメージが管理する設定をイメージ側の内�
 playwright-cli  # ブラウザ操作（Playwright CLI）
 agent-browser   # ブラウザ操作（agent-browser）
 ctx7            # ライブラリの最新ドキュメントを引く（Context7 CLI）
-dip             # .drawio.png の図面の抽出・検証・更新（drawio-png-cli）
+d-png-cli       # .drawio.png の図面の読み書き・検証（d-png-cli）
 dagu            # YAML で定義したワークフロー（DAG）の実行（Dagu）
 ```
 
