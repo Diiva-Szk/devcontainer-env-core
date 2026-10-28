@@ -9,13 +9,11 @@ specifiers = ["2.1.312"]
 
 [tools."aqua:anthropics/claude-code"."platforms.linux-arm64"]
 checksum = "sha256:0635c6245b11bbb4ca16e4119b0ac3980ee99e2f8cf5ab6e8d6c0e9e0db3ee5b"
-checksum_source = "mise-versions"
 url = "https://github.com/anthropics/claude-code/releases/download/v2.1.312/claude-linux-arm64.tar.gz"
 url_api = "https://api.github.com/repos/anthropics/claude-code/releases/assets/682510791"
 
 [tools."aqua:anthropics/claude-code"."platforms.linux-x64"]
 checksum = "sha256:d9324231c4e3dfe342e853f56c752348ae060f9f221cdf4b0f90ef1dc47ee907"
-checksum_source = "mise-versions"
 url = "https://github.com/anthropics/claude-code/releases/download/v2.1.312/claude-linux-x64.tar.gz"
 url_api = "https://api.github.com/repos/anthropics/claude-code/releases/assets/682511222"
 
@@ -26,13 +24,11 @@ specifiers = ["2.24.0"]
 
 [tools."aqua:dagucloud/dagu"."platforms.linux-arm64"]
 checksum = "sha256:ce98ff6caf131018b0dc880c8ddb06781efc8cb26fc80e49b7dd8f9d5a6a7453"
-checksum_source = "mise-versions"
 url = "https://github.com/dagucloud/dagu/releases/download/v2.24.0/dagu_2.24.0_linux_arm64.tar.gz"
 url_api = "https://api.github.com/repos/dagucloud/dagu/releases/assets/680885667"
 
 [tools."aqua:dagucloud/dagu"."platforms.linux-x64"]
 checksum = "sha256:da4598447e43cd2994051803b5a1995544f1b8eca3fb56f6d5407a0a1147c8f2"
-checksum_source = "mise-versions"
 url = "https://github.com/dagucloud/dagu/releases/download/v2.24.0/dagu_2.24.0_linux_amd64.tar.gz"
 url_api = "https://api.github.com/repos/dagucloud/dagu/releases/assets/680886036"
 
@@ -60,13 +56,11 @@ specifiers = ["1.0.104"]
 
 [tools."aqua:github/copilot-cli"."platforms.linux-arm64"]
 checksum = "sha256:29b3978051df684109e2343b2fccd733f971f8ebe472732fa3e07cfc2093f8e7"
-checksum_source = "mise-versions"
 url = "https://github.com/github/copilot-cli/releases/download/v1.0.104/copilot-linux-arm64.tar.gz"
 url_api = "https://api.github.com/repos/github/copilot-cli/releases/assets/680166706"
 
 [tools."aqua:github/copilot-cli"."platforms.linux-x64"]
 checksum = "sha256:fa9722665f2c670aa6ce26f1eb30fbfe7ed0177606bf61c21125855345c9c447"
-checksum_source = "mise-versions"
 url = "https://github.com/github/copilot-cli/releases/download/v1.0.104/copilot-linux-x64.tar.gz"
 url_api = "https://api.github.com/repos/github/copilot-cli/releases/assets/680166939"
 
@@ -77,13 +71,11 @@ specifiers = ["1.562.0"]
 
 [tools."aqua:github/copilot-language-server-release"."platforms.linux-arm64"]
 checksum = "sha256:d9cd294d69652e88ac5fae755ff852904f070549e12cbfac3368147aab178e4b"
-checksum_source = "mise-versions"
 url = "https://github.com/github/copilot-language-server-release/releases/download/1.562.0/copilot-language-server-linux-arm64-1.562.0.zip"
 url_api = "https://api.github.com/repos/github/copilot-language-server-release/releases/assets/680227196"
 
 [tools."aqua:github/copilot-language-server-release"."platforms.linux-x64"]
 checksum = "sha256:57fb99dcbdf47547c63ecec7174c65c6ae348ecf2e5206b436ba9715e75c607f"
-checksum_source = "mise-versions"
 url = "https://github.com/github/copilot-language-server-release/releases/download/1.562.0/copilot-language-server-linux-x64-1.562.0.zip"
 url_api = "https://api.github.com/repos/github/copilot-language-server-release/releases/assets/680227197"
 
@@ -94,13 +86,11 @@ specifiers = ["1.4.8"]
 
 [tools."aqua:google-antigravity/antigravity-cli"."platforms.linux-arm64"]
 checksum = "sha256:bbe34c56bdfdcfd9b9a4fd24f7430f7a807777b356b216b41862fb6dd9450c80"
-checksum_source = "mise-versions"
 url = "https://github.com/google-antigravity/antigravity-cli/releases/download/1.4.8/agy_cli_linux_arm64.tar.gz"
 url_api = "https://api.github.com/repos/google-antigravity/antigravity-cli/releases/assets/680773897"
 
 [tools."aqua:google-antigravity/antigravity-cli"."platforms.linux-x64"]
 checksum = "sha256:8b165f0fc584f0f92dd1318dc3a090706ae18aade7d36b0b8623b85aeaf86c52"
-checksum_source = "mise-versions"
 url = "https://github.com/google-antigravity/antigravity-cli/releases/download/1.4.8/agy_cli_linux_x64.tar.gz"
 url_api = "https://api.github.com/repos/google-antigravity/antigravity-cli/releases/assets/680773895"
 
@@ -111,13 +101,11 @@ specifiers = ["0.40.0"]
 
 [tools."aqua:vercel-labs/agent-browser"."platforms.linux-arm64"]
 checksum = "sha256:f33b4dd9bd7707ad952125937f9de18f93548c5d51283b18092fe21ced6b9e53"
-checksum_source = "mise-versions"
 url = "https://github.com/vercel-labs/agent-browser/releases/download/v0.40.0/agent-browser-linux-arm64"
 url_api = "https://api.github.com/repos/vercel-labs/agent-browser/releases/assets/682935171"
 
 [tools."aqua:vercel-labs/agent-browser"."platforms.linux-x64"]
 checksum = "sha256:aeebf976eb429064efb10179ccdf737ec7d798c019bae7067ce2751c9c6e176a"
-checksum_source = "mise-versions"
 url = "https://github.com/vercel-labs/agent-browser/releases/download/v0.40.0/agent-browser-linux-musl-x64"
 url_api = "https://api.github.com/repos/vercel-labs/agent-browser/releases/assets/682935170"
 
@@ -131,30 +119,13 @@ asset_pattern = "simple-icons.xml"
 
 [tools."github:mondeja/simple-icons-drawio"."platforms.linux-arm64"]
 checksum = "sha256:95cd1b22e9f860266ade9f5587c5623d58f23e6435cb38b69897e4e2d36a145c"
-checksum_source = "mise-versions"
 url = "https://github.com/mondeja/simple-icons-drawio/releases/download/16.36.0/simple-icons.xml"
 url_api = "https://api.github.com/repos/mondeja/simple-icons-drawio/releases/assets/676941683"
 
 [tools."github:mondeja/simple-icons-drawio"."platforms.linux-x64"]
 checksum = "sha256:95cd1b22e9f860266ade9f5587c5623d58f23e6435cb38b69897e4e2d36a145c"
-checksum_source = "mise-versions"
 url = "https://github.com/mondeja/simple-icons-drawio/releases/download/16.36.0/simple-icons.xml"
 url_api = "https://api.github.com/repos/mondeja/simple-icons-drawio/releases/assets/676941683"
-
-[[tools."github:openai/codex"]]
-version = "0.165.0"
-backend = "github:openai/codex"
-specifiers = ["0.165.0"]
-
-[tools."github:openai/codex".options]
-asset_pattern = "codex-package-aarch64-unknown-linux-musl.tar.gz"
-version_prefix = "rust-v"
-
-[tools."github:openai/codex"."platforms.linux-arm64"]
-checksum = "sha256:c8b2844fdef57498572db960344aee8c836ce9f75c203379da0a9c3a334fc3b7"
-checksum_source = "mise-versions"
-url = "https://github.com/openai/codex/releases/download/rust-v0.165.0/codex-package-aarch64-unknown-linux-musl.tar.gz"
-url_api = "https://api.github.com/repos/openai/codex/releases/assets/682726582"
 
 [[tools."github:openai/codex"]]
 version = "0.165.0"
@@ -167,9 +138,22 @@ version_prefix = "rust-v"
 
 [tools."github:openai/codex"."platforms.linux-x64"]
 checksum = "sha256:e97c4463d7f146692a955d7b0e1c8cf48f97cd4d616cd45c5dcab2e8d9743316"
-checksum_source = "mise-versions"
 url = "https://github.com/openai/codex/releases/download/rust-v0.165.0/codex-package-x86_64-unknown-linux-musl.tar.gz"
 url_api = "https://api.github.com/repos/openai/codex/releases/assets/682734800"
+
+[[tools."github:openai/codex"]]
+version = "0.165.0"
+backend = "github:openai/codex"
+specifiers = ["0.165.0"]
+
+[tools."github:openai/codex".options]
+asset_pattern = "codex-package-aarch64-unknown-linux-musl.tar.gz"
+version_prefix = "rust-v"
+
+[tools."github:openai/codex"."platforms.linux-arm64"]
+checksum = "sha256:c8b2844fdef57498572db960344aee8c836ce9f75c203379da0a9c3a334fc3b7"
+url = "https://github.com/openai/codex/releases/download/rust-v0.165.0/codex-package-aarch64-unknown-linux-musl.tar.gz"
+url_api = "https://api.github.com/repos/openai/codex/releases/assets/682726582"
 
 [[tools."github:szk302/d-png-cli"]]
 version = "0.2.0"
@@ -200,20 +184,20 @@ url_api = "https://api.github.com/repos/szk302/d-png-cli/releases/assets/6848100
 provenance = "github-attestations"
 
 [[tools."http:kiro-cli"]]
-version = "2.33.1"
+version = "2.35.1"
 backend = "http:kiro-cli"
-specifiers = ["2.33.1"]
+specifiers = ["2.35.1"]
 
 [tools."http:kiro-cli".options]
 strip_components = "1"
 
 [tools."http:kiro-cli"."platforms.linux-arm64"]
-checksum = "sha256:b0e002b8fb512cbeb697a224ebe8ee9e0f15b3ab0427062205422c0b37b35f66"
-url = "https://desktop-release.q.us-east-1.amazonaws.com/2.33.1/kirocli-aarch64-linux.tar.gz"
+checksum = "sha256:933d53ed2636c5035fb775e725f73987888e7b398a0bdb09a4b5f035b7e0bf40"
+url = "https://desktop-release.q.us-east-1.amazonaws.com/2.35.1/kirocli-aarch64-linux.tar.gz"
 
 [tools."http:kiro-cli"."platforms.linux-x64"]
-checksum = "sha256:5993158abeb1a3086a591d5c7dd77e3db3c889a3c0d8b41418bc6a1af79400fb"
-url = "https://desktop-release.q.us-east-1.amazonaws.com/2.33.1/kirocli-x86_64-linux.tar.gz"
+checksum = "sha256:b4ec8f61c466dbfb06b73972fa746f4f96bf19abe2d4307af3cd988bde751b56"
+url = "https://desktop-release.q.us-east-1.amazonaws.com/2.35.1/kirocli-x86_64-linux.tar.gz"
 
 [[tools."npm:@playwright/cli"]]
 version = "0.1.22"
@@ -223,6 +207,6 @@ specifiers = ["0.1.22"]
 
 [[tools."npm:ctx7"]]
 version = "0.8.2"
-aube = { path = ".mise/locks/npm-ctx7/0.8.2", digest = "sha256:55fcee0d2f30519370f7874352a26f058c6b51c8e55f412aa7f495414d180c25" }
+aube = { path = ".mise/locks/npm-ctx7/0.8.2", digest = "sha256:e8e23c013f9ad801caf540c36abf7047552419e6a02831d3e0600e4d83fa4bf7" }
 backend = "npm:ctx7"
 specifiers = ["0.8.2"]
