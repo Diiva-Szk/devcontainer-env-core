@@ -9,22 +9,22 @@
 
 [tools]
 # ai tools
-"aqua:anthropics/claude-code" = "2.1.306"
-"aqua:github/copilot-cli" = "1.0.102"
-"aqua:github/copilot-language-server-release" = "1.556.0"
-"aqua:google-antigravity/antigravity-cli" = "1.4.4"
+"aqua:anthropics/claude-code" = "2.1.312"
+"aqua:github/copilot-cli" = "1.0.104"
+"aqua:github/copilot-language-server-release" = "1.562.0"
+"aqua:google-antigravity/antigravity-cli" = "1.4.8"
 # AI エージェント向けのルール・設定を各ツールの形式で生成する CLI
 "aqua:dyoshikawa/rulesync" = "41.0.0"
 
 # Dagu（YAML で定義したワークフロー（DAG）を実行するエンジン）
-"aqua:dagucloud/dagu" = "2.21.0"
+"aqua:dagucloud/dagu" = "2.24.0"
 
 # agent-browser（コーディングエージェント向けのブラウザ操作 CLI）
 #   npm でも配布されているが、そちらは全プラットフォームのバイナリを1パッケージに同梱するため
 #   展開後 119MB になる。aqua backend なら単一バイナリ（linux-x64 は静的リンクの musl 版）で済む。
 #   ブラウザは Google Chrome を使う（Dockerfile の AGENT_BROWSER_EXECUTABLE_PATH）。
 #   `agent-browser install` による Chrome for Testing のダウンロードは不要。
-"aqua:vercel-labs/agent-browser" = "0.39.1"
+"aqua:vercel-labs/agent-browser" = "0.40.0"
 
 # Playwright CLI（コーディングエージェント向けのブラウザ操作 CLI）
 #   npm でのみ配布されているため npm backend で入れる。mise lock が依存グラフを
@@ -40,7 +40,7 @@
 #   注釈付きタグ（ctx7@<版> 形式）を解決できないため。dyoshikawa/rulesync 側の既知の問題）。
 #   版を変えると、PR 上で update-find-docs-skill ワークフローが SKILL.md を同じ版のタグから
 #   作り直す（手元では scripts/update-find-docs-skill.sh）。
-"npm:ctx7" = "0.8.1"
+"npm:ctx7" = "0.8.2"
 
 # d-png-cli（.drawio.png に埋め込まれた draw.io の XML を読み書き・検証する CLI。旧 drawio-png-cli / dip）
 #   aqua レジストリに無いため github backend で取得する。静的リンクの musl 版を使う。
@@ -68,7 +68,7 @@ linux-arm64 = { asset_pattern = "d-png-cli-*-aarch64-unknown-linux-musl.tar.gz" 
 #   Dockerfile で `d-png-cli library pack` により @simple-icons/simple-icons（版はこの version）として
 #   /opt/d-png-libraries に置く。d-png-cli は mise の配置先を直接読まない。
 [tools."github:mondeja/simple-icons-drawio"]
-version = "16.35.0"
+version = "16.36.0"
 asset_pattern = "simple-icons.xml"
 
 # OpenAI Codex CLI
@@ -82,7 +82,7 @@ asset_pattern = "simple-icons.xml"
 #   asset_pattern に {{ arch() }} を使うと mise lock を実行したマシンのアーキテクチャで展開され、
 #   全プラットフォームに同じ成果物が記録されてしまうため、プラットフォームごとに指定する。
 [tools."github:openai/codex"]
-version = "0.163.0"
+version = "0.165.0"
 version_prefix = "rust-v"
 bin_path = "bin"
 
@@ -97,7 +97,7 @@ linux-arm64 = { asset_pattern = "codex-package-aarch64-unknown-linux-musl.tar.gz
 #   載っていない（latest が先に進んだ）場合、mise lock は成果物を実際にダウンロードして計算する。
 [tools."http:kiro-cli"]
 # renovate: datasource=custom.kiro-cli depName=kiro-cli
-version = "2.33.1"
+version = "2.35.1"
 url = 'https://desktop-release.q.us-east-1.amazonaws.com/{{ version }}/kirocli-{{ arch(x64="x86_64", arm64="aarch64") }}-linux.tar.gz'
 checksum_url = "https://desktop-release.q.us-east-1.amazonaws.com/latest/manifest.json"
 checksum_expr = '"sha256:" + filter(fromJSON(body).packages, { "https://desktop-release.q.us-east-1.amazonaws.com/" + #.download == url })[0].sha256'
