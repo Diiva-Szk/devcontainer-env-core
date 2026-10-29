@@ -61,7 +61,7 @@ flowchart LR
 | ローカルメール | [Local Markdown Mail](https://github.com/szk302/local-markdown-mail)（lmm。ローカルのファイルだけで AI エージェントと人が Markdown のメッセージをやり取りする） |
 | Lint | hadolint、secretlint |
 | Terraform | tfenv、tflint、terraform-docs |
-| クラウド | AWS CLI、Google Cloud CLI |
+| クラウド | AWS CLI、AWS Session Manager plugin（`aws ssm start-session` などで使う）、Google Cloud CLI |
 
 **`ai` コンテナ** — [docker-images/ai/opt/mise/config.toml](docker-images/ai/opt/mise/config.toml)
 

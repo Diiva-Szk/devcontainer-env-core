@@ -213,6 +213,7 @@ RUN mise install && \
     mise --version && \
     wt --version && \
     lmm --version && \
+    session-manager-plugin --version && \
     python --version && \
     node --version
 

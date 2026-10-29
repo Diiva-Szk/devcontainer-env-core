@@ -231,6 +231,19 @@ checksum = "sha256:8559447da59814184cb122512086c4b193418d15ed0712b4197191f5dcb70
 url = "https://github.com/szk302/local-markdown-mail/releases/download/v0.2.0/lmm-v0.2.0-x86_64-unknown-linux-musl.tar.gz"
 url_api = "https://api.github.com/repos/szk302/local-markdown-mail/releases/assets/635031110"
 
+[[tools."http:session-manager-plugin"]]
+version = "1.2.896.0"
+backend = "http:session-manager-plugin"
+specifiers = ["1.2.896.0"]
+
+[tools."http:session-manager-plugin"."platforms.linux-arm64"]
+checksum = "sha256:914eeca87b18b55356c58be197080f73742b3ca60d3823f0a45670dc9056aa9c"
+url = "https://s3.amazonaws.com/session-manager-downloads/plugin/1.2.896.0/ubuntu_arm64/session-manager-plugin.deb"
+
+[tools."http:session-manager-plugin"."platforms.linux-x64"]
+checksum = "sha256:53f51fcc67314a4bf85888a38a3967cd41f8d0f28a60a9469a63acf935ba713e"
+url = "https://s3.amazonaws.com/session-manager-downloads/plugin/1.2.896.0/ubuntu_64bit/session-manager-plugin.deb"
+
 [[tools.node]]
 version = "24.21.0"
 backend = "core:node"
