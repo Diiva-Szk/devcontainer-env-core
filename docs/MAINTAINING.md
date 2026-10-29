@@ -81,6 +81,7 @@ CLI ツールと言語ランタイム（Python / Node.js）は [mise](https://mi
 - **user コンテナは `paranoid = true`** です。ワークスペースは ai コンテナと共有しており、ai 側がワークスペースの `mise.toml` に任意のツール（http backend の任意 URL 等）を書き込めるためです。paranoid モードの trust はファイル内容のハッシュに紐づくため、書き換えられた設定は再度 trust されるまで読み込まれません。
 - **Node.js は LTS のみ**を使います。Renovate は LTS 以外へは更新せず、`build-images.yml` が `scripts/check-node-lts.sh` で指定中の版が LTS であることを検査します。
 - **npm backend のツール**（ai の Playwright CLI）は、`mise lock` が依存グラフを integrity 付きで `mise.lock` と同じディレクトリの `.mise/locks/npm-<name>/<version>/`（`package.json` / `aube-lock.yaml`）にサイドカーとして書き出し、`mise.lock` にはその digest が記録されます。`mise install` はこのグラフを再生するため、推移的依存まで固定されます。サイドカーも `mise.lock` と一緒にコミットしてください（mise 2026.9.7 以上が必要）。
+- **AWS Session Manager plugin**（dev-base）は、Linux 向けの配布物が配布元（S3）の `.deb` / `.rpm` だけです（aqua レジストリの定義は macOS 専用で、GitHub リリースにも成果物がありません）。mise は `.deb` を展開しないため、http backend で `.deb` を取得し、`postinstall` で `dpkg-deb -x` によりインストール先へ展開します。`.deb` はダウンロード時に `mise.lock` のチェックサム（配布元が提供しないため `fill-mise-lock-checksums.sh` が補う）で検証されます。`bin_path` を指定すると、ダウンロードしたファイルが `bin_path` の下に置かれるため、展開後に `.deb` を消しています（残すと `session-manager-plugin.deb` の shim ができます）。
 
 ### ツールを追加・更新する
 
@@ -369,6 +370,7 @@ flowchart TD
 | --- | --- |
 | mise の aqua / github / core backend のツール | Renovate の mise マネージャ（lock は `skipArtifactsUpdate` で更新させない） |
 | Kiro CLI（http backend） | `customManagers` の正規表現 + `customDatasources`（latest マニフェスト） |
+| AWS Session Manager plugin（http backend） | `customManagers` の正規表現（`aws/session-manager-plugin` の github-releases。版が `1.2.896.0` のような4桁のため、`# renovate:` コメントの `versioning=loose` で比較する）。lock は `update-mise-lock.yml` が作り直す |
 | mise の npm backend のツール（Playwright CLI、ctx7） | Renovate の mise マネージャ（npm データソース）。依存グラフのサイドカー（`.mise/locks/`）は Renovate の対象外にし、`update-mise-lock.yml` が作り直す |
 | rulesync の取得元の `ref`（agent-browser のスキル） | `customManagers` の正規表現（`// renovate:` コメント）。lock は `update-rulesync-lock.yml` が作り直す |
 | draw.io の Web 資材（d-png-cli 用） | Renovate の対象外。d-png-cli の互換コミットに合わせて手で更新する（[draw.io の Web 資材](#drawio-の-web-資材ai)）。ライブラリ `@drawio/*` もこの版から作る |

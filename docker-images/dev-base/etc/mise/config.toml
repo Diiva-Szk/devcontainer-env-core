@@ -61,6 +61,22 @@ version = "0.2.0"
 linux-x64 = { asset_pattern = "lmm-*-x86_64-unknown-linux-musl.tar.gz" }
 linux-arm64 = { asset_pattern = "lmm-*-aarch64-unknown-linux-musl.tar.gz" }
 
+# AWS Session Manager plugin（aws ssm start-session などで AWS CLI が PATH から呼び出す）
+#   aqua レジストリの定義は macOS 専用で、GitHub リリースにも成果物が無いため、
+#   配布元（S3）の .deb を http backend で取得する。配布元はチェックサムを提供しないため、
+#   mise.lock のチェックサムは fill-mise-lock-checksums.sh が補う。
+#   mise は .deb を展開せず1つのファイルとして置くため、postinstall で dpkg-deb -x により
+#   インストール先へ展開する。bin_path を指定すると、ダウンロードしたファイルは bin_path の下に
+#   置かれるため、展開後に消す（残すと session-manager-plugin.deb の shim ができる）。
+#   .deb にある systemd / upstart の定義は展開されるだけで使われない。
+#   版は 1.2.896.0 のような4桁で semver ではないため、Renovate では loose で比較する。
+[tools."http:session-manager-plugin"]
+# renovate: datasource=github-releases depName=aws/session-manager-plugin versioning=loose
+version = "1.2.896.0"
+url = 'https://s3.amazonaws.com/session-manager-downloads/plugin/{{ version }}/{{ arch(x64="ubuntu_64bit", arm64="ubuntu_arm64") }}/session-manager-plugin.deb'
+bin_path = "usr/local/sessionmanagerplugin/bin"
+postinstall = 'deb="$MISE_TOOL_INSTALL_PATH/usr/local/sessionmanagerplugin/bin/session-manager-plugin.deb" && dpkg-deb -x "$deb" "$MISE_TOOL_INSTALL_PATH" && rm "$deb"'
+
 # Worktrunk の操作（ai / user 共通）。追加の引数はそのまま wt に渡す。
 # mise は子プロセスなので親シェルを cd できない。switch は --no-cd で移動せずに終える。
 # dir: system スコープの設定の場所ではなく、呼び出したディレクトリで実行する。

@@ -102,10 +102,12 @@
       // 以下の形式（テーブル形式のツール定義）を対象にする:
       //   # renovate: datasource=custom.kiro-cli depName=kiro-cli
       //   version = "2.21.4"
+      // semver でない版は versioning= を付けて指定する（Session Manager plugin の 1.2.896.0 など）:
+      //   # renovate: datasource=github-releases depName=aws/session-manager-plugin versioning=loose
       matchStrings: [
-        '#\\s*renovate:\\s*datasource=(?<datasource>\\S+)\\s+depName=(?<depName>\\S+)\\s*\\nversion\\s*=\\s*"(?<currentValue>[^"]+)"',
+        '#\\s*renovate:\\s*datasource=(?<datasource>\\S+)\\s+depName=(?<depName>\\S+?)(?:\\s+versioning=(?<versioning>\\S+))?\\s*\\nversion\\s*=\\s*"(?<currentValue>[^"]+)"',
       ],
-      versioningTemplate: 'semver',
+      versioningTemplate: '{{#if versioning}}{{{versioning}}}{{else}}semver{{/if}}',
     },
     {
       customType: 'regex',
