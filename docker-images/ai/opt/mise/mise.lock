@@ -33,20 +33,20 @@ url = "https://github.com/dagucloud/dagu/releases/download/v2.24.0/dagu_2.24.0_l
 url_api = "https://api.github.com/repos/dagucloud/dagu/releases/assets/680886036"
 
 [[tools."aqua:dyoshikawa/rulesync"]]
-version = "41.0.0"
+version = "43.2.0"
 backend = "aqua:dyoshikawa/rulesync"
-specifiers = ["41.0.0"]
+specifiers = ["43.2.0"]
 
 [tools."aqua:dyoshikawa/rulesync"."platforms.linux-arm64"]
-checksum = "sha256:3bc83122250d12c027aac9acfb7243092ed29aa27e52f3a9a62aa0ae33e30a3c"
-url = "https://github.com/dyoshikawa/rulesync/releases/download/v41.0.0/rulesync-linux-arm64"
-url_api = "https://api.github.com/repos/dyoshikawa/rulesync/releases/assets/672017109"
+checksum = "sha256:e6500b1e693dbc76e51faeb589ade2f3e5616d35c49ad4db29a7fb750b0493d4"
+url = "https://github.com/dyoshikawa/rulesync/releases/download/v43.2.0/rulesync-linux-arm64"
+url_api = "https://api.github.com/repos/dyoshikawa/rulesync/releases/assets/682147105"
 provenance = "github-attestations"
 
 [tools."aqua:dyoshikawa/rulesync"."platforms.linux-x64"]
-checksum = "sha256:6598756e1f57959645589de9c2ce7b686018eb754bf1c994e8137ea2fba80ed6"
-url = "https://github.com/dyoshikawa/rulesync/releases/download/v41.0.0/rulesync-linux-x64"
-url_api = "https://api.github.com/repos/dyoshikawa/rulesync/releases/assets/672017110"
+checksum = "sha256:50754c306ffadaf423c990796f44194b1949698e60b00c32497c4f8f746b04e0"
+url = "https://github.com/dyoshikawa/rulesync/releases/download/v43.2.0/rulesync-linux-x64"
+url_api = "https://api.github.com/repos/dyoshikawa/rulesync/releases/assets/682147111"
 provenance = "github-attestations"
 
 [[tools."aqua:github/copilot-cli"]]
@@ -133,20 +133,6 @@ backend = "github:openai/codex"
 specifiers = ["0.165.0"]
 
 [tools."github:openai/codex".options]
-asset_pattern = "codex-package-x86_64-unknown-linux-musl.tar.gz"
-version_prefix = "rust-v"
-
-[tools."github:openai/codex"."platforms.linux-x64"]
-checksum = "sha256:e97c4463d7f146692a955d7b0e1c8cf48f97cd4d616cd45c5dcab2e8d9743316"
-url = "https://github.com/openai/codex/releases/download/rust-v0.165.0/codex-package-x86_64-unknown-linux-musl.tar.gz"
-url_api = "https://api.github.com/repos/openai/codex/releases/assets/682734800"
-
-[[tools."github:openai/codex"]]
-version = "0.165.0"
-backend = "github:openai/codex"
-specifiers = ["0.165.0"]
-
-[tools."github:openai/codex".options]
 asset_pattern = "codex-package-aarch64-unknown-linux-musl.tar.gz"
 version_prefix = "rust-v"
 
@@ -154,6 +140,20 @@ version_prefix = "rust-v"
 checksum = "sha256:c8b2844fdef57498572db960344aee8c836ce9f75c203379da0a9c3a334fc3b7"
 url = "https://github.com/openai/codex/releases/download/rust-v0.165.0/codex-package-aarch64-unknown-linux-musl.tar.gz"
 url_api = "https://api.github.com/repos/openai/codex/releases/assets/682726582"
+
+[[tools."github:openai/codex"]]
+version = "0.165.0"
+backend = "github:openai/codex"
+specifiers = ["0.165.0"]
+
+[tools."github:openai/codex".options]
+asset_pattern = "codex-package-x86_64-unknown-linux-musl.tar.gz"
+version_prefix = "rust-v"
+
+[tools."github:openai/codex"."platforms.linux-x64"]
+checksum = "sha256:e97c4463d7f146692a955d7b0e1c8cf48f97cd4d616cd45c5dcab2e8d9743316"
+url = "https://github.com/openai/codex/releases/download/rust-v0.165.0/codex-package-x86_64-unknown-linux-musl.tar.gz"
+url_api = "https://api.github.com/repos/openai/codex/releases/assets/682734800"
 
 [[tools."github:szk302/d-png-cli"]]
 version = "0.2.0"
