@@ -128,3 +128,61 @@ raw = true
 raw_args = true
 quiet = true
 run = "wt remove --foreground"
+
+# クラウドの CLI のログイン（ai / user 共通）。追加の引数はそのまま各 CLI に渡す（mise run login:aws-sso --profile dev）。
+# コンテナでは、CLI がブラウザを起動できなかったり、ブラウザから localhost のコールバックへ戻れなかったりして
+# ログインに失敗しやすい。そのため、表示された URL を手元のブラウザで開き、デバイスコードの確認か
+# 認可コードの貼り付けで終える方式（localhost のコールバックを使わない方式）に固定する。
+# dir: 呼び出したディレクトリで実行する（ワークスペースの mise.toml の env を効かせるため）。
+# raw: コードの入力や確認の対話を直接端末へ接続する。
+# raw_args: --help なども各 CLI へ渡す。
+#
+# gh: デバイスコード方式（--web）。Enter で開くブラウザ（GH_BROWSER）は何もしないコマンドにし、
+#     表示された URL を手で開く。git の操作も https で gh の認証を使えるようにする（確認が出る）。
+[tasks."login:gh"]
+description = "[global] GitHub CLI にブラウザなしでログインする（デバイスコード）"
+dir = "{{cwd}}"
+raw = true
+raw_args = true
+quiet = true
+env = { GH_BROWSER = "true" }
+run = "gh auth login --hostname github.com --git-protocol https --web"
+
+# aws（IAM Identity Center）: デバイスコード方式。プロファイルは事前に
+# `aws configure sso --use-device-code --no-browser` で作っておく（この設定でもブラウザは不要）。
+[tasks."login:aws-sso"]
+description = "[global] AWS CLI に IAM Identity Center（SSO）でブラウザなしでログインする（デバイスコード）"
+dir = "{{cwd}}"
+raw = true
+raw_args = true
+quiet = true
+run = "aws sso login --use-device-code --no-browser"
+
+# aws（コンソールの認証情報）: ログイン後にブラウザに表示される認可コードを端末へ貼り付ける。
+[tasks."login:aws"]
+description = "[global] AWS CLI にコンソールの認証情報でブラウザなしでログインする（認可コードを貼り付ける）"
+dir = "{{cwd}}"
+raw = true
+raw_args = true
+quiet = true
+run = "aws login --remote"
+
+# gcloud: ログイン後にブラウザに表示される認可コードを端末へ貼り付ける。
+#   --no-browser（gcloud の入った別のマシンで続きを実行する方式）ではなく --no-launch-browser を使う。
+#   アプリケーションのデフォルト認証情報（ADC）も更新するときは --update-adc を付ける。
+[tasks."login:gcloud"]
+description = "[global] Google Cloud CLI にブラウザなしでログインする（認可コードを貼り付ける）"
+dir = "{{cwd}}"
+raw = true
+raw_args = true
+quiet = true
+run = "gcloud auth login --no-launch-browser"
+
+# az: デバイスコード方式。
+[tasks."login:az"]
+description = "[global] Azure CLI にブラウザなしでログインする（デバイスコード）"
+dir = "{{cwd}}"
+raw = true
+raw_args = true
+quiet = true
+run = "az login --use-device-code"

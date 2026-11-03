@@ -34,6 +34,7 @@ Feature（`devcontainer-features/` 配下）には `Dockerfile` を含めず、�
 │   │   ├── etc/profile.d/        # ログインシェルで mise shims の PATH を復元
 │   │   ├── etc/xdg/worktrunk/    # Worktrunk の共通設定（worktree の配置先）
 │   │   ├── opt/python/           # Python パッケージ（requirements.in / requirements.txt）
+│   │   ├── opt/azure-cli/        # Azure CLI（requirements.in / requirements.txt。専用の venv に入れる）
 │   │   └── usr/local/bin/        # entrypoint.sh / google-chrome（共通の起動オプションを付けるラッパー。user 用）
 │   ├── ai/
 │   │   ├── opt/mise/             # mise の設定と lock（global スコープ）
@@ -109,6 +110,7 @@ CLI ツールと言語ランタイム（Python / Node.js）は [mise](https://mi
 | 依存 | 定義 | 導入方法 |
 | --- | --- | --- |
 | Python パッケージ | `docker-images/dev-base/opt/python/requirements.in`（直接依存） / `requirements.txt`（推移的依存とハッシュ） | `uv pip install --system --require-hashes` |
+| Azure CLI | `docker-images/dev-base/opt/azure-cli/requirements.in`（直接依存） / `requirements.txt`（推移的依存とハッシュ） | `uv pip install --require-hashes` で専用の venv（`~/.local/share/azure-cli`）に入れ、`~/.local/bin/az` にリンクを置く |
 | Renovate CLI（user） | `docker-images/user/opt/renovate/package.json` / `package-lock.json` | `npm ci --ignore-scripts` |
 | draw.io の Web 資材（ai） | `docker-images/Dockerfile` の `DRAWIO_WEBAPP_COMMIT` と `docker-images/ai/opt/drawio-webapp/sparse-checkout` | 固定したコミットから git の sparse checkout で必要なパスだけを取得し、`/opt/drawio-webapp` に配置（[draw.io の Web 資材](#drawio-の-web-資材ai)を参照） |
 | KasmVNC（ai） | `docker-images/Dockerfile` の `KASMVNC_VERSION` / `KASMVNC_SHA256_*` | GitHub リリースの `.deb` を sha256 で検証して `apt-get install` |
@@ -119,13 +121,14 @@ CLI ツールと言語ランタイム（Python / Node.js）は [mise](https://mi
 | デスクトップ（ai）、socat（user） | `docker-images/Dockerfile` | Debian のパッケージ（`apt-get`） |
 | Google Chrome（ai / user） | `docker-images/Dockerfile` | Google の apt リポジトリ（署名鍵の主鍵のフィンガープリントを `GOOGLE_LINUX_SIGNING_KEY_FPR` で照合）から `apt-get install` |
 
-- Python パッケージを変更したら、`docker-images/dev-base/opt/python` で次を実行して `requirements.txt` を再生成します。オプションは Renovate がヘッダーから解釈できるよう `=` でつなぎます。
+- Python パッケージ・Azure CLI を変更したら、`docker-images/dev-base/opt/python`・`docker-images/dev-base/opt/azure-cli` で次を実行して `requirements.txt` を再生成します。オプションは Renovate がヘッダーから解釈できるよう `=` でつなぎます。
 
   ```sh
   uv pip compile --universal --generate-hashes --python-version=3.14 --output-file=requirements.txt requirements.in
   ```
 
-- Python のマイナーバージョンを上げた場合は、`--python-version` を合わせて `requirements.txt` を再生成してください。
+- Python のマイナーバージョンを上げた場合は、両方の `--python-version` を合わせて `requirements.txt` を再生成してください。
+- Azure CLI は依存（azure-mgmt-* など）の版を細かく固定しているため、`/opt/python` のパッケージとは別の venv に入れます。PyYAML は Python 3.15 向けの wheel が無く（6.0.3 時点）、3.15 ではソースからビルドされます（libyaml の C 拡張は無く、純 Python 版になります）。
 - Renovate CLI はインストールスクリプトを実行しないため、re2 のネイティブ拡張は入らず、標準の RegExp にフォールバックします。
 - KasmVNC は Renovate の更新対象外です（アーキテクチャごとの sha256 を合わせて更新する必要があるため）。更新するときは Dockerfile のコメントの手順で、`KASMVNC_VERSION` と amd64 / arm64 の sha256 を書き換えてください。
 - KasmVNC の TLS 証明書は、`ai` コンテナの起動時に `start-desktop` がコンテナごとに生成します。`ssl-cert` の証明書（snakeoil）はビルド時に作られ、公開しているビルドキャッシュを通じて全利用者で同じ秘密鍵になるため使いません。
@@ -149,6 +152,14 @@ dev-base の mise 設定には `wt:add`・`wt:switch`・`wt:list`・`wt:rm` を�
 ```sh
 python3 scripts/test-worktrunk-mise.py
 ```
+
+### クラウドの CLI のログインのタスク
+
+dev-base の mise 設定には `login:gh`・`login:aws-sso`・`login:aws`・`login:gcloud`・`login:az` を定義しています（使い方は README の「クラウドの CLI へのログイン」）。コンテナでは、CLI がブラウザを起動できなかったり、ブラウザから localhost のコールバックへ戻れなかったりしてログインに失敗しやすいため、どれも localhost のコールバックを使わない方式（デバイスコード、または認可コードの貼り付け）に固定しています。`raw_args = true` で追加の引数（`--help` を含む）を各 CLI に渡します。
+
+- gh はデバイスコード方式で、Enter を押すとブラウザを開こうとします。開けないと失敗のメッセージが出て紛らわしいため、タスクの `env` で `GH_BROWSER=true`（何もしないコマンド）にしています。
+- gcloud の `--no-browser` は、gcloud の入った別のマシンで続きのコマンドを実行する方式です。手元に gcloud が無くても使えるよう、URL を開いて認可コードを貼り付ける `--no-launch-browser` を使います。
+- CLI の版を上げてオプションが変わった場合は、タスクも合わせて直してください（AWS CLI の `aws login --remote` は 2.37.10 で動作を確認済み）。
 
 ### AI ツールのスキル（ai）
 
@@ -378,7 +389,7 @@ flowchart TD
 | d-png スキル（d-png-cli、vendoring） | Renovate の対象外。スキルは版によって変わらない案内のため通常は取り直さない（[d-png の vendoring](#d-png-の-vendoring)） |
 | find-docs スキル（ctx7、vendoring） | Renovate の対象外。Renovate が ctx7 の版を上げた PR で、`update-find-docs-skill.yml` が同じ版のタグから作り直す（[find-docs の vendoring](#find-docs-の-vendoring)）。rulesync の git transport が注釈付きタグに対応したら、agent-browser と同じ `customManagers` の正規表現に移行する |
 | Renovate 本体のコンテナ / BuildKit | `customManagers` の正規表現（`CLI_IMAGE_TAG` / `BUILDKIT_IMAGE_TAG` のバージョン + digest） |
-| Python パッケージ | pip-compile マネージャ（`requirements.txt` のヘッダーのコマンドで再生成） |
+| Python パッケージ / Azure CLI | pip-compile マネージャ（`requirements.txt` のヘッダーのコマンドで再生成）。Azure CLI は Python パッケージとは別の PR（グループ）にする |
 | VS Code 拡張機能 | `customManagers` の正規表現（`// renovate:` コメント）。Marketplace は参照できないため GitHub のリリースを代理指標にし、`release-features.yml` が `scripts/check-vscode-extensions.sh` で指定の版が Marketplace に存在することを検査する（未公開の版は `renovate.json5` の `allowedVersions` で除外する） |
 
 ## サードパーティ Action と実行時の依存
@@ -421,4 +432,4 @@ Action の SHA 固定だけでは、Action が実行時に取得するものま�
 - **PR のコードを実行するジョブと、書き込みトークンを扱うジョブの分離:** `update-mise-lock.yml`・`update-rulesync-lock.yml`・`update-find-docs-skill.yml` は、lock（またはスキル）を生成する `generate` ジョブと push する `push` ジョブを別 runner で実行します。同じ runner で PR のコードを実行した後にトークンを扱うと、`.git/hooks` 等を仕込まれてトークンを盗まれるおそれがあるためです。`push` ジョブは PR のコードを実行せず、受け取った lock（またはスキル）のファイル構成・形式・書き込み先（シンボリックリンクでないこと）を検証してから取り込みます。
 - **publish は main からのみ:** `release-features.yml` の publish は `main` ブランチでのみ実行し、Environment `release` を使います。
 - **ビルドキャッシュの書き出しは main からのみ:** 利用者のビルドに取り込まれるため、`publish-build-cache.yml` は `main` でのみ `packages: write` を使います。PR のビルド（`build-images.yml`）はキャッシュを読むだけです。
-- **イメージ内の依存の固定:** mise のツールは `mise.lock`、Python パッケージはハッシュ付き `requirements.txt`、Renovate CLI は `package-lock.json`、ブラウザ操作 CLI のスキルは `rulesync.lock` で固定しています。
+- **イメージ内の依存の固定:** mise のツールは `mise.lock`、Python パッケージと Azure CLI はハッシュ付き `requirements.txt`、Renovate CLI は `package-lock.json`、ブラウザ操作 CLI のスキルは `rulesync.lock` で固定しています。

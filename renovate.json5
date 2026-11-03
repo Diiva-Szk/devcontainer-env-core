@@ -148,12 +148,12 @@
       versioningTemplate: 'docker',
     },
   ],
-  // Python パッケージ（dev-base/opt/python）。requirements.txt のヘッダーに記録された
-  // uv pip compile のコマンドで、ハッシュを含めて再生成される。
+  // Python パッケージ（dev-base/opt/python）と Azure CLI（dev-base/opt/azure-cli）。
+  // requirements.txt のヘッダーに記録された uv pip compile のコマンドで、ハッシュを含めて再生成される。
   // pip-compile マネージャは既定で対象ファイルを持たないため明示する。
   'pip-compile': {
     managerFilePatterns: [
-      '/^docker-images/dev-base/opt/python/requirements\\.txt$/',
+      '/^docker-images/dev-base/opt/(python|azure-cli)/requirements\\.txt$/',
     ],
   },
   // 拡張機能のバージョンが更新されたら、その Feature 自身の version も patch 上げする。
@@ -398,6 +398,7 @@
       ],
       matchFileNames: [
         'docker-images/dev-base/opt/python/requirements.txt',
+        'docker-images/dev-base/opt/azure-cli/requirements.txt',
       ],
       enabled: false,
     },
@@ -407,6 +408,18 @@
       ],
       groupName: 'dev-base の Python パッケージ',
       groupSlug: 'python-dev-base',
+    },
+    {
+      // Azure CLI は別の venv に入れ、依存も別に解決されるため、Python パッケージとは別の PR にする。
+      // 上のルールより後に置くことでグループを上書きする。
+      matchManagers: [
+        'pip-compile',
+      ],
+      matchFileNames: [
+        'docker-images/dev-base/opt/azure-cli/**',
+      ],
+      groupName: 'dev-base の Azure CLI',
+      groupSlug: 'azure-cli-dev-base',
     },
     {
       // github-actions マネージャは renovatebot/github-action の renovate-version を追跡するが、
