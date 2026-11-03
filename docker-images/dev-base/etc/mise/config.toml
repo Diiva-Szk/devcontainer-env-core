@@ -44,6 +44,10 @@ locked_scopes = ["system", "global"]
 # cloud tools
 "aqua:twistedpair/google-cloud-sdk" = "562.0.0"
 "aqua:aws/aws-cli" = "2.37.10"
+# Wrangler（Cloudflare の CLI。Workers / Pages / R2 / D1 / KV などを操作する）
+#   npm でのみ配布されているため npm backend で入れる（サイドカーの扱いは ai の playwright-cli と同じ）。
+#   テレメトリは Dockerfile の WRANGLER_SEND_METRICS で止める。
+"npm:wrangler" = "4.154.0"
 
 # 必要に応じて ai/user 共通ツールを追加
 

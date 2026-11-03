@@ -371,7 +371,7 @@ flowchart TD
 | mise の aqua / github / core backend のツール | Renovate の mise マネージャ（lock は `skipArtifactsUpdate` で更新させない） |
 | Kiro CLI（http backend） | `customManagers` の正規表現 + `customDatasources`（latest マニフェスト） |
 | AWS Session Manager plugin（http backend） | `customManagers` の正規表現（`aws/session-manager-plugin` の github-releases。版が `1.2.896.0` のような4桁のため、`# renovate:` コメントの `versioning=loose` で比較する）。lock は `update-mise-lock.yml` が作り直す |
-| mise の npm backend のツール（Playwright CLI、ctx7） | Renovate の mise マネージャ（npm データソース）。依存グラフのサイドカー（`.mise/locks/`）は Renovate の対象外にし、`update-mise-lock.yml` が作り直す |
+| mise の npm backend のツール（Playwright CLI、ctx7、Wrangler） | Renovate の mise マネージャ（npm データソース）。依存グラフのサイドカー（`.mise/locks/`）は Renovate の対象外にし、`update-mise-lock.yml` が作り直す |
 | rulesync の取得元の `ref`（agent-browser のスキル） | `customManagers` の正規表現（`// renovate:` コメント）。lock は `update-rulesync-lock.yml` が作り直す |
 | draw.io の Web 資材（d-png-cli 用） | Renovate の対象外。d-png-cli の互換コミットに合わせて手で更新する（[draw.io の Web 資材](#drawio-の-web-資材ai)）。ライブラリ `@drawio/*` もこの版から作る |
 | d-png-cli のライブラリ（Simple Icons） | Renovate の mise マネージャ（github-releases）。lock は `update-mise-lock.yml` が作り直す |

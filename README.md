@@ -57,11 +57,11 @@ flowchart LR
 | --- | --- |
 | 言語 | Python、Node.js（LTS のバージョンのみ） |
 | Python パッケージ | uv、ipykernel、pandas、pyarrow |
-| 汎用 | git、Worktrunk（wt）、curl、wget、jq、yq、GitHub CLI（gh）、tmux、build-essential |
+| 汎用 | git、Worktrunk（wt）、curl、wget、jq、yq、GitHub CLI（gh）、tmux、build-essential、dig・nslookup（bind9-dnsutils） |
 | ローカルメール | [Local Markdown Mail](https://github.com/szk302/local-markdown-mail)（lmm。ローカルのファイルだけで AI エージェントと人が Markdown のメッセージをやり取りする） |
 | Lint | hadolint、secretlint |
 | Terraform | tfenv、tflint、terraform-docs |
-| クラウド | AWS CLI、AWS Session Manager plugin（`aws ssm start-session` などで使う）、Google Cloud CLI |
+| クラウド | AWS CLI、AWS Session Manager plugin（`aws ssm start-session` などで使う）、Google Cloud CLI、Cloudflare Wrangler（`wrangler`。テレメトリは無効にしてある） |
 
 **`ai` コンテナ** — [docker-images/ai/opt/mise/config.toml](docker-images/ai/opt/mise/config.toml)
 
