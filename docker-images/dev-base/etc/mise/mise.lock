@@ -257,6 +257,12 @@ url = "https://nodejs.org/dist/v24.21.0/node-v24.21.0-linux-arm64.tar.gz"
 checksum = "sha256:6e1db87ef58b8819e5d5402eff1536491b18edd8eb7bee5ef7897876e88dc5ff"
 url = "https://nodejs.org/dist/v24.21.0/node-v24.21.0-linux-x64.tar.gz"
 
+[[tools."npm:wrangler"]]
+version = "4.154.0"
+aube = { path = ".mise/locks/npm-wrangler/4.154.0", digest = "sha256:674398644b4414f2e01714fbb4194e76ffc8ea5ac0b9f4ac31c5d5c2f6c3dc32" }
+backend = "npm:wrangler"
+specifiers = ["4.154.0"]
+
 [[tools.python]]
 version = "3.14.8"
 backend = "core:python"

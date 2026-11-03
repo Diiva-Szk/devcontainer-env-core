@@ -79,6 +79,7 @@ ARG USER_NAME=dev
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
 # 開発用システムパッケージ
+#   bind9-dnsutils: dig / nslookup（DNS の確認）
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
         git \
@@ -89,7 +90,8 @@ RUN apt-get update && \
         less \
         vim \
         procps \
-        openssh-client && \
+        openssh-client \
+        bind9-dnsutils && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
@@ -206,14 +208,19 @@ RUN chmod -R u=rwX,go=rX /etc/mise /opt/python /etc/xdg/worktrunk && \
 #     恒久化したくなったらイメージ側の config.toml へ昇格する。
 ENV PATH="/home/${USER_NAME}/.local/share/mise/shims:${PATH}"
 
+# WRANGLER_SEND_METRICS: Wrangler が Cloudflare へ送る利用状況のテレメトリを止める
+#   （ai の CTX7_TELEMETRY_DISABLED と同じ考え方）。エラー報告（Sentry）は Wrangler の既定で送らない。
+ENV WRANGLER_SEND_METRICS=false
+
 USER ${USER_NAME}
 
-# ベース共通ツールをインストール（Python / Node / uv を含む）
+# ベース共通ツールをインストール（Python / Node / uv / Wrangler を含む）
 RUN mise install && \
     mise --version && \
     wt --version && \
     lmm --version && \
     session-manager-plugin --version && \
+    wrangler --version && \
     python --version && \
     node --version
 
