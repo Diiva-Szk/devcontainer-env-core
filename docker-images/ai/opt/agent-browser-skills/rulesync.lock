@@ -2,15 +2,15 @@
   "lockfileVersion": 1,
   "sources": {
     "vercel-labs/agent-browser": {
-      "requestedRef": "v0.41.0",
-      "resolvedRef": "1453dd37a40c730fe00f592bc32198a896ff8747",
-      "resolvedAt": "2026-10-31T22:26:20.930Z",
+      "requestedRef": "v0.41.1",
+      "resolvedRef": "5868f7c05020e047c00e68e4abf9253cce864f41",
+      "resolvedAt": "2026-11-03T23:58:12.339Z",
       "skills": {
         "vercel-sandbox": {
-          "integrity": "sha256-664b1d90654e1e68b7d662f9f2558125be96f6f21dc70087643185fade141d7f"
+          "integrity": "sha256-72bf988d77ad98f4c95f150f6eb0ecc5af49c5a3551222d0ea31945f8fc7c47f"
         },
         "core": {
-          "integrity": "sha256-5a8b90a42914f36ebfb2853fff427a346e78d84d0486c05cb43cf8a82a5ae5ac"
+          "integrity": "sha256-f942652e736b0c5e05bdefd454ff71ec0934714d3e28069a2ccd2eb668ef1451"
         },
         "derive-client": {
           "integrity": "sha256-6967e6720e2042b0b23eab377c2622d6fa5e96cd2be53078ccf5acf3f58f8ab0"
