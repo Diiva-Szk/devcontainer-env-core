@@ -9,15 +9,15 @@
 
 [tools]
 # ai tools
-"aqua:anthropics/claude-code" = "2.1.316"
+"aqua:anthropics/claude-code" = "2.1.317"
 "aqua:github/copilot-cli" = "1.0.105"
 "aqua:github/copilot-language-server-release" = "1.565.3"
 "aqua:google-antigravity/antigravity-cli" = "1.4.12"
 # AI エージェント向けのルール・設定を各ツールの形式で生成する CLI
-"aqua:dyoshikawa/rulesync" = "43.4.2"
+"aqua:dyoshikawa/rulesync" = "43.5.0"
 
 # Dagu（YAML で定義したワークフロー（DAG）を実行するエンジン）
-"aqua:dagucloud/dagu" = "2.25.1"
+"aqua:dagucloud/dagu" = "2.25.2"
 
 # agent-browser（コーディングエージェント向けのブラウザ操作 CLI）
 #   npm でも配布されているが、そちらは全プラットフォームのバイナリを1パッケージに同梱するため
@@ -40,7 +40,7 @@
 #   注釈付きタグ（ctx7@<版> 形式）を解決できないため。dyoshikawa/rulesync 側の既知の問題）。
 #   版を変えると、PR 上で update-find-docs-skill ワークフローが SKILL.md を同じ版のタグから
 #   作り直す（手元では scripts/update-find-docs-skill.sh）。
-"npm:ctx7" = "0.8.2"
+"npm:ctx7" = "0.9.0"
 
 # d-png-cli（.drawio.png に埋め込まれた draw.io の XML を読み書き・検証する CLI。旧 drawio-png-cli / dip）
 #   aqua レジストリに無いため github backend で取得する。静的リンクの musl 版を使う。
