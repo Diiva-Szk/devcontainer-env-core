@@ -133,20 +133,6 @@ backend = "github:openai/codex"
 specifiers = ["0.166.0"]
 
 [tools."github:openai/codex".options]
-asset_pattern = "codex-package-aarch64-unknown-linux-musl.tar.gz"
-version_prefix = "rust-v"
-
-[tools."github:openai/codex"."platforms.linux-arm64"]
-checksum = "sha256:7821b77dda2e6283fb1f63f3165177a271da8833e857cf673c6ca1c9db3bfcc6"
-url = "https://github.com/openai/codex/releases/download/rust-v0.166.0/codex-package-aarch64-unknown-linux-musl.tar.gz"
-url_api = "https://api.github.com/repos/openai/codex/releases/assets/689706667"
-
-[[tools."github:openai/codex"]]
-version = "0.166.0"
-backend = "github:openai/codex"
-specifiers = ["0.166.0"]
-
-[tools."github:openai/codex".options]
 asset_pattern = "codex-package-x86_64-unknown-linux-musl.tar.gz"
 version_prefix = "rust-v"
 
@@ -155,32 +141,46 @@ checksum = "sha256:1d44b28bc4ac9937d7d3532264baa68a507ce364956a0d4ebb856f331cdee
 url = "https://github.com/openai/codex/releases/download/rust-v0.166.0/codex-package-x86_64-unknown-linux-musl.tar.gz"
 url_api = "https://api.github.com/repos/openai/codex/releases/assets/689712510"
 
+[[tools."github:openai/codex"]]
+version = "0.166.0"
+backend = "github:openai/codex"
+specifiers = ["0.166.0"]
+
+[tools."github:openai/codex".options]
+asset_pattern = "codex-package-aarch64-unknown-linux-musl.tar.gz"
+version_prefix = "rust-v"
+
+[tools."github:openai/codex"."platforms.linux-arm64"]
+checksum = "sha256:7821b77dda2e6283fb1f63f3165177a271da8833e857cf673c6ca1c9db3bfcc6"
+url = "https://github.com/openai/codex/releases/download/rust-v0.166.0/codex-package-aarch64-unknown-linux-musl.tar.gz"
+url_api = "https://api.github.com/repos/openai/codex/releases/assets/689706667"
+
 [[tools."github:szk302/d-png-cli"]]
-version = "0.2.0"
+version = "0.2.1"
 backend = "github:szk302/d-png-cli"
-specifiers = ["0.2.0"]
+specifiers = ["0.2.1"]
 
 [tools."github:szk302/d-png-cli".options]
 asset_pattern = "d-png-cli-*-aarch64-unknown-linux-musl.tar.gz"
 
 [tools."github:szk302/d-png-cli"."platforms.linux-arm64"]
-checksum = "sha256:8222ecb6c9896de4360f2a40730f29072430691839a987f23611b31129f1e274"
-url = "https://github.com/szk302/d-png-cli/releases/download/v0.2.0/d-png-cli-0.2.0-aarch64-unknown-linux-musl.tar.gz"
-url_api = "https://api.github.com/repos/szk302/d-png-cli/releases/assets/684810011"
+checksum = "sha256:d76d9beffea94ac155841a08ac310bc7cc3e2353ccbe6b8a3194f5fb9258f763"
+url = "https://github.com/szk302/d-png-cli/releases/download/v0.2.1/d-png-cli-0.2.1-aarch64-unknown-linux-musl.tar.gz"
+url_api = "https://api.github.com/repos/szk302/d-png-cli/releases/assets/709201431"
 provenance = "github-attestations"
 
 [[tools."github:szk302/d-png-cli"]]
-version = "0.2.0"
+version = "0.2.1"
 backend = "github:szk302/d-png-cli"
-specifiers = ["0.2.0"]
+specifiers = ["0.2.1"]
 
 [tools."github:szk302/d-png-cli".options]
 asset_pattern = "d-png-cli-*-x86_64-unknown-linux-musl.tar.gz"
 
 [tools."github:szk302/d-png-cli"."platforms.linux-x64"]
-checksum = "sha256:40fa2d357d715ed38f8e08cc94a77ace63c569c92e78591a3ab8f1220de2aacb"
-url = "https://github.com/szk302/d-png-cli/releases/download/v0.2.0/d-png-cli-0.2.0-x86_64-unknown-linux-musl.tar.gz"
-url_api = "https://api.github.com/repos/szk302/d-png-cli/releases/assets/684810039"
+checksum = "sha256:020c8959064e0b74674afe711f7c3ec557cf5802fd1fe6da0c351025222ec6fe"
+url = "https://github.com/szk302/d-png-cli/releases/download/v0.2.1/d-png-cli-0.2.1-x86_64-unknown-linux-musl.tar.gz"
+url_api = "https://api.github.com/repos/szk302/d-png-cli/releases/assets/709201488"
 provenance = "github-attestations"
 
 [[tools."http:kiro-cli"]]
