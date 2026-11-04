@@ -1,0 +1,10 @@
+# dev-base の Azure CLI（az）。PyPI の azure-cli を専用の venv（~/.local/share/azure-cli）へ入れる。
+# azure-cli は依存（azure-mgmt-* など）の版を細かく固定しているため、/opt/python のパッケージと
+# 同じ環境には入れない。
+# 直接依存だけをバージョン固定で記述し、推移的依存を含む完全なリストとハッシュは
+# requirements.txt に生成する（Renovate の pip-compile マネージャが両方を更新する）。
+#
+# 変更後は、このディレクトリで以下を実行して requirements.txt を再生成すること:
+#   uv pip compile --universal --generate-hashes --python-version=3.14 --output-file=requirements.txt requirements.in
+# （オプションは Renovate がヘッダーから解釈できるよう「=」でつなぐ）
+azure-cli==2.91.0

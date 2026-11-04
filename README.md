@@ -14,6 +14,7 @@
 - [使い方](#使い方)
 - [VS Code の Feature](#vs-code-の-feature)
 - [git worktree のタスク](#git-worktree-のタスク)
+- [クラウドの CLI へのログイン](#クラウドの-cli-へのログイン)
 - [ツールの追加・バージョンの上書き](#ツールの追加バージョンの上書き)
 - [設定項目](#設定項目)
 - [AI ツールの状態の保存](#ai-ツールの状態の保存)
@@ -61,7 +62,7 @@ flowchart LR
 | ローカルメール | [Local Markdown Mail](https://github.com/szk302/local-markdown-mail)（lmm。ローカルのファイルだけで AI エージェントと人が Markdown のメッセージをやり取りする） |
 | Lint | hadolint、secretlint |
 | Terraform | tfenv、tflint、terraform-docs |
-| クラウド | AWS CLI、AWS Session Manager plugin（`aws ssm start-session` などで使う）、Google Cloud CLI、Cloudflare Wrangler（`wrangler`。テレメトリは無効にしてある） |
+| クラウド | AWS CLI、AWS Session Manager plugin（`aws ssm start-session` などで使う）、Google Cloud CLI、Azure CLI（`az`。テレメトリは無効にしてある）、Cloudflare Wrangler（`wrangler`。テレメトリは無効にしてある） |
 
 **`ai` コンテナ** — [docker-images/ai/opt/mise/config.toml](docker-images/ai/opt/mise/config.toml)
 
@@ -260,6 +261,32 @@ mise run wt:rm feat/foo --no-delete-branch  # worktree だけを削除し、ブ�
 - `.worktrees/` は git の管理対象外にしてください（プロジェクトの `.gitignore` に `.worktrees/` を追加する）。
 - worktree はコンテナ内の絶対パス（`/home/dev/work/...`）で記録されるため、ホストの git からは使えません。
 - `user` コンテナでは、trust していない `mise.toml` があるディレクトリで実行すると mise がエラーになります（[`mise trust` が必要](#user-コンテナでは-mise-trust-が必要)）。`wt` を直接実行する場合も mise の shim を経由するため同じです。trust はファイルのパスごとに必要なため、メインの worktree で trust していても、`wt:add` で作った worktree の `mise.toml` は trust されていません。worktree で作業する前に内容を確認して `mise trust` してください。
+
+## クラウドの CLI へのログイン
+
+コンテナの中では、CLI がブラウザを起動できなかったり、ブラウザから localhost へのリダイレクトが戻ってこなかったりして、ログインに失敗することがあります。`user` / `ai` の両方のコンテナに、ブラウザを使わずにログインする mise タスクを用意しています（定義は [docker-images/dev-base/etc/mise/config.toml](docker-images/dev-base/etc/mise/config.toml)）。表示された URL を手元のブラウザで開いて認証します。タスク名の後の引数・オプションは、そのまま各 CLI に渡します。
+
+| タスク | 実行するコマンド | 認証の終え方 |
+| --- | --- | --- |
+| `mise run login:gh` | `gh auth login --hostname github.com --git-protocol https --web` | 表示されたコードを URL の画面に入力する |
+| `mise run login:aws-sso` | `aws sso login --use-device-code --no-browser` | 表示されたコードを URL の画面で確認する |
+| `mise run login:aws` | `aws login --remote` | ログイン後にブラウザに表示される認可コードを端末に貼り付ける |
+| `mise run login:gcloud` | `gcloud auth login --no-launch-browser` | ログイン後にブラウザに表示される認可コードを端末に貼り付ける |
+| `mise run login:az` | `az login --use-device-code` | 表示されたコードを URL の画面に入力する |
+
+```sh
+mise run login:aws-sso --profile dev   # プロファイルを指定する
+mise run login:gcloud --update-adc     # アプリケーションのデフォルト認証情報（ADC）も更新する
+mise run login:az --tenant <テナントID>  # テナントを指定する
+```
+
+- `login:gh` は Enter を押してもブラウザを開きません（`GH_BROWSER` を何もしないコマンドにしています）。表示された URL を手で開いてください。git の操作でも gh の認証を使うか確認されます。ssh で操作する場合は `--git-protocol ssh` を付けます。
+- `login:aws-sso` で使うプロファイルは、先に `aws configure sso --use-device-code --no-browser` で作ってください（この設定もブラウザなしで行えます）。
+- `login:aws` は AWS マネジメントコンソールの認証情報でログインします（`aws login`）。リージョンは `AWS_REGION`（`user` コンテナの既定は `ap-northeast-1`）か `--region` で決まります。
+- Microsoft Entra の条件付きアクセスでデバイスコードのフローを禁止しているテナントでは、`login:az` ではログインできません。
+- ログインの状態（`~/.config/gh`・`~/.aws`・`~/.config/gcloud`・`~/.azure` など）はコンテナの中に保存されます。コンテナを作り直すと消えます。
+- `ai` コンテナでログインすると、AI エージェントがその認証情報を使えるようになります。必要なときだけにしてください。
+- `user` コンテナでは、trust していない `mise.toml` があるディレクトリで実行すると mise がエラーになります（[`mise trust` が必要](#user-コンテナでは-mise-trust-が必要)）。
 
 ## ツールの追加・バージョンの上書き
 

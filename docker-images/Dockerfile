@@ -195,10 +195,11 @@ COPY --chown=root:root dev-base/usr/local/bin/entrypoint.sh /usr/local/bin/entry
 # Worktrunk の共通設定（worktree の配置先。user / ai 共通）。
 COPY --chown=root:root dev-base/etc/xdg/worktrunk /etc/xdg/worktrunk
 
-# Python パッケージの定義（ハッシュ付き requirements.txt）。root 所有・読み取り専用。
+# Python パッケージと Azure CLI の定義（ハッシュ付き requirements.txt）。root 所有・読み取り専用。
 COPY --chown=root:root dev-base/opt/python /opt/python
+COPY --chown=root:root dev-base/opt/azure-cli /opt/azure-cli
 
-RUN chmod -R u=rwX,go=rX /etc/mise /opt/python /etc/xdg/worktrunk && \
+RUN chmod -R u=rwX,go=rX /etc/mise /opt/python /opt/azure-cli /etc/xdg/worktrunk && \
     chmod 0644 /etc/profile.d/mise.sh && \
     chmod 0755 /usr/local/bin/mise /usr/local/bin/entrypoint.sh
 
@@ -234,6 +235,31 @@ RUN mise install && \
 #   --break-system-packages は不要。
 # -------------------------------------------------------------------
 RUN uv pip install --system --require-hashes -r /opt/python/requirements.txt
+
+# -------------------------------------------------------------------
+# Azure CLI（az）
+#   PyPI の azure-cli を、ハッシュ付きの requirements.txt（dev-base/opt/azure-cli）で専用の venv に入れる。
+#   azure-cli は依存の版を細かく固定しているため、上の Python パッケージと同じ環境には入れない。
+#   venv は mise の Python で作る（Python の版を上げるとこの層も作り直される）。
+#   venv の bin/az は venv の Python を直接指すため、PATH 上の ~/.local/bin にリンクを置くだけで使える。
+#   依存が多く wheel のキャッシュが大きいため、uv のキャッシュは使わない（層に残さない）。
+#   版の確認は一時的な設定ディレクトリで行い、~/.azure をイメージに残さない。
+#
+#   AZURE_CORE_COLLECT_TELEMETRY: Azure CLI が Microsoft へ送る利用状況のテレメトリを止める
+#     （Wrangler の WRANGLER_SEND_METRICS と同じ考え方）。
+#   AZURE_CORE_SURVEY_MESSAGE: Azure CLI がときどき表示するアンケートの案内を止める。
+# -------------------------------------------------------------------
+ENV AZURE_CORE_COLLECT_TELEMETRY=false \
+    AZURE_CORE_SURVEY_MESSAGE=false
+
+RUN venv="/home/${USER_NAME}/.local/share/azure-cli" && \
+    uv venv --no-cache --python "$(mise which python)" "${venv}" && \
+    uv pip install --no-cache --python "${venv}/bin/python" --require-hashes -r /opt/azure-cli/requirements.txt && \
+    mkdir -p "/home/${USER_NAME}/.local/bin" && \
+    ln -s "${venv}/bin/az" "/home/${USER_NAME}/.local/bin/az" && \
+    config_dir="$(mktemp -d)" && \
+    AZURE_CONFIG_DIR="${config_dir}" az version && \
+    rm -rf "${config_dir}"
 
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 
