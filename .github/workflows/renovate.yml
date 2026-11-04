@@ -48,7 +48,7 @@ jobs:
       # minimumReleaseAge が永久に pending になるため。
       # 名前を RENOVATE_ で始めないこと（Renovate コンテナへ設定として渡されてしまう）。
       # renovate: datasource=docker depName=renovate/renovate
-      CLI_IMAGE_TAG: '44.69.6@sha256:1f28f1c17ce62b079c6e2c4f3484f72c1147f0608d51b5ae1eaef992f7324d31'
+      CLI_IMAGE_TAG: '44.190.2@sha256:a1fa316d623c6a48a366ad84a8513777706ba5b471f27b531a547bffa13e424b'
     steps:
       # GitHub App のインストールトークンを発行する。
       # GITHUB_TOKEN による push は他のワークフローを起動しないため、
