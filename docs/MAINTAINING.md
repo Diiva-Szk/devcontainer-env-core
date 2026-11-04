@@ -117,7 +117,7 @@ CLI ツールと言語ランタイム（Python / Node.js）は [mise](https://mi
 | KasmVNC（ai） | `docker-images/Dockerfile` の `KASMVNC_VERSION` / `KASMVNC_SHA256_*` | GitHub リリースの `.deb` を sha256 で検証して `apt-get install` |
 | ブラウザ操作 CLI のスキル（ai） | `docker-images/ai/opt/rulesync/` / `docker-images/ai/opt/agent-browser-skills/`（`rulesync.jsonc` と `rulesync.lock`） | `rulesync install --frozen` で取得し `rulesync generate --global` で各ツールへ展開 |
 | find-docs スキル（ai） | `docker-images/ai/opt/rulesync/.rulesync/skills/find-docs/SKILL.md`（vendoring） | `rulesync generate --global` で各ツールへ展開（取得は `scripts/update-find-docs-skill.sh`。PR 上では `update-find-docs-skill.yml` が実行する。[find-docs の vendoring](#find-docs-の-vendoring)を参照） |
-| d-png-cli のライブラリ（ai。draw.io の図形パレット・Simple Icons） | `docker-images/ai/opt/d-png-libraries/build-drawio-libraries.py`（draw.io の Web 資材から生成）、`docker-images/ai/opt/mise/config.toml`（`github:mondeja/simple-icons-drawio`）と `mise.lock` | ビルド時に `d-png-cli library pack` で取得元 `/opt/d-png-libraries` を作り、ユーザーの `config.toml` でスコープに割り当てる（[d-png-cli のライブラリ](#d-png-cli-のライブラリai)を参照） |
+| d-png-cli のライブラリ（ai。draw.io の図形パレット・Simple Icons） | `docker-images/ai/opt/d-png-libraries/build-drawio-libraries.py`（draw.io の Web 資材から生成）、`docker-images/ai/opt/mise/config.toml`（`github:mondeja/simple-icons-drawio`）と `mise.lock` | ビルド時に `d-png-cli library pack` で取得元 `/opt/d-png-libraries` を作り、ユーザーの `config.toml` でスコープに割り当てて、全ライブラリを `library install --global` で取り込む（[d-png-cli のライブラリ](#d-png-cli-のライブラリai)を参照） |
 | d-png スキル（ai） | `docker-images/ai/opt/rulesync/.rulesync/skills/d-png/SKILL.md`（vendoring） | `rulesync generate --global` で各ツールへ展開（取得は手動。[d-png の vendoring](#d-png-の-vendoring)を参照） |
 | デスクトップ（ai）、socat（user） | `docker-images/Dockerfile` | Debian のパッケージ（`apt-get`） |
 | Google Chrome（ai / user） | `docker-images/Dockerfile` | Google の apt リポジトリ（署名鍵の主鍵のフィンガープリントを `GOOGLE_LINUX_SIGNING_KEY_FPR` で照合）から `apt-get install` |
@@ -233,7 +233,7 @@ bash scripts/update-find-docs-skill.sh
 
 ### d-png-cli のライブラリ（ai）
 
-d-png-cli（v0.2.0 以降）はライブラリ（`<mxlibrary>` 形式の draw.io のカスタムライブラリ）を同梱せず、各プロジェクトの `.d-png/` に登録・取り込みしたものだけを参照します（ユーザー領域に置けるのは `config.toml` だけです）。そこで、イメージのビルド時にライブラリの取得元（`file:` のディレクトリ）を `/opt/d-png-libraries` に作り、ユーザーの `config.toml`（`docker-images/ai/home-config/.config/d-png-cli/config.toml`。`~/.config` は volume ではないため、イメージを作り直せば反映されます）でスコープに割り当てています。利用者はプロジェクトごとに `d-png-cli library install @drawio/<パレット>` などで取り込みます。ライブラリ自体はリポジトリに置きません。
+d-png-cli（v0.2.0 以降）はライブラリ（`<mxlibrary>` 形式の draw.io のカスタムライブラリ）を同梱せず、プロジェクトの `.d-png/` か、ユーザー領域（`~/.config/d-png-cli/`。v0.2.1 以降のグローバルのライブラリ）に登録・取り込みしたものだけを参照します。そこで、イメージのビルド時にライブラリの取得元（`file:` のディレクトリ）を `/opt/d-png-libraries` に作り、ユーザーの `config.toml`（`docker-images/ai/home-config/.config/d-png-cli/config.toml`。`~/.config` は volume ではないため、イメージを作り直せば反映されます）でスコープに割り当て、取得元の全ライブラリを `d-png-cli library install --global` でグローバルに取り込んでいます。AI エージェントは、プロジェクトで `init` や取り込みをしなくても図形を参照できます。VS Code 拡張のライブラリ欄に出す場合や、参照を含む XML をリポジトリで共有する場合は、利用者がプロジェクトにも `d-png-cli library install @drawio/<パレット>` などで取り込みます。ライブラリ自体はリポジトリに置きません。
 
 | スコープ | 中身 | 版 |
 | --- | --- | --- |
@@ -247,8 +247,9 @@ d-png-cli（v0.2.0 以降）はライブラリ（`<mxlibrary>` 形式の draw.io
   - サイドバーの作りが変わってパレットが空になったことに気づけるよう、主要なパレット（`general`・`aws4-compute`・`azure2-compute`・`gcp2-compute`・`kubernetes` など）ができなければ失敗します。
 - **Simple Icons の取得:** ツールではなくデータですが、lock によるチェックサムの固定と Renovate の追従（github-releases。ai の mise ツールと同じグループ・周期）を他のツールと同じ仕組みで行うため、ai の mise 設定に `github:mondeja/simple-icons-drawio` として書いています。プラットフォームに依存しないため、`asset_pattern` は1つです。版は `mise where` の配置先（`.../<版>`）から取ります。
 - **shim:** mise の github backend は単体ファイルを実行ファイルとして扱うため、`simple-icons.xml` という shim が PATH に1つできます（`bin_path` を指定しても避けられないことを確認済み）。実行しても何も起きず無害なため、そのままにしています。避けるには取得専用の mise 設定を別に置く必要があり、`update-mise-locks.sh`・`update-mise-lock.yml`・`build-images.yml` の対象を広げる改修が要るためです。
-- **配置と検証:** 取得元はほかの `/opt` 配下と同じく root 所有・読み取り専用です（`library install` は読むだけです）。ビルドでは、一時的なプロジェクトにユーザーの `config.toml` のスコープを通してライブラリを取り込み、参照（`dpng-ref`）で置いた図を描いて、取り込みと描画が通ることを確かめます（[draw.io の Web 資材](#drawio-の-web-資材ai)の検証を兼ねます）。
-- **版を上げたとき:** 取得元にはビルドした時点の版だけが置かれます。プロジェクトに取り込み済みのファイルはそのまま使えますが、`lock.json` の版が取得元から消えるため、取り込み直すときは利用者が `d-png-cli library update` で新しい版にします。
+- **配置と検証:** 取得元はほかの `/opt` 配下と同じく root 所有・読み取り専用です（`library install` は読むだけです）。グローバルのライブラリ（`~/.config/d-png-cli/libraries/`）は、home-config の配置の後に、ユーザーの `config.toml` のスコープを通して取得元の全ライブラリ（`@*/*`）を取り込んで作ります（約25秒・約18MB）。d-png-cli がユーザーの `config.toml` に `[dependencies]` を書き足し、`~/.config/d-png-cli/lock.json` を作ります（コメントは保たれます）。取得元のキャッシュは一時ディレクトリに置いて消します。続けて、プロジェクトの無い一時ディレクトリで、参照（`dpng-ref`）で置いた図を描いて、グローバルのライブラリでの参照と描画が通ることを確かめます（[draw.io の Web 資材](#drawio-の-web-資材ai)の検証を兼ねます）。
+- **グローバルにした理由:** v0.2.1 の `d-png-cli skill` は、登録済みのライブラリを探し、無ければユーザーに登録を依頼するようエージェントに指示します。グローバルに取り込んでおけば、`.d-png/` の無いリポジトリでもエージェントが止まらずに図形を使えます。全部を取り込むのは、どのパレットを入れるかを選ぶ手間と比べて、時間・容量（約25秒・約18MB）と `library search` の速さ（約0.8秒）に問題が無いためです。
+- **版を上げたとき:** 取得元にはビルドした時点の版だけが置かれます。グローバルのライブラリはイメージを作り直すと取得元と同じ版になります。プロジェクトに取り込み済みのファイルはそのまま使えますが、`lock.json` の版が取得元から消えるため、取り込み直すときは利用者が `d-png-cli library update` で新しい版にします。
 - **ライセンス:** draw.io の図形は draw.io（Apache-2.0）由来のため、`/opt/drawio-webapp/LICENSE` を `/opt/d-png-libraries/LICENSE-drawio` として置いています。Simple Icons の取得元のリポジトリは BSD 3-Clause（Copyright (c) 2022, Álvaro Mondéjar Rubio）で、リリースにはライセンス表記のファイルが無いため、リポジトリの `LICENSE.md` を `docker-images/ai/opt/d-png-libraries/LICENSE-simple-icons-drawio.md` に置き、`/opt/d-png-libraries/` へ配置しています（d-png-cli は取得元の `@<スコープ>/` の下だけを読むため、直下のファイルは影響しません）。アイコン自体は Simple Icons（CC0 1.0）由来です。各社のアイコン・ブランドのロゴの利用には、各社の商標・利用条件が別にかかります。
 - **ライブラリを追加するとき:** Dockerfile の生成ステップで `d-png-cli library pack <ファイル> --name @<スコープ>/<名前> --version <版> --to /opt/d-png-libraries` を実行し、スコープを `home-config/.config/d-png-cli/config.toml` の `[scopes]` に足します。取得方法は Simple Icons と同じく mise と lock で固定し、ライセンス表記も `/opt/d-png-libraries/` に置いてください。
 

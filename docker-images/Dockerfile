@@ -457,10 +457,12 @@ RUN mise install && \
 ENV DAGU_SKIP_EXAMPLES=true
 
 # d-png-cli のライブラリの取得元（file:/opt/d-png-libraries）
-#   d-png-cli はライブラリ（図形・アイコン）を同梱せず、各プロジェクトの .d-png/ に取り込んだものだけを
-#   参照する。リポジトリにはライブラリを置かず、ここで取得元を作り、ユーザーの config.toml
-#   （ai/home-config/.config/d-png-cli/config.toml）でスコープに割り当てる。プロジェクトでは
-#   `d-png-cli library install @drawio/aws4-compute` などで取り込む（版は lock.json に記録される）。
+#   d-png-cli はライブラリ（図形・アイコン）を同梱せず、プロジェクトの .d-png/ か、ユーザー領域
+#   （~/.config/d-png-cli/。グローバルのライブラリ）に取り込んだものだけを参照する。リポジトリには
+#   ライブラリを置かず、ここで取得元を作り、ユーザーの config.toml
+#   （ai/home-config/.config/d-png-cli/config.toml）でスコープに割り当てる。取得元の全ライブラリは
+#   下の home-config の後でグローバルに取り込む。プロジェクトでも
+#   `d-png-cli library install @drawio/aws4-compute` などで取り込める（版は lock.json に記録される）。
 #   @drawio/<パレット>: draw.io のサイドバーの図形（VS Code の draw.io 拡張の図形パレットと同じもの）。
 #     上で配置した Web 資材（拡張 1.9.0 と同じ draw.io 26.0.2）のサイドバーのコードを Chrome で動かし、
 #     パレットごとにライブラリにする（ai/opt/d-png-libraries/build-drawio-libraries.py。約30秒）。
@@ -497,20 +499,33 @@ RUN set -eu; \
 COPY --chown=${USER_NAME}:${USER_NAME} ai/home-config "/home/${USER_NAME}"
 RUN chmod 0755 "/home/${USER_NAME}/.vnc/xstartup"
 
+# d-png-cli のグローバルのライブラリ（~/.config/d-png-cli/libraries/）
+#   取得元の全ライブラリ（@drawio/* と @simple-icons/simple-icons）を、ユーザーの config.toml の
+#   スコープを通して `library install --global` で取り込む（v0.2.1 以降。約25秒・約18MB）。
+#   プロジェクト（.d-png/）が無い場所でも参照でき、AI エージェントは init や取り込みをせずに
+#   図形を使える。プロジェクトに同じ名前のライブラリがあれば、d-png-cli はそちらを使う。
+#   依存はユーザーの config.toml の [dependencies]、版は ~/.config/d-png-cli/lock.json に記録される。
+#   ~/.config は volume ではないため、イメージを作り直せば取得元と同じ版に揃う。
+#   取得元はプロジェクトへの取り込みと library update で使うため残す。
+#   取得元のキャッシュ（D_PNG_CACHE）は一時ディレクトリに置き、イメージに残さない。
+RUN set -eu; \
+    cache_dir="$(mktemp -d)"; \
+    cd /opt/d-png-libraries; \
+    set --; \
+    for dir in @*/*/; do set -- "$@" "${dir%/}"; done; \
+    D_PNG_CACHE="${cache_dir}" d-png-cli library install --global "$@" > /dev/null; \
+    rm -rf "${cache_dir}"
+
 # d-png-cli のライブラリと draw.io の Web 資材の確認
-#   一時的なプロジェクトに、ユーザーの config.toml のスコープを通して取得元からライブラリを取り込み、
-#   参照（dpng-ref）で置いた図を Chrome で描く。図は、AWS の図形（Lambda）、Azure のアイコン（img/lib の画像）、
+#   プロジェクトの無い一時ディレクトリで、グローバルのライブラリの参照（dpng-ref）で置いた図を Chrome で描く。
+#   図は、AWS の図形（Lambda）、Azure のアイコン（img/lib の画像）、
 #   Google Cloud のアイコン（図に埋め込まれた data: の画像）、Misc のアイコン（img/clipart の画像）、
 #   Simple Icons のアイコン、MathJax の拡張を遅延ロードする数式（\color）を含む。
-#   ライブラリの参照・取り込みと、draw.io の Web 資材（/opt/drawio-webapp）で足りることを確かめる
+#   グローバルのライブラリの参照と、draw.io の Web 資材（/opt/drawio-webapp）で足りることを確かめる
 #   （資材が欠けていると d-png-cli が ASSET_MISSING などで失敗する）。
-#   取得元のキャッシュ（D_PNG_CACHE）も一時ディレクトリに置き、イメージに残さない。
 RUN set -eu; \
     check_dir="$(mktemp -d)"; \
-    export D_PNG_PROJECT="${check_dir}" D_PNG_CACHE="${check_dir}/cache"; \
-    d-png-cli init "${check_dir}" > /dev/null; \
-    d-png-cli library install @drawio/aws4-compute @drawio/azure2-compute @drawio/gcp2-compute \
-      @drawio/misc @simple-icons/simple-icons > /dev/null; \
+    cd "${check_dir}"; \
     printf '%s' '<mxfile><diagram id="p" name="p"><mxGraphModel math="1"><root><mxCell id="0"/><mxCell id="1" parent="0"/><mxCell id="aws" parent="1" dpng-ref="@drawio/aws4-compute/lambda"><mxGeometry as="geometry"/></mxCell><mxCell id="azure" parent="1" dpng-ref="@drawio/azure2-compute/function-apps"><mxGeometry x="100" as="geometry"/></mxCell><mxCell id="gcp" parent="1" dpng-ref="@drawio/gcp2-compute/compute-engine"><mxGeometry x="200" as="geometry"/></mxCell><mxCell id="misc" parent="1" dpng-ref="@drawio/misc/icon"><mxGeometry x="360" as="geometry"/></mxCell><mxCell id="si" parent="1" dpng-ref="@simple-icons/simple-icons/postgresql"><mxGeometry x="440" width="48" as="geometry"/></mxCell><mxCell id="math" value="$$\color{red}{x+y}$$" style="text;html=1;" vertex="1" parent="1"><mxGeometry x="520" width="80" height="40" as="geometry"/></mxCell></root></mxGraphModel></diagram></mxfile>' \
       | d-png-cli write -o "${check_dir}/check.drawio.png" > /dev/null; \
     rm -rf "${check_dir}"

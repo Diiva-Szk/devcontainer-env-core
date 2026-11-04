@@ -75,17 +75,24 @@ d-png-cli はライブラリ（図に `dpng-ref` の参照で入れる図形・�
 | `@drawio/<パレット>` | VS Code の draw.io 拡張の図形パレット（draw.io のサイドバー）の図形。パレットごとに1つのライブラリで、`general`・`flowchart`・`uml`・`aws4-compute`・`azure2-compute`・`gcp2-compute`・`kubernetes` など488個あります。版は draw.io の版（26.0.2） |
 | `@simple-icons/simple-icons` | [Simple Icons の draw.io ライブラリ](https://github.com/mondeja/simple-icons-drawio)。版は Simple Icons の版 |
 
-d-png-cli は、プロジェクトに取り込んだライブラリだけを参照します。使うプロジェクトで次のように取り込んでください（`.d-png/` が作られ、`config.toml` の `[dependencies]` と `lock.json` に記録されます。取り込んだファイルは `.d-png/.gitignore` で Git から除外されます）。
+取得元の全ライブラリは、イメージのビルド時にグローバルのライブラリ（`~/.config/d-png-cli/libraries/`）として取り込んであります。プロジェクト（`.d-png/`）が無い場所でも、そのまま参照できます。
+
+```sh
+d-png-cli library search lambda         # 先頭の列が XML に書く参照（@drawio/aws4-compute/lambda）
+d-png-cli library list --global         # グローバルのライブラリの一覧
+```
+
+VS Code 拡張のライブラリ欄に出す場合や、参照（`dpng-ref`）を含む XML をリポジトリで共有する場合は、プロジェクトにも取り込んでください。グローバルのライブラリは `library vscode` の対象にならず、ほかの環境にもないためです。プロジェクトに取り込むと `.d-png/` が作られ、`config.toml` の `[dependencies]` と `lock.json` に記録されます。取り込んだファイルは `.d-png/.gitignore` で Git から除外されます。プロジェクトに同じ名前のライブラリがあれば、d-png-cli はグローバルのものよりそちらを使います。
 
 ```sh
 d-png-cli init
 ls /opt/d-png-libraries/@drawio/        # 取り込めるパレットの一覧
 d-png-cli library install @drawio/aws4-compute @simple-icons/simple-icons
-d-png-cli library search lambda         # 先頭の列が XML に書く参照（@drawio/aws4-compute/lambda）
 d-png-cli library vscode --write        # VS Code 拡張のライブラリ欄にも出す場合（Simple Icons など）
 ```
 
 - 取得元は `ai` コンテナの中にあるため、取り込んだライブラリをほかの環境（CI など）で `library install` により復元することはできません。
+- `~/.config` は volume ではないため、ユーザーの `config.toml` に手で足したスコープや、自分で `--global` を付けて登録・取り込みしたライブラリは、イメージを更新してコンテナを作り直すと消えます。作り直した後に、もう一度設定・登録してください。
 - イメージの更新で版が上がると（Simple Icons の更新など）、取得元には新しい版だけが残ります。取り込み済みのファイルはそのまま使えますが、取り込み直す場合は `d-png-cli library update` で新しい版にしてください。
 - 各社のアイコン・ブランドのロゴの利用は、それぞれの商標・利用条件に従ってください。
 

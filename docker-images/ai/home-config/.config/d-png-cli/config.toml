@@ -3,7 +3,10 @@
 # イメージのビルド時に作ったライブラリの取得元（/opt/d-png-libraries）を、スコープに割り当てる。
 #   @drawio/<パレット>           draw.io のサイドバーの図形（VS Code の draw.io 拡張の図形パレット）
 #   @simple-icons/simple-icons   Simple Icons
-# ライブラリはプロジェクトごとに取り込む（d-png-cli はライブラリをユーザー領域に置かない）。
+# 取得元の全ライブラリは、イメージのビルド時にグローバルのライブラリ（~/.config/d-png-cli/libraries/）
+# として取り込み済みで、プロジェクトが無い場所でも参照できる。末尾の [dependencies] と
+# ~/.config/d-png-cli/lock.json は、そのときに d-png-cli が書き足したもの。
+# VS Code 拡張のライブラリ欄に出す場合や、参照を含む XML をリポジトリで共有する場合は、プロジェクトにも取り込む。
 #   d-png-cli init
 #   d-png-cli library install @drawio/aws4-compute @simple-icons/simple-icons
 # 取り込めるライブラリは ls /opt/d-png-libraries/@drawio/ で一覧できる。
