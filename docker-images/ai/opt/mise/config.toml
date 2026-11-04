@@ -48,12 +48,13 @@
 #   先頭ディレクトリの自動除去は働かず、d-png-cli は展開先の直下に置かれる（bin_path・strip_components は不要）。
 #   asset_pattern をプラットフォームごとに指定する理由は codex と同じ。
 #   描画には Google Chrome を使う（Dockerfile の D_PNG_CHROME_PATH / D_PNG_CHROME_ARGS）。
-#   ライブラリは同梱されないため、Dockerfile で取得元（/opt/d-png-libraries）を作る。
+#   ライブラリは同梱されないため、Dockerfile で取得元（/opt/d-png-libraries）を作り、
+#   全ライブラリをグローバルに取り込む（library install --global。v0.2.1 以降）。
 #   スキル（d-png）は opt/rulesync/.rulesync/skills/d-png/SKILL.md に vendoring している
 #   （リリースタグが注釈付きタグで、find-docs と同じく rulesync が解決できないため）。
 #   スキルは案内だけで本文は `d-png-cli skill` が出力するため、版を上げてもスキルの取り直しは通常不要。
 [tools."github:szk302/d-png-cli"]
-version = "0.2.0"
+version = "0.2.1"
 
 [tools."github:szk302/d-png-cli".platforms]
 linux-x64 = { asset_pattern = "d-png-cli-*-x86_64-unknown-linux-musl.tar.gz" }
