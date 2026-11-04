@@ -184,20 +184,20 @@ url_api = "https://api.github.com/repos/szk302/d-png-cli/releases/assets/6848100
 provenance = "github-attestations"
 
 [[tools."http:kiro-cli"]]
-version = "2.37.0"
+version = "3.0.0"
 backend = "http:kiro-cli"
-specifiers = ["2.37.0"]
+specifiers = ["3.0.0"]
 
 [tools."http:kiro-cli".options]
 strip_components = "1"
 
 [tools."http:kiro-cli"."platforms.linux-arm64"]
-checksum = "sha256:3588100df2addfbb2c6953698ea2d6e7d2b88c5ef664ec3235e08fa454219f68"
-url = "https://desktop-release.q.us-east-1.amazonaws.com/2.37.0/kirocli-aarch64-linux.tar.gz"
+checksum = "sha256:ee719fcf8d1166a44eb543e9acada6e2766cf13765787612336d0a43f3903766"
+url = "https://desktop-release.q.us-east-1.amazonaws.com/3.0.0/kirocli-aarch64-linux.tar.gz"
 
 [tools."http:kiro-cli"."platforms.linux-x64"]
-checksum = "sha256:02c49873ba64285f34048aac377ccf0b546b5627f39dd775bae9fa306112ff19"
-url = "https://desktop-release.q.us-east-1.amazonaws.com/2.37.0/kirocli-x86_64-linux.tar.gz"
+checksum = "sha256:2ebb8688b84765e4baf46d6e28b3e79780e7724e198591c22d0528d03a88a282"
+url = "https://desktop-release.q.us-east-1.amazonaws.com/3.0.0/kirocli-x86_64-linux.tar.gz"
 
 [[tools."npm:@playwright/cli"]]
 version = "0.1.23"
