@@ -1,0 +1,46 @@
+name: Verify actions lock
+
+# ワークフローが使う Action は .github/workflows/actions.lock でコミットを固定している。
+# lock に載っていない Action や、lock に無いワークフローがあると、そのワークフローは実行時に失敗する。
+# lock を作り直さずに uses: を変えた場合や、固定したコミットが上流のタグ・ブランチから
+# 外れた場合（タグの付け替え・履歴の書き換え）に、マージ前にここで検出する。
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/**'
+  workflow_dispatch:
+
+concurrency:
+  group: verify-actions-lock-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
+permissions: {}
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    env:
+      # gh actions-lock の版。Renovate がリポジトリで使う版（renovate.json5 の constraints.ghActionsLock）と揃える。
+      # 名前を GH_ACTIONS_LOCK_ で始めないこと（拡張機能が設定として読む環境変数の接頭辞のため）。
+      # renovate: datasource=github-releases depName=github/gh-actions-lock
+      LOCK_EXTENSION_VERSION: 'v0.4.0'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+
+      # リリースは immutable（公開後にタグも成果物も差し替えられない）のため、タグで固定する。
+      - name: Install gh actions-lock
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh extension install github/gh-actions-lock --pin "$LOCK_EXTENSION_VERSION"
+
+      # ファイルは書き換えず、lock の網羅性と、固定したコミットが上流で検証できることを確かめる。
+      - name: Verify actions.lock
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh actions-lock --verify

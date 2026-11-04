@@ -38,7 +38,7 @@ jobs:
     timeout-minutes: 60
     env:
       # Renovate 本体のコンテナイメージ（バージョン + digest で固定する）。
-      # Action 自体を SHA 固定しても、既定では可変タグ（ghcr.io/renovatebot/renovate:43 等）の
+      # Action 自体を actions.lock でコミット固定しても、既定では可変タグ（ghcr.io/renovatebot/renovate:43 等）の
       # コンテナが実行される。このコンテナには強い App トークンが渡るため、タグの差し替えや
       # リリース侵害の影響を受けないよう digest で固定する。
       #
@@ -58,13 +58,13 @@ jobs:
       # permission-* を指定しないと、トークンは App installation の全権限を継承する。
       # Renovate に必要な権限だけに絞る（いずれも App 側に付与されている必要がある）:
       #   Contents / Issues / Pull requests / Checks / Commit statuses : read+write
-      #   Workflows : read+write （アクションのSHA固定を更新するために必須）
+      #   Workflows : read+write （ワークフローの uses: と .github/workflows/actions.lock を更新するために必須）
       #   Dependabot alerts : read （renovate.json5 の vulnerabilityAlerts で脆弱性アラートを読むため）
       # Metadata:read は常に付与される。
       # vulnerabilityAlerts には、リポジトリ側で Dependency graph と Dependabot alerts の有効化も必要。
       - name: Generate GitHub App token
         id: app-token
-        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        uses: actions/create-github-app-token@v3.3.0
         with:
           client-id: ${{ secrets.RENOVATE_APP_CLIENT_ID }}
           private-key: ${{ secrets.RENOVATE_APP_PRIVATE_KEY }}
@@ -79,7 +79,7 @@ jobs:
       # Renovate は自身でリポジトリを clone するため actions/checkout は不要。
       # postUpgradeTasks が参照する scripts/ も、その clone 側のものが使われる。
       - name: Run Renovate
-        uses: renovatebot/github-action@2804199d260ad00c1fae0e9e842888369391c776 # v46.3.10
+        uses: renovatebot/github-action@v46.3.10
         with:
           token: ${{ steps.app-token.outputs.token }}
           renovate-image: renovate/renovate

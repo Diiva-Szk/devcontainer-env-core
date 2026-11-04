@@ -3,13 +3,21 @@
   timezone: 'Asia/Tokyo',
   extends: [
     'config:recommended',
-    // イメージ・アクションをダイジェストで固定し、タグの差し替えによる
-    // すり替えを防ぐ（サプライチェーン対策）
+    // イメージをダイジェストで固定し、タグの差し替えによるすり替えを防ぐ（サプライチェーン対策）。
+    // Action は .github/workflows/actions.lock でコミットを固定するため、uses: は版のタグで書く
+    // （helpers:pinGitHubActionDigests は使わない。Renovate が SHA に固定し直すと、
+    //   gh actions-lock がタグへ戻すため）。
     'docker:pinDigests',
-    'helpers:pinGitHubActionDigests',
     // メンテナンスが止まった依存を検知する
     'abandonments:recommended',
   ],
+  // Action の版を更新したPRでは、Renovate が gh actions-lock で .github/workflows/actions.lock を作り直す。
+  // 拡張機能の版は CI の検証（verify-actions-lock.yml）と揃える。未指定だと Renovate の既定の版になり、
+  // Renovate 本体の更新で黙って変わる。値はリリースのタグ（v 付き）で書く。
+  constraints: {
+    // renovate: datasource=github-releases depName=github/gh-actions-lock
+    ghActionsLock: 'v0.4.0',
+  },
   dependencyDashboard: true,
   dependencyDashboardOSVVulnerabilitySummary: 'all',
   osvVulnerabilityAlerts: true,
@@ -128,6 +136,26 @@
         '//\\s*renovate:\\s*datasource=(?<datasource>\\S+)\\s+depName=(?<depName>\\S+)\\s*\\n[^}]*?"ref":\\s*"v(?<currentValue>[^"]+)"',
       ],
       // データソース側のタグ（v0.38.1 形式）から v を除き、捕捉した値と比較できるようにする
+      extractVersionTemplate: '^v?(?<version>.+)$',
+      versioningTemplate: 'semver',
+    },
+    {
+      customType: 'regex',
+      description: 'gh actions-lock の版（Renovate の constraints.ghActionsLock と CI の検証で使う版）',
+      managerFilePatterns: [
+        '/^renovate\\.json5$/',
+        '/^\\.github/workflows/verify-actions-lock\\.yml$/',
+      ],
+      // 以下の形式を対象にする（depName が同じため、両方が1つのPRで更新される）:
+      //   // renovate: datasource=github-releases depName=github/gh-actions-lock
+      //   ghActionsLock: 'v0.4.0',
+      //   # renovate: datasource=github-releases depName=github/gh-actions-lock
+      //   LOCK_EXTENSION_VERSION: 'v0.4.0'
+      //
+      // v 接頭辞は捕捉範囲の外に置く（rulesync の ref と同じ理由）。
+      matchStrings: [
+        '(?://|#)\\s*renovate:\\s*datasource=(?<datasource>\\S+)\\s+depName=(?<depName>\\S+)\\s*\\n\\s*[A-Za-z_]+:\\s*\'v(?<currentValue>[^\']+)\'',
+      ],
       extractVersionTemplate: '^v?(?<version>.+)$',
       versioningTemplate: 'semver',
     },

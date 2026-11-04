@@ -54,6 +54,7 @@ Feature（`devcontainer-features/` 配下）には `Dockerfile` を含めず、�
 ├── renovate.json5
 └── .github/
     ├── workflows/
+    │   └── actions.lock          # Action のコミットの固定（gh actions-lock が生成。手で編集しない）
     ├── ci/compose.cache.yml      # CI でビルドキャッシュを書き出すための compose の上書き
     └── tools/devcontainer-cli/   # CI で使う Dev Containers CLI（package-lock.json）
 ```
@@ -302,7 +303,7 @@ d-png-cli の同梱資材は基本図形だけで、AWS・Google Cloud・Azure �
 
 ## CI/CD パイプライン
 
-`.github/workflows/` の7ワークフローは、以下のように連鎖して動作します。
+`.github/workflows/` の8ワークフローは、以下のように連鎖して動作します。
 
 ```mermaid
 flowchart TD
@@ -320,6 +321,7 @@ flowchart TD
     PR -->|"docker-images/**/mise/config.toml"| lock["update-mise-lock.yml<br/>generate: mise.lock とサイドカーを作り直す<br/>push: 検証して PR ブランチへ push（別 runner）"]
     PR -->|"docker-images/**/rulesync.jsonc"| rlock["update-rulesync-lock.yml<br/>generate: rulesync.lock を作り直す<br/>push: 検証して PR ブランチへ push（別 runner）"]
     PR -->|"docker-images/ai/opt/mise/config.toml"| fdocs["update-find-docs-skill.yml<br/>generate: find-docs スキルを ctx7 と同じ版のタグから作り直す<br/>push: 検証して PR ブランチへ push（別 runner）"]
+    PR -->|".github/workflows/**"| vlock["verify-actions-lock.yml<br/>actions.lock の検証（gh actions-lock --verify）"]
     PR -->|"devcontainer-features/**"| validate["release-features.yml : validate<br/>features package のパース検証<br/>拡張機能の版が Marketplace に存在するかの検査"]
 
     lock -->|"App token の push が再トリガー"| build
@@ -336,6 +338,7 @@ flowchart TD
 - **lock → build の連鎖:** mise は `locked = true` のため、`config.toml` だけ更新すると `mise.lock` と不一致になりビルドが失敗します。Renovate には lock を更新させず（`skipArtifactsUpdate`）、`update-mise-lock` が PR ブランチへ lock を push します。コミットは lock 更新用の GitHub App（`diiva-szk-lock-updater`）のトークンで GraphQL の `createCommitOnBranch` から作るため、GitHub による署名が付き（Verified）、そのコミットが改めて `build-images` を起こします。コミットの作者はその App の bot になり、`gitIgnoredAuthors` により Renovate から「人の編集」とみなされません。
 - **rulesync の lock → build の連鎖:** ビルドは `rulesync install --frozen` のため、`rulesync.jsonc` の `ref` だけ更新すると `rulesync.lock` と不一致になり失敗します。Renovate は `ref` だけを更新し、`update-rulesync-lock` が mise と同じ仕組みで lock を PR ブランチへ push します。
 - **find-docs スキル → build の連鎖:** ビルドは vendoring した find-docs スキルの版（`find-docs.version`）と `ctx7 --version` を照合するため、Renovate が ctx7 の版だけを上げると失敗します。`update-find-docs-skill` が同じ版のタグからスキルを作り直し、mise と同じ仕組みで PR ブランチへ push します（[find-docs の vendoring](#find-docs-の-vendoring)）。
+- **actions.lock:** Renovate は Action の版を上げる PR で `actions.lock` も作り直してコミットするため、mise のような push 用のワークフローはありません。`verify-actions-lock` は検証だけを行います（[サードパーティ Action と実行時の依存](#サードパーティ-action-と実行時の依存)）。
 - **validate → publish:** `publish` は `needs: validate` かつ `if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'` です。PR ではパース検証のみ行い、`main` からのみ GHCR へ publish します（手動実行で別ブランチを選んでも publish しません）。
 - **version bump との連動:** Feature の `version` を上げないと `publish` は何も配信しません。Renovate の `postUpgradeTasks` が `scripts/bump-feature-version.sh` で patch を上げます。手作業で Feature を変更した場合は `version` を上げてください。
 
@@ -389,29 +392,47 @@ flowchart TD
 | d-png スキル（d-png-cli、vendoring） | Renovate の対象外。スキルは版によって変わらない案内のため通常は取り直さない（[d-png の vendoring](#d-png-の-vendoring)） |
 | find-docs スキル（ctx7、vendoring） | Renovate の対象外。Renovate が ctx7 の版を上げた PR で、`update-find-docs-skill.yml` が同じ版のタグから作り直す（[find-docs の vendoring](#find-docs-の-vendoring)）。rulesync の git transport が注釈付きタグに対応したら、agent-browser と同じ `customManagers` の正規表現に移行する |
 | Renovate 本体のコンテナ / BuildKit | `customManagers` の正規表現（`CLI_IMAGE_TAG` / `BUILDKIT_IMAGE_TAG` のバージョン + digest） |
+| ワークフローの Action（`uses:`） | Renovate の github-actions マネージャ（版のタグ）。`actions.lock` は Renovate が `gh actions-lock` で作り直す |
+| gh actions-lock（CLI 拡張） | `customManagers` の正規表現（`// renovate:` / `# renovate:` コメント）。`renovate.json5` の `constraints.ghActionsLock`（Renovate が使う版）と `verify-actions-lock.yml` の `LOCK_EXTENSION_VERSION`（CI が使う版）を1つの PR で更新する |
 | Python パッケージ / Azure CLI | pip-compile マネージャ（`requirements.txt` のヘッダーのコマンドで再生成）。Azure CLI は Python パッケージとは別の PR（グループ）にする |
 | VS Code 拡張機能 | `customManagers` の正規表現（`// renovate:` コメント）。Marketplace は参照できないため GitHub のリリースを代理指標にし、`release-features.yml` が `scripts/check-vscode-extensions.sh` で指定の版が Marketplace に存在することを検査する（未公開の版は `renovate.json5` の `allowedVersions` で除外する） |
 
 ## サードパーティ Action と実行時の依存
 
-ワークフローで利用している Action は、すべてコミット SHA で固定しています（Renovate が自動更新）。実際の版は、各ワークフローの `uses:` の SHA とその行末のコメント（`# v7.0.1` など）を参照してください。
+ワークフローで利用している Action は、GitHub の [workflow dependency lockfile](https://docs.github.com/actions/concepts/security/workflow-dependency-lockfiles)（`.github/workflows/actions.lock`）でコミットを固定しています。`uses:` には版のタグ（`@v7.0.1` など）を書き、lock がそのタグの指すコミットと取得元リポジトリの ID（`owner_id` / `repo_id`）を記録します。Action が内部で使う Action（推移的な依存）も固定されます。実行時は lock に記録したコミットが使われ、lock に無い Action を使うジョブは失敗します。
+
+以前は `uses:` をコミット SHA で固定していました（`helpers:pinGitHubActionDigests`）。lock は SHA の固定と違い、推移的な依存とリポジトリの同一性まで固定できるため移行しました。`gh actions-lock` は SHA の固定をタグに書き換えるため、Renovate の `helpers:pinGitHubActionDigests` は外しています（残すと Renovate が SHA に戻す PR を作ります）。
+
+- **Renovate の更新:** Action の版を上げる PR で、Renovate が `gh actions-lock` を実行して lock を作り直します。拡張機能の版は `renovate.json5` の `constraints.ghActionsLock` で固定し、CI の検証と揃えています。
+- **手でワークフローを追加・変更したとき:** `uses:` を変えたら lock を作り直し、ワークフローと一緒にコミットします。lock は手で編集しないでください。新しいワークフローも lock に載せる必要があります（載っていないと `verify-actions-lock` が失敗します）。
+
+  ```bash
+  gh extension install github/gh-actions-lock   # 初回のみ（gh auth login 済みであること）
+  gh actions-lock                               # .github/workflows/ を検査し、lock とワークフローを更新する
+  gh actions-lock --verify                      # 書き換えずに検査だけ行う（CI と同じ）
+  ```
+
+- **CI の検証:** `verify-actions-lock.yml` が、`.github/workflows/` を変えた PR で `gh actions-lock --verify` を実行します。lock の漏れ（lock に無い `uses:` やワークフロー）と、固定したコミットが上流のタグ・ブランチから外れていないか（タグの付け替え・履歴の書き換え）を検査します。
+- **lock の差分のレビュー:** `commit` の変更は依存の更新としてレビューしてください。`owner_id` / `repo_id` が変わった場合は、リポジトリの移管や乗っ取りを疑って調べてください。
+- **lock の対象外:** 他のリポジトリの再利用可能ワークフロー（`jobs.<job_id>.uses`）、コンテナイメージ（`docker://`・`container:`・`services:`）、ローカルの Action（`uses: ./…`）は lock の対象外です。いずれも現在は使っていません。使う場合は、再利用可能ワークフローはコミット SHA、イメージは digest で固定してください。
 
 | Action | 利用ワークフロー |
 | --- | --- |
-| [`actions/checkout`](https://github.com/actions/checkout) | build-images / publish-build-cache / release-features / update-mise-lock / update-rulesync-lock / update-find-docs-skill |
+| [`actions/checkout`](https://github.com/actions/checkout) | build-images / publish-build-cache / release-features / update-mise-lock / update-rulesync-lock / update-find-docs-skill / verify-actions-lock |
 | [`actions/upload-artifact`](https://github.com/actions/upload-artifact) | update-mise-lock / update-rulesync-lock / update-find-docs-skill |
 | [`actions/download-artifact`](https://github.com/actions/download-artifact) | update-mise-lock / update-rulesync-lock / update-find-docs-skill |
 | [`devcontainers/action`](https://github.com/devcontainers/action) | release-features |
 | [`actions/create-github-app-token`](https://github.com/actions/create-github-app-token) | renovate / update-mise-lock / update-rulesync-lock / update-find-docs-skill |
 | [`renovatebot/github-action`](https://github.com/renovatebot/github-action) | renovate |
 
-Action の SHA 固定だけでは、Action が実行時に取得するものまでは固定されません。以下は個別に固定しています。
+Action のコミットを固定しても、Action が実行時に取得するものまでは固定されません。以下は個別に固定しています。
 
 | 対象 | 固定方法 | 利用ワークフロー |
 | --- | --- | --- |
 | Renovate 本体のコンテナ | `renovate.yml` の `CLI_IMAGE_TAG` でバージョン + digest を指定 | renovate |
 | BuildKit（docker-container ドライバー） | `BUILDKIT_IMAGE_TAG` でバージョン + digest を指定 | build-images / publish-build-cache |
 | Dev Containers CLI | `.github/tools/devcontainer-cli/package-lock.json` の integrity で固定し `npm ci` で事前導入 | release-features |
+| gh actions-lock（CLI 拡張） | `LOCK_EXTENSION_VERSION` のタグを `gh extension install --pin` で指定（リリースは immutable のため、公開後にタグや成果物は差し替えられない） | verify-actions-lock |
 | mise | Dockerfile と同じ `jdxcode/mise` イメージ（タグ + digest 固定）から mise のバイナリを取り出し、runner の上で `mise lock`（update-mise-lock）や `mise x` による rulesync（update-rulesync-lock）を実行 | update-mise-lock / update-rulesync-lock |
 
 ## セキュリティ上の設計
