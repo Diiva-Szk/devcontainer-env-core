@@ -362,6 +362,7 @@ flowchart TD
 - `renovate.yml` は毎日実行し、`renovate.json5` の `schedule`（`* 0-11 * * 2` = 火曜 0〜11時 JST）で AI ツール以外の PR 作成を火曜に限定しています。GitHub Actions のスケジュール実行は遅れることがあるため、枠を広めに取っています。
 - `schedule` は新しいブランチ・PR の作成を制限するもので、既存 PR のリベースなどは時間外でも行われます。
 - `renovate.yml` を手動実行しても、火曜以外は AI ツールと脆弱性修正以外の新しい PR は作られません。
+- 1時間あたりの PR 作成数の上限（`prHourlyLimit`）は外しています（`0`）。AI ツール以外の PR は火曜の1回の実行でまとめて作られるため、既定の `2` のままだと週に2件しか PR にならず、残りの更新が Dependency Dashboard の「Awaiting Schedule」に積み残されます。同時に開く PR の上限（`prConcurrentLimit`）は既定の `10` のままです。
 - AI ツールのルールは、Kiro CLI の `minimumReleaseAge: null` より前に置いています。packageRules は後のルールが優先されるため、順序を入れ替えると Kiro にも待機期間が適用され、リリース日時の無い Kiro の更新が永久に pending になります。
 
 ### 待機期間 (minimumReleaseAge)

@@ -42,6 +42,12 @@
   schedule: [
     '* 0-11 * * 2',
   ],
+  // 1時間あたりのPR作成数の上限（prHourlyLimit。既定は 2）を外す。
+  // renovate.yml は1日1回しか実行されず、AI ツール以外の新しいPRは火曜の1回の実行でしか作られない。
+  // 既定のままだと AI ツール以外の更新は週に2件までしかPRにならず、残りは Dependency Dashboard の
+  // Awaiting Schedule に積み残される（Renovate 本体の更新は 2026-09 の 44.69.6 から2か月PRが作られなかった）。
+  // 同時に開くPRの上限（prConcurrentLimit。既定は 10）は残す。
+  prHourlyLimit: 0,
   // update-mise-lock / update-rulesync-lock ワークフローが Renovate のPRブランチへ lock をコミットする
   // （update-find-docs-skill ワークフローも同じ App で find-docs スキルをコミットする）。
   // そのコミットを「人による編集」とみなされると Renovate がPRの更新を止めるため無視させる。
