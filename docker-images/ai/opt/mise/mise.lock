@@ -33,20 +33,20 @@ url = "https://github.com/dagucloud/dagu/releases/download/v2.25.2/dagu_2.25.2_l
 url_api = "https://api.github.com/repos/dagucloud/dagu/releases/assets/704430937"
 
 [[tools."aqua:dyoshikawa/rulesync"]]
-version = "43.5.0"
+version = "43.6.0"
 backend = "aqua:dyoshikawa/rulesync"
-specifiers = ["43.5.0"]
+specifiers = ["43.6.0"]
 
 [tools."aqua:dyoshikawa/rulesync"."platforms.linux-arm64"]
-checksum = "sha256:ad52b07cd58e4cb29671a9c7fda58abf18e0b3ab665e4845d345856a39558d1a"
-url = "https://github.com/dyoshikawa/rulesync/releases/download/v43.5.0/rulesync-linux-arm64"
-url_api = "https://api.github.com/repos/dyoshikawa/rulesync/releases/assets/705067530"
+checksum = "sha256:6bbc4a26c1c1529d4c5a1658e57335337458a1d31fb6dadc465949fdd2c64491"
+url = "https://github.com/dyoshikawa/rulesync/releases/download/v43.6.0/rulesync-linux-arm64"
+url_api = "https://api.github.com/repos/dyoshikawa/rulesync/releases/assets/705560993"
 provenance = "github-attestations"
 
 [tools."aqua:dyoshikawa/rulesync"."platforms.linux-x64"]
-checksum = "sha256:06835721bd8b70de0ee3304231bec781458ef4f6b417be339191c32e26d7767d"
-url = "https://github.com/dyoshikawa/rulesync/releases/download/v43.5.0/rulesync-linux-x64"
-url_api = "https://api.github.com/repos/dyoshikawa/rulesync/releases/assets/705067523"
+checksum = "sha256:9554ef887e2b504c32548a4c11c476b5724e5ce1c7924ebf9e8152993c200112"
+url = "https://github.com/dyoshikawa/rulesync/releases/download/v43.6.0/rulesync-linux-x64"
+url_api = "https://api.github.com/repos/dyoshikawa/rulesync/releases/assets/705560991"
 provenance = "github-attestations"
 
 [[tools."aqua:github/copilot-cli"]]
@@ -65,19 +65,19 @@ url = "https://github.com/github/copilot-cli/releases/download/v1.0.105/copilot-
 url_api = "https://api.github.com/repos/github/copilot-cli/releases/assets/683349254"
 
 [[tools."aqua:github/copilot-language-server-release"]]
-version = "1.565.3"
+version = "1.566.0"
 backend = "aqua:github/copilot-language-server-release"
-specifiers = ["1.565.3"]
+specifiers = ["1.566.0"]
 
 [tools."aqua:github/copilot-language-server-release"."platforms.linux-arm64"]
-checksum = "sha256:d6a3c0b7c3312aed0dbbe3f36d6c6cf8edecbe980e406276374c27a4e5f82bfa"
-url = "https://github.com/github/copilot-language-server-release/releases/download/1.565.3/copilot-language-server-linux-arm64-1.565.3.zip"
-url_api = "https://api.github.com/repos/github/copilot-language-server-release/releases/assets/703605070"
+checksum = "sha256:0e6db1f76ec1afc5019b612f2eedab394b0df7b2ce22637547212eec16c25cb6"
+url = "https://github.com/github/copilot-language-server-release/releases/download/1.566.0/copilot-language-server-linux-arm64-1.566.0.zip"
+url_api = "https://api.github.com/repos/github/copilot-language-server-release/releases/assets/707380080"
 
 [tools."aqua:github/copilot-language-server-release"."platforms.linux-x64"]
-checksum = "sha256:92d6f35f1d7c2bf246f5ee87dd37da9d52d6270a38a243978e29ed2d9cc2a730"
-url = "https://github.com/github/copilot-language-server-release/releases/download/1.565.3/copilot-language-server-linux-x64-1.565.3.zip"
-url_api = "https://api.github.com/repos/github/copilot-language-server-release/releases/assets/703605075"
+checksum = "sha256:ffdaffed4d8bc05b31042b2d991bdeca5d262c33ba9761df6fc0b9c184c051f8"
+url = "https://github.com/github/copilot-language-server-release/releases/download/1.566.0/copilot-language-server-linux-x64-1.566.0.zip"
+url_api = "https://api.github.com/repos/github/copilot-language-server-release/releases/assets/707380089"
 
 [[tools."aqua:google-antigravity/antigravity-cli"]]
 version = "1.4.12"
@@ -95,19 +95,19 @@ url = "https://github.com/google-antigravity/antigravity-cli/releases/download/1
 url_api = "https://api.github.com/repos/google-antigravity/antigravity-cli/releases/assets/693488645"
 
 [[tools."aqua:vercel-labs/agent-browser"]]
-version = "0.41.1"
+version = "0.41.2"
 backend = "aqua:vercel-labs/agent-browser"
-specifiers = ["0.41.1"]
+specifiers = ["0.41.2"]
 
 [tools."aqua:vercel-labs/agent-browser"."platforms.linux-arm64"]
-checksum = "sha256:f0b3bdaa40abf2a5111ec08e6d242110aaf56045ef5108cbc633bacc8e53ca17"
-url = "https://github.com/vercel-labs/agent-browser/releases/download/v0.41.1/agent-browser-linux-arm64"
-url_api = "https://api.github.com/repos/vercel-labs/agent-browser/releases/assets/698714772"
+checksum = "sha256:00d291f45e1c4d527b3aa08c70c54c7c3030fde0794f8d4575aaa3ca1680f728"
+url = "https://github.com/vercel-labs/agent-browser/releases/download/v0.41.2/agent-browser-linux-arm64"
+url_api = "https://api.github.com/repos/vercel-labs/agent-browser/releases/assets/707522446"
 
 [tools."aqua:vercel-labs/agent-browser"."platforms.linux-x64"]
-checksum = "sha256:951c795e21fddab1d4091ad2ca4f0e69f1eea6534288e6a251598df11ca8e9af"
-url = "https://github.com/vercel-labs/agent-browser/releases/download/v0.41.1/agent-browser-linux-musl-x64"
-url_api = "https://api.github.com/repos/vercel-labs/agent-browser/releases/assets/698714776"
+checksum = "sha256:5d452d57772330fe4cef9b7aeb5e7137890dde20bbb65e82b990e0bc0b35d9cd"
+url = "https://github.com/vercel-labs/agent-browser/releases/download/v0.41.2/agent-browser-linux-musl-x64"
+url_api = "https://api.github.com/repos/vercel-labs/agent-browser/releases/assets/707522450"
 
 [[tools."github:mondeja/simple-icons-drawio"]]
 version = "16.36.0"
@@ -161,12 +161,12 @@ backend = "github:szk302/d-png-cli"
 specifiers = ["0.2.1"]
 
 [tools."github:szk302/d-png-cli".options]
-asset_pattern = "d-png-cli-*-aarch64-unknown-linux-musl.tar.gz"
+asset_pattern = "d-png-cli-*-x86_64-unknown-linux-musl.tar.gz"
 
-[tools."github:szk302/d-png-cli"."platforms.linux-arm64"]
-checksum = "sha256:d76d9beffea94ac155841a08ac310bc7cc3e2353ccbe6b8a3194f5fb9258f763"
-url = "https://github.com/szk302/d-png-cli/releases/download/v0.2.1/d-png-cli-0.2.1-aarch64-unknown-linux-musl.tar.gz"
-url_api = "https://api.github.com/repos/szk302/d-png-cli/releases/assets/709201431"
+[tools."github:szk302/d-png-cli"."platforms.linux-x64"]
+checksum = "sha256:020c8959064e0b74674afe711f7c3ec557cf5802fd1fe6da0c351025222ec6fe"
+url = "https://github.com/szk302/d-png-cli/releases/download/v0.2.1/d-png-cli-0.2.1-x86_64-unknown-linux-musl.tar.gz"
+url_api = "https://api.github.com/repos/szk302/d-png-cli/releases/assets/709201488"
 provenance = "github-attestations"
 
 [[tools."github:szk302/d-png-cli"]]
@@ -175,12 +175,12 @@ backend = "github:szk302/d-png-cli"
 specifiers = ["0.2.1"]
 
 [tools."github:szk302/d-png-cli".options]
-asset_pattern = "d-png-cli-*-x86_64-unknown-linux-musl.tar.gz"
+asset_pattern = "d-png-cli-*-aarch64-unknown-linux-musl.tar.gz"
 
-[tools."github:szk302/d-png-cli"."platforms.linux-x64"]
-checksum = "sha256:020c8959064e0b74674afe711f7c3ec557cf5802fd1fe6da0c351025222ec6fe"
-url = "https://github.com/szk302/d-png-cli/releases/download/v0.2.1/d-png-cli-0.2.1-x86_64-unknown-linux-musl.tar.gz"
-url_api = "https://api.github.com/repos/szk302/d-png-cli/releases/assets/709201488"
+[tools."github:szk302/d-png-cli"."platforms.linux-arm64"]
+checksum = "sha256:d76d9beffea94ac155841a08ac310bc7cc3e2353ccbe6b8a3194f5fb9258f763"
+url = "https://github.com/szk302/d-png-cli/releases/download/v0.2.1/d-png-cli-0.2.1-aarch64-unknown-linux-musl.tar.gz"
+url_api = "https://api.github.com/repos/szk302/d-png-cli/releases/assets/709201431"
 provenance = "github-attestations"
 
 [[tools."http:kiro-cli"]]

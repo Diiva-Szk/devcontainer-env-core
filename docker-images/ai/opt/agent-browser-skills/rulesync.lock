@@ -2,15 +2,15 @@
   "lockfileVersion": 1,
   "sources": {
     "vercel-labs/agent-browser": {
-      "requestedRef": "v0.41.1",
-      "resolvedRef": "5868f7c05020e047c00e68e4abf9253cce864f41",
-      "resolvedAt": "2026-11-03T23:58:12.339Z",
+      "requestedRef": "v0.41.2",
+      "resolvedRef": "d52a5e90c372ec4710c69adc3837ac14bbd852aa",
+      "resolvedAt": "2026-11-05T00:20:03.015Z",
       "skills": {
         "vercel-sandbox": {
           "integrity": "sha256-72bf988d77ad98f4c95f150f6eb0ecc5af49c5a3551222d0ea31945f8fc7c47f"
         },
         "core": {
-          "integrity": "sha256-f942652e736b0c5e05bdefd454ff71ec0934714d3e28069a2ccd2eb668ef1451"
+          "integrity": "sha256-450d13f94ad8861985b862f06b39987d8c8b6e7a0f3faa41d2af8e557799639a"
         },
         "derive-client": {
           "integrity": "sha256-6967e6720e2042b0b23eab377c2622d6fa5e96cd2be53078ccf5acf3f58f8ab0"
@@ -25,7 +25,7 @@
           "integrity": "sha256-57f471158cab325680ccbdf629079f04e6098ad1191b4c907166ecad5afc5fe9"
         },
         "protected-vercel-deployments": {
-          "integrity": "sha256-2bad620e44801bcab8bd96b8de077bfc1656c744c45bfc6c4da5674861fcfa4c"
+          "integrity": "sha256-cd729c388db35537ed19506d6f2112e24539068111cb9460735959c039e19a34"
         },
         "electron": {
           "integrity": "sha256-637d08276e7d16c4a4fa1a5d661cb88830ce39679053b74d0b48a7f792667f91"
