@@ -9,15 +9,15 @@
 
 [tools]
 # ai tools
-"aqua:anthropics/claude-code" = "2.1.317"
+"aqua:anthropics/claude-code" = "2.1.318"
 "aqua:github/copilot-cli" = "1.0.105"
 "aqua:github/copilot-language-server-release" = "1.566.0"
-"aqua:google-antigravity/antigravity-cli" = "1.4.12"
+"aqua:google-antigravity/antigravity-cli" = "1.5.1"
 # AI エージェント向けのルール・設定を各ツールの形式で生成する CLI
-"aqua:dyoshikawa/rulesync" = "43.6.0"
+"aqua:dyoshikawa/rulesync" = "43.6.2"
 
 # Dagu（YAML で定義したワークフロー（DAG）を実行するエンジン）
-"aqua:dagucloud/dagu" = "2.25.2"
+"aqua:dagucloud/dagu" = "2.25.8"
 
 # agent-browser（コーディングエージェント向けのブラウザ操作 CLI）
 #   npm でも配布されているが、そちらは全プラットフォームのバイナリを1パッケージに同梱するため
@@ -98,7 +98,7 @@ linux-arm64 = { asset_pattern = "codex-package-aarch64-unknown-linux-musl.tar.gz
 #   載っていない（latest が先に進んだ）場合、mise lock は成果物を実際にダウンロードして計算する。
 [tools."http:kiro-cli"]
 # renovate: datasource=custom.kiro-cli depName=kiro-cli
-version = "3.0.0"
+version = "3.1.0"
 url = 'https://desktop-release.q.us-east-1.amazonaws.com/{{ version }}/kirocli-{{ arch(x64="x86_64", arm64="aarch64") }}-linux.tar.gz'
 checksum_url = "https://desktop-release.q.us-east-1.amazonaws.com/latest/manifest.json"
 checksum_expr = '"sha256:" + filter(fromJSON(body).packages, { "https://desktop-release.q.us-east-1.amazonaws.com/" + #.download == url })[0].sha256'
