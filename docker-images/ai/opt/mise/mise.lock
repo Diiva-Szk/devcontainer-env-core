@@ -161,12 +161,12 @@ backend = "github:szk302/d-png-cli"
 specifiers = ["0.2.1"]
 
 [tools."github:szk302/d-png-cli".options]
-asset_pattern = "d-png-cli-*-aarch64-unknown-linux-musl.tar.gz"
+asset_pattern = "d-png-cli-*-x86_64-unknown-linux-musl.tar.gz"
 
-[tools."github:szk302/d-png-cli"."platforms.linux-arm64"]
-checksum = "sha256:d76d9beffea94ac155841a08ac310bc7cc3e2353ccbe6b8a3194f5fb9258f763"
-url = "https://github.com/szk302/d-png-cli/releases/download/v0.2.1/d-png-cli-0.2.1-aarch64-unknown-linux-musl.tar.gz"
-url_api = "https://api.github.com/repos/szk302/d-png-cli/releases/assets/709201431"
+[tools."github:szk302/d-png-cli"."platforms.linux-x64"]
+checksum = "sha256:020c8959064e0b74674afe711f7c3ec557cf5802fd1fe6da0c351025222ec6fe"
+url = "https://github.com/szk302/d-png-cli/releases/download/v0.2.1/d-png-cli-0.2.1-x86_64-unknown-linux-musl.tar.gz"
+url_api = "https://api.github.com/repos/szk302/d-png-cli/releases/assets/709201488"
 provenance = "github-attestations"
 
 [[tools."github:szk302/d-png-cli"]]
@@ -175,12 +175,12 @@ backend = "github:szk302/d-png-cli"
 specifiers = ["0.2.1"]
 
 [tools."github:szk302/d-png-cli".options]
-asset_pattern = "d-png-cli-*-x86_64-unknown-linux-musl.tar.gz"
+asset_pattern = "d-png-cli-*-aarch64-unknown-linux-musl.tar.gz"
 
-[tools."github:szk302/d-png-cli"."platforms.linux-x64"]
-checksum = "sha256:020c8959064e0b74674afe711f7c3ec557cf5802fd1fe6da0c351025222ec6fe"
-url = "https://github.com/szk302/d-png-cli/releases/download/v0.2.1/d-png-cli-0.2.1-x86_64-unknown-linux-musl.tar.gz"
-url_api = "https://api.github.com/repos/szk302/d-png-cli/releases/assets/709201488"
+[tools."github:szk302/d-png-cli"."platforms.linux-arm64"]
+checksum = "sha256:d76d9beffea94ac155841a08ac310bc7cc3e2353ccbe6b8a3194f5fb9258f763"
+url = "https://github.com/szk302/d-png-cli/releases/download/v0.2.1/d-png-cli-0.2.1-aarch64-unknown-linux-musl.tar.gz"
+url_api = "https://api.github.com/repos/szk302/d-png-cli/releases/assets/709201431"
 provenance = "github-attestations"
 
 [[tools."http:kiro-cli"]]
@@ -207,6 +207,6 @@ specifiers = ["0.1.23"]
 
 [[tools."npm:ctx7"]]
 version = "0.10.0"
-aube = { path = ".mise/locks/npm-ctx7/0.10.0", digest = "sha256:30afe5e09f1872fddb291a2500e7acb4bf30f976296263354e17a7e335f5d58e" }
+aube = { path = ".mise/locks/npm-ctx7/0.10.0", digest = "sha256:63b1c1ddb65d660daebcd71261a58ad3153477620606d6e67c2bf90cd99ccd9a" }
 backend = "npm:ctx7"
 specifiers = ["0.10.0"]
