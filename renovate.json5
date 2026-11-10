@@ -16,7 +16,7 @@
   // Renovate 本体の更新で黙って変わる。値はリリースのタグ（v 付き）で書く。
   constraints: {
     // renovate: datasource=github-releases depName=github/gh-actions-lock
-    ghActionsLock: 'v0.4.0',
+    ghActionsLock: 'v0.4.1',
   },
   dependencyDashboard: true,
   dependencyDashboardOSVVulnerabilitySummary: 'all',
