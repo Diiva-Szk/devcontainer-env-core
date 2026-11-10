@@ -12,7 +12,7 @@ workflows:
         - 'devcontainers/action@v1.4.4'
     '.github/workflows/renovate.yml':
         - 'actions/create-github-app-token@v3.3.0'
-        - 'renovatebot/github-action@v46.3.10'
+        - 'renovatebot/github-action@v46.3.12'
     '.github/workflows/update-find-docs-skill.yml':
         - 'actions/checkout@v7.0.1'
         - 'actions/create-github-app-token@v3.3.0'
@@ -56,8 +56,8 @@ dependencies:
         commit: 'sha1-bef2cf2d1a019b00b45e184f83035e01bd1972f3'
         owner_id: 102692984
         repo_id: 499316426
-    'renovatebot/github-action@v46.3.10':
-        ref: 'v46.3.10'
-        commit: 'sha1-2804199d260ad00c1fae0e9e842888369391c776'
+    'renovatebot/github-action@v46.3.12':
+        ref: 'v46.3.12'
+        commit: 'sha1-1c0cf989c02653fba0efe7ca5772338860ca71dc'
         owner_id: 38656520
         repo_id: 252754603
