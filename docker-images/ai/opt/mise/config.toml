@@ -12,12 +12,12 @@
 "aqua:anthropics/claude-code" = "2.1.319"
 "aqua:github/copilot-cli" = "1.0.107"
 "aqua:github/copilot-language-server-release" = "1.566.0"
-"aqua:google-antigravity/antigravity-cli" = "1.5.1"
+"aqua:google-antigravity/antigravity-cli" = "1.5.3"
 # AI エージェント向けのルール・設定を各ツールの形式で生成する CLI
-"aqua:dyoshikawa/rulesync" = "43.7.0"
+"aqua:dyoshikawa/rulesync" = "43.8.0"
 
 # Dagu（YAML で定義したワークフロー（DAG）を実行するエンジン）
-"aqua:dagucloud/dagu" = "2.25.8"
+"aqua:dagucloud/dagu" = "2.26.0"
 
 # agent-browser（コーディングエージェント向けのブラウザ操作 CLI）
 #   npm でも配布されているが、そちらは全プラットフォームのバイナリを1パッケージに同梱するため
@@ -69,7 +69,7 @@ linux-arm64 = { asset_pattern = "d-png-cli-*-aarch64-unknown-linux-musl.tar.gz" 
 #   Dockerfile で `d-png-cli library pack` により @simple-icons/simple-icons（版はこの version）として
 #   /opt/d-png-libraries に置く。d-png-cli は mise の配置先を直接読まない。
 [tools."github:mondeja/simple-icons-drawio"]
-version = "16.36.0"
+version = "16.37.0"
 asset_pattern = "simple-icons.xml"
 
 # OpenAI Codex CLI

@@ -5,6 +5,6 @@
 # 変更後は、このディレクトリで以下を実行して requirements.txt を再生成すること:
 #   uv pip compile --universal --generate-hashes --python-version=3.14 --output-file=requirements.txt requirements.in
 # （オプションは Renovate がヘッダーから解釈できるよう「=」でつなぐ）
-ipykernel==7.3.0
-pandas==3.0.6
+ipykernel==7.4.0
+pandas==3.1.0
 pyarrow==26.0.0
