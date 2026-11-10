@@ -98,9 +98,9 @@ CLI ツールと言語ランタイム（Python / Node.js）は [mise](https://mi
 
 `scripts/update-mise-locks.sh` は次を行います。
 
-- lock をゼロから生成する（古いエントリが残らないようにするため）。
+- lock をゼロから生成する（古いエントリが残らないようにするため）。そのため lock はその mise が新しく作る形式（mise 2026.10.25 では `lockfile_version = 3`）になる。`update-mise-lock.yml` はこの版を検証しているため、mise の更新で版が上がったら合わせて更新する。
 - 配布元がチェックサムを提供しない成果物（aws-cli, google-cloud-sdk, claude-code など）は `mise lock` がチェックサムを記録しないため、`scripts/fill-mise-lock-checksums.sh` で成果物をダウンロードして sha256 を補完する。URL が変わっていなければ旧 lock の値を再利用する。
-- 解決できなかったエントリ（skipped）や、linux-arm64 に x86_64 向けの成果物が記録されたエントリがあれば失敗する。npm backend のツールはプラットフォーム別の成果物を持たず、常にプラットフォーム数ぶん skipped になるため、その数だけは許容する（代わりに依存グラフ（`aube`）の記録があることを確認する）。
+- linux-x64 / linux-arm64 のどちらかのエントリが無いツールや、linux-arm64 に x86_64 向けの成果物が記録されたエントリがあれば失敗する。mise 2026.10.19 以降の既定（`lockfile_mode = "generate"`）では `mise lock` が解決できなかった件数（skipped）を出力しないため、生成された lock の中身で確認する。npm backend のツールはプラットフォーム別の成果物を持たないため対象外とし、代わりに依存グラフ（`aube`）の記録があることを確認する。
 - npm backend のサイドカー（`.mise/locks/`）は消さずに残し、`mise lock` に再利用・整理させる（参照されなくなった版のディレクトリは `mise lock` が消す）。
 - エントリの並び順だけが変わった場合は旧 lock を残す（mise lock は複数エントリの並び順が実行ごとに揺れるため）。
 
