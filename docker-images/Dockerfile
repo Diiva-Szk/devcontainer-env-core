@@ -15,7 +15,7 @@ ARG ARG_BASE_IMAGE_DIGEST="sha256:d7e12182ce18b85b93007c1dedf31f2d29e01ccf3182cc
 #   update-mise-lock / update-rulesync-lock ワークフローも、ここに書かれたイメージから
 #   同じバイナリを取り出して lock を作る。
 ###########################################################################
-FROM jdxcode/mise:2026.9.11@sha256:2f6212f640d0347c9ccf0e7d49a0cbb90e3caf1d205162f2e2c3350ecb5eb1d5 AS mise
+FROM jdxcode/mise:2026.10.25@sha256:91417f41840316b7c5da6854bef393eccea4546ae70f8baf0803e0e94287b68d AS mise
 
 ###########################################################################
 # base:
