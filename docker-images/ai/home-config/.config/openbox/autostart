@@ -4,3 +4,9 @@ xsetroot -cursor_name left_ptr &
 fcitx5 -d &
 # デスクトップのアイコン（~/.idesktop/*.lnk）
 idesk &
+# 1Password（git の署名を 1Password で行う設定のときだけ。setup-git-signing が gpg.ssh.program を設定する）。
+#   起動直後はロックされているため、このデスクトップでロックを解除する（README の「git の署名」）。
+#   ウィンドウを閉じると SSH エージェントも止まることがあるため、閉じずに最小化しておく。
+if [ "$(git config --global --get gpg.ssh.program)" = /usr/local/bin/git-sign-1password ]; then
+  /usr/local/bin/1password &
+fi

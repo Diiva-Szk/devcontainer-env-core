@@ -10,8 +10,9 @@
 #   （イメージ側の更新を取り込むタイミングは利用者が決める。
 #     ai コンテナで sync-home-defaults --check / sync-home-defaults を実行する）。
 #
-#   .env の GIT_SIGNING_KEY があれば、git の署名を設定する（setup-git-signing）。
-#   秘密鍵を AI エージェントのセッションの環境変数に残さないよう、設定したらすぐに消す
+#   .env の GIT_SIGNING_PUBLIC_KEY（1Password で署名する）か GIT_SIGNING_KEY（秘密鍵で署名する）が
+#   あれば、git の署名を設定する（setup-git-signing）。
+#   秘密鍵を AI エージェントのセッションの環境変数に残さないよう、GIT_SIGNING_KEY は設定したらすぐに消す
 #   （start-sshd はこのスクリプトの環境変数を ssh のセッションへ引き継ぐ）。
 #
 #   設定の配布や署名の設定、デスクトップ・ssh サーバーの起動に失敗しても、AI エージェントは
@@ -26,7 +27,7 @@ if ! /usr/local/bin/sync-home-defaults --seed; then
 fi
 
 if ! /usr/local/bin/setup-git-signing; then
-  echo "ai-entrypoint: git の署名を設定できませんでした（GIT_SIGNING_KEY を確認してください）" >&2
+  echo "ai-entrypoint: git の署名を設定できませんでした（GIT_SIGNING_PUBLIC_KEY / GIT_SIGNING_1PASSWORD_VAULT / GIT_SIGNING_KEY を確認してください）" >&2
 fi
 unset GIT_SIGNING_KEY
 

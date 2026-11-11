@@ -71,9 +71,16 @@ services:
       # Chrome のサンドボックスが起動できない（agent-browser は既定で --no-sandbox を付けるため対象外）。
       # playwright-cli 用に既定で無効化しておく。
       PLAYWRIGHT_MCP_SANDBOX: "false"
-      # git の署名に使う SSH の秘密鍵（中身）。空なら署名しない。
-      #   ai-entrypoint.sh（setup-git-signing）がファイルに書き出して ~/.gitconfig に設定し、
-      #   AI エージェントのセッションには引き継がない。
+      # git の署名（ai-entrypoint.sh の setup-git-signing が ~/.gitconfig に設定する。README の「git の署名」）。
+      #   GIT_SIGNING_PUBLIC_KEY:      1Password の SSH エージェントで署名するときの公開鍵（1行）。
+      #                                秘密鍵は 1Password の中だけにあり、ファイルにも環境変数にも置かない。
+      #   GIT_SIGNING_1PASSWORD_VAULT: 1Password の SSH エージェントに使わせる vault の名前
+      #                                （AI エージェント用のユーザーに共有した、署名用の鍵だけを入れた vault）。
+      #   GIT_SIGNING_KEY:             1Password を使わないときの SSH の秘密鍵（中身）。ファイルに書き出し、
+      #                                AI エージェントのセッションには引き継がない。
+      #   GIT_SIGNING_PUBLIC_KEY と GIT_SIGNING_KEY が両方とも空なら署名しない。
+      GIT_SIGNING_PUBLIC_KEY: ${GIT_SIGNING_PUBLIC_KEY:-}
+      GIT_SIGNING_1PASSWORD_VAULT: ${GIT_SIGNING_1PASSWORD_VAULT:-}
       GIT_SIGNING_KEY: ${GIT_SIGNING_KEY:-}
     # デスクトップ（KasmVNC）と ssh サーバーのポート。ホストには公開せず（ports は書かない）、
     # 同じネットワークの user コンテナからだけ接続させる。
@@ -100,6 +107,8 @@ services:
       - ai-kiro-data:/home/${USER_NAME:-dev}/.local/share/kiro-cli
       # Context7 CLI（ctx7）の認証情報（ctx7 login で作られる credentials.json）
       - ai-context7:/home/${USER_NAME:-dev}/.config/context7
+      # 1Password のサインインの状態・設定・SSH エージェントの設定（ssh/agent.toml）
+      - ai-1password:/home/${USER_NAME:-dev}/.config/1Password
       # ssh の鍵の受け渡し（user コンテナの volumes を参照。ai からはクライアントの鍵を書き換えられない）
       - ai-ssh-client:/var/lib/ai-ssh/client:ro
       - ai-ssh-host:/var/lib/ai-ssh/host
@@ -122,6 +131,7 @@ volumes:
   ai-kiro-data:
   ai-gemini:
   ai-context7:
+  ai-1password:
   # ai コンテナへ ssh で入るための鍵の受け渡し（中身は公開鍵だけ。消しても起動時に作り直される）
   ai-ssh-client:
   ai-ssh-host:
