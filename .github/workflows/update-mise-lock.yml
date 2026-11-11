@@ -213,8 +213,10 @@ jobs:
               data = tomllib.load(f)
           if set(data) - {"lockfile_version", "tools"}:
               sys.exit(f"想定外のキー: {sorted(set(data) - {'lockfile_version', 'tools'})}")
-          if data.get("lockfile_version") != 2:
-              sys.exit("lockfile_version が 2 ではありません")
+          # update-mise-locks.sh は lock を毎回ゼロから作るため、Dockerfile の mise が新しく作る lock の版になる。
+          # mise の更新で版が上がったら、形式の変化を確認してからここを合わせる。
+          if data.get("lockfile_version") != 3:
+              sys.exit("lockfile_version が 3 ではありません")
 
           path_re = re.compile(r"\.mise/locks/(npm-[a-z0-9][a-z0-9._-]*/[0-9A-Za-z][0-9A-Za-z.+_-]*)")
           referenced = set()
