@@ -93,15 +93,17 @@ linux-arm64 = { asset_pattern = "codex-package-aarch64-unknown-linux-musl.tar.gz
 
 # Amazon Kiro CLI
 #   GitHub リリースも aqua レジストリも無いため http backend で取得する。
-#   配布元はバージョン別のマニフェストを公開しておらず、latest/manifest.json のみ存在する。
-#   そのためチェックサムは「latest のマニフェストに同一 URL の成果物が載っていればそこから取る」。
-#   載っていない（latest が先に進んだ）場合、mise lock は成果物を実際にダウンロードして計算する。
+#   チェックサムの取得元（checksum_url / checksum_expr）は設定しない。mise lock が成果物を
+#   ダウンロードして sha256 を計算する。
+#   配布元はバージョン別のマニフェストを公開しておらず、latest/manifest.json しか無いため、
+#   latest が先に進むと、固定した版のチェックサムをマニフェストから取れなくなる。
+#   mise 2026.10.19 以降の既定（lockfile_mode = generate）では、設定した取得元からチェックサムを
+#   解決できないと mise lock が失敗し、Renovate の更新がマージされるまで lock を作り直せなくなる。
+#   マニフェストは成果物と同じ配布元にあり、照合しても検証の強さはほとんど変わらない。
 [tools."http:kiro-cli"]
 # renovate: datasource=custom.kiro-cli depName=kiro-cli
 version = "3.1.0"
 url = 'https://desktop-release.q.us-east-1.amazonaws.com/{{ version }}/kirocli-{{ arch(x64="x86_64", arm64="aarch64") }}-linux.tar.gz'
-checksum_url = "https://desktop-release.q.us-east-1.amazonaws.com/latest/manifest.json"
-checksum_expr = '"sha256:" + filter(fromJSON(body).packages, { "https://desktop-release.q.us-east-1.amazonaws.com/" + #.download == url })[0].sha256'
 # アーカイブは kirocli/bin/kiro-cli の構成。bin_path を指定すると先頭ディレクトリの
 # 自動除去が無効になるため、strip_components も明示する。
 strip_components = 1
