@@ -325,6 +325,70 @@ RUN arch="$(dpkg --print-architecture)" && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/* "${tmp_dir}"
 
+# 1Password（デスクトップアプリ）。git の署名を 1Password の SSH エージェントで行うために使う
+#   （AI エージェント用の 1Password のユーザーでサインインし、秘密鍵をファイルや .env に置かずに署名する。
+#     設定は setup-git-signing、手順は README の「git の署名」）。
+#   arm64 の apt リポジトリにはデスクトップアプリが無い（CLI だけ）ため、両アーキテクチャとも
+#   公式の tar.gz を使う。tar.gz の署名（.sig）を sqv で検証し、署名した鍵のフィンガープリント
+#   （sqv が出力する）を ONEPASSWORD_SIGNING_KEY_FPR と照合する。鍵は配布元から取得するため、
+#   取得した鍵ではなく、実際に署名した鍵で照合する。
+#   Google Chrome と同じく版は固定しない（latest の tar.gz を使い、この層を作り直したときの版が入る）。
+#   付属の after-install.sh は実行しない。chrome-sandbox への SUID、BrowserSupport / 1password-mcp への
+#   SGID の付与と、apt リポジトリの追加を行うため。ai には SUID / SGID のバイナリを置かない
+#   （Chrome の chrome-sandbox と同じ。サンドボックスは使えないため、ラッパー（/usr/local/bin/1password）が
+#   --no-sandbox を付ける）。ブラウザ連携（BrowserSupport）と MCP サーバーはこの用途では使わない。
+#   依存は 1Password の .deb の Depends と同じもの（trixie での名前。多くは Chrome のために入っている）。
+#   版の固定されない大きな層のため、更新の早い AI ツール（mise install）より前に置く。
+#   DL3064（ARG に機密情報）は、名前の ONEPASSWORD が PASSWORD を含むための誤検知
+#   （中身は公開されている署名鍵のフィンガープリント）。
+# hadolint ignore=DL3064
+ARG ONEPASSWORD_SIGNING_KEY_FPR="3FEF9748469ADBE15DA7CA80AC2D62742012EA22"
+RUN arch="$(dpkg --print-architecture)" && \
+    case "${arch}" in \
+      amd64) op_arch="x86_64" ;; \
+      arm64) op_arch="aarch64" ;; \
+      *) echo "1Password: 未対応のアーキテクチャです: ${arch}" >&2; exit 1 ;; \
+    esac && \
+    url="https://downloads.1password.com/linux/tar/stable/${op_arch}/1password-latest.tar.gz" && \
+    tmp_dir="$(mktemp -d)" && \
+    curl --proto '=https' --tlsv1.2 -fsSL -o "${tmp_dir}/1password.tar.gz" "${url}" && \
+    curl --proto '=https' --tlsv1.2 -fsSL -o "${tmp_dir}/1password.tar.gz.sig" "${url}.sig" && \
+    curl --proto '=https' --tlsv1.2 -fsSL -o "${tmp_dir}/1password.asc" \
+      https://downloads.1password.com/linux/keys/1password.asc && \
+    signer="$(sqv --keyring="${tmp_dir}/1password.asc" \
+      --signature-file="${tmp_dir}/1password.tar.gz.sig" "${tmp_dir}/1password.tar.gz")" && \
+    if [ "${signer}" != "${ONEPASSWORD_SIGNING_KEY_FPR}" ]; then \
+      echo "1Password の署名鍵のフィンガープリントが一致しません: ${signer}" >&2; exit 1; \
+    fi && \
+    mkdir "${tmp_dir}/x" && \
+    tar -xzf "${tmp_dir}/1password.tar.gz" -C "${tmp_dir}/x" --no-same-owner --no-same-permissions && \
+    mv "${tmp_dir}"/x/1password-*/ /opt/1Password && \
+    chown -R root:root /opt/1Password && \
+    chmod -R u=rwX,go=rX /opt/1Password && \
+    if [ -n "$(find /opt/1Password -perm /6000)" ]; then \
+      echo "1Password: SUID / SGID の付いたファイルがあります" >&2; exit 1; \
+    fi && \
+    test -x /opt/1Password/1password && \
+    cp -r /opt/1Password/resources/icons/hicolor /usr/share/icons/ && \
+    apt-get update && \
+    apt-get install -y --no-install-recommends \
+        libasound2t64 \
+        libatk-bridge2.0-0t64 \
+        libatk1.0-0t64 \
+        libcurl4t64 \
+        libdrm2 \
+        libgbm1 \
+        libgtk-3-0t64 \
+        libnotify4 \
+        libnss3 \
+        libudev1 \
+        libxcb-shape0 \
+        libxcb-xfixes0 \
+        libxshmfence1 \
+        xdg-utils && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/* "${tmp_dir}"
+
 # ssh サーバー（user コンテナの ai コマンドの接続先）。
 #   sshd は root を使わず、コンテナのユーザーのまま start-sshd が起動する（ai には root が無いため）。
 #   パッケージの導入時に作られるホスト鍵（/etc/ssh/ssh_host_*）は消す。使わないうえ、
@@ -374,12 +438,15 @@ RUN tmp_dir="$(mktemp -d)" && \
 
 # デスクトップと ssh サーバーの起動スクリプト、git の署名の設定スクリプトと、ai 用の google-chrome（ラッパー）。
 #   google-chrome は dev-base で置いた共通のラッパーを、リモートデバッグ等を付ける ai 用のものに置き換える。
+#   1password は 1Password のデスクトップアプリのラッパー、git-sign-1password は git の SSH 署名
+#   （gpg.ssh.program）で 1Password の SSH エージェントを使わせるもの。
 COPY --chown=root:root ai/usr/share/icons/st /usr/share/icons/st
 COPY --chown=root:root ai/usr/local/bin /usr/local/bin
 
 RUN chmod -R u=rwX,go=rX /usr/share/icons/st && \
     chmod 0755 /usr/local/bin/start-desktop /usr/local/bin/start-sshd /usr/local/bin/ai-entrypoint.sh \
-               /usr/local/bin/sync-home-defaults /usr/local/bin/setup-git-signing /usr/local/bin/google-chrome
+               /usr/local/bin/sync-home-defaults /usr/local/bin/setup-git-signing /usr/local/bin/google-chrome \
+               /usr/local/bin/1password /usr/local/bin/git-sign-1password
 
 # ssh（user コンテナの ai コマンド）や docker exec で入ったシェルから起動した GUI アプリもデスクトップに表示する
 # （ssh のセッションには start-sshd が ~/.ssh/environment で引き継ぐ）。
@@ -644,6 +711,11 @@ RUN install -d -o "${USER_NAME}" -g "${USER_NAME}" "/home/${USER_NAME}/.local/sh
 # （ctx7 login、または CONTEXT7_API_KEY を使わない場合は作られない）。
 # Kiro CLI と同じ理由で、volume にする前に一般ユーザー所有で作っておく。
 RUN install -d -o "${USER_NAME}" -g "${USER_NAME}" "/home/${USER_NAME}/.config/context7"
+
+# 1Password のデスクトップアプリは、サインインの状態・設定・SSH エージェントの設定（ssh/agent.toml）を
+# ~/.config/1Password に置く。Kiro CLI と同じ理由で、volume にする前に一般ユーザー所有で作っておく
+# （保管庫の暗号化された複製も置かれるため、本人以外は読めない 0700 にする）。
+RUN install -d -m 0700 -o "${USER_NAME}" -g "${USER_NAME}" "/home/${USER_NAME}/.config/1Password"
 
 USER ${USER_NAME}
 
