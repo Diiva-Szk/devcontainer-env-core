@@ -5,53 +5,148 @@
 #   ai-entrypoint.sh がコンテナの起動時に呼ぶ。
 #
 #   ai コンテナは VS Code がアタッチしないため、ホストの ssh-agent / gpg-agent や
-#   git の設定が転送されない。代わりに .env の GIT_SIGNING_KEY（SSH の秘密鍵の中身）を
-#   ~/.ssh/git_signing_key に書き出し、~/.gitconfig で署名に使わせる。
+#   git の設定が転送されない。代わりに次のどちらかで署名する（.env で選ぶ）。
 #
-#   GIT_SIGNING_KEY が空なら署名しない（以前に設定したものがあれば外す）。
-#   鍵が読めない（形式が違う・パスフレーズ付き）場合は、すべてのコミットが失敗しないよう
+#   1. 1Password（GIT_SIGNING_PUBLIC_KEY）
+#        ai のデスクトップで動く 1Password の SSH エージェントで署名する。秘密鍵はファイルにも
+#        環境変数にも置かない。公開鍵を ~/.ssh/git_signing_key.pub に書き出して user.signingkey にし、
+#        gpg.ssh.program（git-sign-1password）でエージェントを使わせる。
+#        GIT_SIGNING_1PASSWORD_VAULT があれば、エージェントがその vault の鍵を使うよう
+#        ~/.config/1Password/ssh/agent.toml を作る（エージェントは既定では Personal / Private /
+#        Employee vault の鍵しか使わず、共有された vault の鍵は使われないため）。
+#   2. 秘密鍵（GIT_SIGNING_KEY）
+#        SSH の秘密鍵の中身を ~/.ssh/git_signing_key に書き出し、~/.gitconfig で署名に使わせる。
+#        AI エージェントは書き出した秘密鍵を読めるため、署名専用の鍵を使うこと。
+#
+#   両方あれば 1Password を使う（秘密鍵は書き出さない）。どちらも空なら署名しない
+#   （以前に設定したものがあれば外す）。値が読めない場合は、すべてのコミットが失敗しないよう
 #   署名を有効にせずに終了ステータス 1 を返す。
-#
-#   AI エージェントは書き出した秘密鍵を読めるため、署名専用の鍵を使うこと。
 ###########################################################################
 set -euo pipefail
 
 key_file="${HOME}/.ssh/git_signing_key"
+pub_file="${key_file}.pub"
+signer="/usr/local/bin/git-sign-1password"
+agent_toml="${HOME}/.config/1Password/ssh/agent.toml"
+# このスクリプトが作った agent.toml の目印（1行目）。目印の無いもの（利用者が作ったもの）は書き換えない
+agent_toml_marker="# setup-git-signing が .env の GIT_SIGNING_1PASSWORD_VAULT から作成（手で編集するときはこの行を消すこと）"
+
+# このスクリプトが作った agent.toml だけを消す
+remove_agent_toml() {
+  if [[ -f "$agent_toml" ]] && [[ "$(head -n 1 "$agent_toml")" == "$agent_toml_marker" ]]; then
+    rm -f "$agent_toml"
+  fi
+}
 
 disable() {
   # このスクリプトが設定したものだけを外す（利用者が別の鍵を設定していれば触らない）
-  if [[ "$(git config --global --get user.signingkey || true)" == "$key_file" ]]; then
-    git config --global --unset user.signingkey || true
-    git config --global --unset gpg.format || true
-    git config --global --unset commit.gpgsign || true
-    git config --global --unset tag.gpgsign || true
+  case "$(git config --global --get user.signingkey || true)" in
+    "$key_file" | "$pub_file")
+      git config --global --unset user.signingkey || true
+      git config --global --unset gpg.format || true
+      git config --global --unset commit.gpgsign || true
+      git config --global --unset tag.gpgsign || true
+      ;;
+  esac
+  if [[ "$(git config --global --get gpg.ssh.program || true)" == "$signer" ]]; then
+    git config --global --unset gpg.ssh.program || true
   fi
-  rm -f "$key_file" "${key_file}.pub"
+  rm -f "$key_file" "$pub_file"
+  remove_agent_toml
 }
 
-key="${GIT_SIGNING_KEY:-}"
+enable() {
+  git config --global gpg.format ssh
+  git config --global user.signingkey "$1"
+  git config --global commit.gpgsign true
+  git config --global tag.gpgsign true
+}
+
 # Windows のエディタで書いた .env の CRLF を取り除く
+pubkey="${GIT_SIGNING_PUBLIC_KEY:-}"
+pubkey="${pubkey//$'\r'/}"
+key="${GIT_SIGNING_KEY:-}"
 key="${key//$'\r'/}"
+vault="${GIT_SIGNING_1PASSWORD_VAULT:-}"
+vault="${vault//$'\r'/}"
 
-if [[ -z "$key" ]]; then
+setup_1password() {
+  if [[ -n "$key" ]]; then
+    echo "setup-git-signing: GIT_SIGNING_PUBLIC_KEY があるため 1Password で署名します。GIT_SIGNING_KEY は使わないため、.env から消してください" >&2
+  fi
+
+  # 秘密鍵の方式で書き出した鍵を残さない
+  rm -f "$key_file"
+  (
+    umask 077
+    mkdir -p "${HOME}/.ssh"
+  )
+  printf '%s\n' "$pubkey" >"$pub_file"
+  chmod 0644 "$pub_file"
+
+  # 1行の公開鍵（"ssh-ed25519 AAAA... コメント"）として読めることを確かめる。
+  # 秘密鍵を誤って書いた場合も、複数行になるためここで止まる。
+  if [[ "$pubkey" == *$'\n'* ]] || ! ssh-keygen -l -f "$pub_file" >/dev/null 2>&1; then
+    echo "setup-git-signing: GIT_SIGNING_PUBLIC_KEY を SSH の公開鍵として読めません（1行の \"ssh-ed25519 AAAA...\" の形式で書いてください）。署名は無効のままにします" >&2
+    disable
+    exit 1
+  fi
+
+  if [[ -n "$vault" ]]; then
+    # TOML の文字列に埋め込むため、エスケープが必要な文字は受け付けない
+    if [[ "$vault" == *[\"\\]* || "$vault" =~ [[:cntrl:]] ]]; then
+      echo "setup-git-signing: GIT_SIGNING_1PASSWORD_VAULT に使えない文字（\" \\ 改行など）があります。署名は無効のままにします" >&2
+      disable
+      exit 1
+    fi
+    if [[ -f "$agent_toml" ]] && [[ "$(head -n 1 "$agent_toml")" != "$agent_toml_marker" ]]; then
+      echo "setup-git-signing: ${agent_toml} は利用者が作ったものなので書き換えません（GIT_SIGNING_1PASSWORD_VAULT は反映されません。vault の設定はこのファイルに書いてください）" >&2
+    else
+      (
+        umask 077
+        mkdir -p "$(dirname "$agent_toml")"
+        printf '%s\n' \
+          "$agent_toml_marker" \
+          '[[ssh-keys]]' \
+          "vault = \"${vault}\"" >"${agent_toml}.tmp"
+        mv -f "${agent_toml}.tmp" "$agent_toml"
+      )
+    fi
+  else
+    remove_agent_toml
+  fi
+
+  enable "$pub_file"
+  git config --global gpg.ssh.program "$signer"
+}
+
+setup_key_file() {
+  # 1Password の方式で設定したものを残さない
+  if [[ "$(git config --global --get gpg.ssh.program || true)" == "$signer" ]]; then
+    git config --global --unset gpg.ssh.program || true
+  fi
+  remove_agent_toml
+
+  (
+    umask 077
+    mkdir -p "${HOME}/.ssh"
+    printf '%s\n' "$key" >"$key_file"
+  )
+
+  # 公開鍵を取り出せることで、鍵として読めること（パスフレーズが無いこと）を確かめる
+  if ! ssh-keygen -y -P '' -f "$key_file" >"$pub_file" 2>/dev/null; then
+    echo "setup-git-signing: GIT_SIGNING_KEY を SSH の秘密鍵として読めません（パスフレーズ付きの鍵は使えません）。署名は無効のままにします" >&2
+    disable
+    exit 1
+  fi
+
+  enable "$key_file"
+}
+
+if [[ -n "$pubkey" ]]; then
+  setup_1password
+elif [[ -n "$key" ]]; then
+  setup_key_file
+else
   disable
-  exit 0
 fi
-
-(
-  umask 077
-  mkdir -p "${HOME}/.ssh"
-  printf '%s\n' "$key" >"$key_file"
-)
-
-# 公開鍵を取り出せることで、鍵として読めること（パスフレーズが無いこと）を確かめる
-if ! ssh-keygen -y -P '' -f "$key_file" >"${key_file}.pub" 2>/dev/null; then
-  echo "setup-git-signing: GIT_SIGNING_KEY を SSH の秘密鍵として読めません（パスフレーズ付きの鍵は使えません）。署名は無効のままにします" >&2
-  disable
-  exit 1
-fi
-
-git config --global gpg.format ssh
-git config --global user.signingkey "$key_file"
-git config --global commit.gpgsign true
-git config --global tag.gpgsign true

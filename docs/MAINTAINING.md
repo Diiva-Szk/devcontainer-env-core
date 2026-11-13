@@ -42,7 +42,7 @@ Feature（`devcontainer-features/` 配下）には `Dockerfile` を含めず、�
 │   │   ├── opt/agent-browser-skills/ # agent-browser のスキル本体の取得（rulesync.jsonc / rulesync.lock）
 │   │   ├── opt/drawio-webapp/    # d-png-cli に渡す draw.io の Web 資材の取得対象のパス（sparse-checkout）
 │   │   ├── opt/d-png-libraries/  # d-png-cli のライブラリの取得元を作るスクリプト（draw.io のサイドバーの図形）と、一緒に配置するライセンス表記
-│   │   ├── usr/local/bin/        # ai-entrypoint.sh / start-desktop（デスクトップの起動）/ start-sshd（ssh サーバーの起動）/ setup-git-signing（git の署名の設定）/ sync-home-defaults / google-chrome（ai 用のラッパー。dev-base のものを置き換える）
+│   │   ├── usr/local/bin/        # ai-entrypoint.sh / start-desktop（デスクトップの起動）/ start-sshd（ssh サーバーの起動）/ setup-git-signing（git の署名の設定）/ git-sign-1password（git の署名で 1Password の SSH エージェントを使う）/ sync-home-defaults / google-chrome（ai 用のラッパー。dev-base のものを置き換える）/ 1password（1Password のラッパー）
 │   │   ├── usr/share/icons/st/   # st のアイコン
 │   │   └── home-config/          # AI エージェントとデスクトップ（KasmVNC / Openbox / idesk）、d-png-cli（ライブラリのスコープ）の設定ファイル
 │   └── user/
@@ -121,6 +121,7 @@ CLI ツールと言語ランタイム（Python / Node.js）は [mise](https://mi
 | d-png スキル（ai） | `docker-images/ai/opt/rulesync/.rulesync/skills/d-png/SKILL.md`（vendoring） | `rulesync generate --global` で各ツールへ展開（取得は手動。[d-png の vendoring](#d-png-の-vendoring)を参照） |
 | デスクトップ（ai）、socat（user） | `docker-images/Dockerfile` | Debian のパッケージ（`apt-get`） |
 | Google Chrome（ai / user） | `docker-images/Dockerfile` | Google の apt リポジトリ（署名鍵の主鍵のフィンガープリントを `GOOGLE_LINUX_SIGNING_KEY_FPR` で照合）から `apt-get install` |
+| 1Password（ai。git の署名） | `docker-images/Dockerfile` の `ONEPASSWORD_SIGNING_KEY_FPR` | 公式の tar.gz を、署名（`.sig`）を `sqv` で検証し、署名した鍵のフィンガープリントを照合してから `/opt/1Password` に展開 |
 
 - Python パッケージ・Azure CLI を変更したら、`docker-images/dev-base/opt/python`・`docker-images/dev-base/opt/azure-cli` で次を実行して `requirements.txt` を再生成します。オプションは Renovate がヘッダーから解釈できるよう `=` でつなぎます。
 
@@ -138,6 +139,13 @@ CLI ツールと言語ランタイム（Python / Node.js）は [mise](https://mi
 - Chrome には Debian の Chromium（`/etc/chromium.d/`）のような起動オプションの設定ファイルが無いため、ラッパー `/usr/local/bin/google-chrome` で付けます。`dev-base` では共通のラッパー（`docker-images/dev-base/usr/local/bin/google-chrome`。サンドボックスの無効化など）を置き、`ai` ステージで、リモートデバッグ用ポート・専用プロファイルも付ける `ai` 用のラッパー（`docker-images/ai/usr/local/bin/google-chrome`）に置き換えます。共通の起動オプションを変えるときは両方を合わせてください。`/usr/bin/google-chrome-stable` は `dpkg-divert` で退避してラッパーを指すようにしているため、`google-chrome` / `x-www-browser` の alternatives やデスクトップファイル（`xdg-open`）から起動しても同じ設定になります。
 - `chrome-sandbox` の setuid ビットは外しています。コンテナ内では SUID のサンドボックスも使えず（`--no-sandbox` で起動します）、root への権限昇格の経路になり得る SUID バイナリを置かないためです。
 - Playwright CLI・agent-browser（ai）も、同梱のブラウザはダウンロードせず、Google Chrome を `PLAYWRIGHT_MCP_EXECUTABLE_PATH` / `AGENT_BROWSER_EXECUTABLE_PATH`（ともに `/opt/google/chrome/chrome`）で使います。ラッパーはリモートデバッグ用ポートやプロファイルを指定し、デスクトップの Chrome と衝突するため実体を指定しています。
+- 1Password（ai）は、ai の git の署名を 1Password の SSH エージェントで行うためのデスクトップアプリです（使い方は README の「1Password で署名する」）。
+  - **tar.gz を使う理由:** 1Password の apt リポジトリは、arm64 には CLI（`1password-cli`）しかなく、デスクトップアプリがありません。両アーキテクチャで同じ手順にするため、公式の tar.gz（`downloads.1password.com/linux/tar/stable/<x86_64|aarch64>/1password-latest.tar.gz`）を使います。
+  - **検証:** tar.gz の署名（`.sig`）を `sqv`（Debian の apt が使う署名検証ツール。ベースイメージに入っている）で検証し、`sqv` が出力する署名した鍵のフィンガープリントを `ONEPASSWORD_SIGNING_KEY_FPR`（1Password の公開している `3FEF9748469ADBE15DA7CA80AC2D62742012EA22`）と照合します。鍵は配布元から取得するため、取得した鍵ではなく、実際に署名した鍵で照合します。1Password が署名の鍵を変えたらビルドが失敗するため、公式の案内（[Install 1Password on Linux](https://support.1password.com/install-linux/)）で新しいフィンガープリントを確認して更新してください。
+  - **版:** Google Chrome と同じく固定しません（`latest` の tar.gz を使い、層を作り直したときの版が入ります）。Renovate の対象外です。
+  - **after-install.sh は実行しない:** 付属の `after-install.sh` は、`chrome-sandbox` に SUID、`1Password-BrowserSupport` / `1password-mcp` に SGID を付け、apt のリポジトリを追加します。Chrome の `chrome-sandbox` と同じく SUID / SGID のバイナリを置かないため実行せず、展開後に SUID / SGID の付いたファイルが無いことを確かめます。サンドボックスは使えないため、ラッパー `/usr/local/bin/1password` が `--no-sandbox`（ほかは Chrome のラッパーと同じ `--disable-dev-shm-usage --disable-gpu`）を付けます。ブラウザ連携（BrowserSupport）と MCP サーバーは使いません。
+  - **依存:** 1Password の `.deb` の `Depends` と同じパッケージを、trixie での名前（`libasound2t64` など）で入れます。多くは Chrome のために入っています。`.deb` の `Depends` が変わったら合わせてください（`downloads.1password.com/linux/debian/amd64/dists/stable/main/binary-amd64/Packages` で確認できます）。
+  - **起動:** git の署名に 1Password を使う設定（`setup-git-signing` が `gpg.ssh.program` に `git-sign-1password` を設定する）のときだけ、デスクトップ（`~/.config/openbox/autostart`）が起動します。サインインの状態・設定・SSH エージェントの設定（`ssh/agent.toml`）は `~/.config/1Password`（volume `ai-1password`）に残ります。
 - d-png-cli（ai）も同じ理由で `D_PNG_CHROME_PATH=/opt/google/chrome/chrome` を指定します（指定しないと PATH のラッパーを先に見つけます）。実体を直接起動するとラッパーの起動オプションが付かないため、`D_PNG_CHROME_ARGS` で `--no-sandbox --disable-dev-shm-usage --disable-gpu` を渡します（d-png-cli は sandbox を自動で無効にしないため、`--no-sandbox` が無いと、setuid ビットを外した `chrome-sandbox` の検査で起動直後に落ちます）。ヘッドレス・専用プロファイル・ループバック限定のデバッグポートは d-png-cli が自分で付けます。
 
 ### Worktrunk と git worktree のタスク
@@ -448,6 +456,10 @@ Action のコミットを固定しても、Action が実行時に取得するも
   - user が乗っ取られた場合、ai には入れます（ワークスペースはもともと共有しているため、新たに届くのは主に ai の volume にある AI ツールの認証情報です）。ホストの Docker を操作されるよりも被害の範囲はずっと小さくなります。
   - volume のマウント先（`/var/lib/ai-ssh/{client,host}`）は、両方のイメージで `0777` にしています。volume は最初にマウントしたときにイメージのディレクトリの権限を引き継ぎます。また、Dev Containers が user のユーザーの UID をホストに合わせて変えることがあるため、所有者では書き込みを許せません。sticky ビット（`1777`）は付けません。付けると、UID が変わった後に前の UID が書いた鍵のファイルを置き換えられなくなります（どちらの volume も書き込めるのは片方のコンテナだけなので、sticky ビットで守る相手はいません）。そのため sshd は `StrictModes no` で動かしています（書き込めるのは rw でマウントした片方のコンテナだけです）。
   - sshd はセッションの環境変数を作り直すため、`start-sshd` が起動時の環境変数を `~/.ssh/environment` に書き出し、`PermitUserEnvironment` で引き継いでいます（`docker exec` で入っていたときと同じ PATH・`DISPLAY` などにするため）。`start-sshd` の `umask 077` は鍵を作る部分（サブシェル）に限っています。sshd に引き継ぐと、ssh のセッションで作るファイルまで `600` になるためです。
+- **ai の git の署名鍵:** 1Password で署名する場合（README の「1Password で署名する」）、秘密鍵は 1Password の中だけに置き、ai でサインインする AI エージェント用のユーザーには、署名用の鍵だけを入れた vault を共有します。
+  - 共有した鍵は ai コンテナで復号できます（1Password の View and Copy Passwords の権限はアプリの画面で隠すだけです）。AI エージェントが取り出せる前提で扱い、署名用の鍵以外を共有しないでください。
+  - 1Password の SSH エージェントを使うのは git の署名（`gpg.ssh.program` の `git-sign-1password`）だけです。`SSH_AUTH_SOCK` はコンテナ全体に設定しません。設定すると ssh の接続でもエージェントが使われ、そのたびに承認を求められるためです。
+  - user から ai への ssh ではエージェントを転送しないため（上記）、user 側の鍵や ssh-agent には届きません。
 - **ai のデスクトップはホストに公開しない:** KasmVNC のポート（8444）は `compose.yml` の `expose` で同じネットワークの user コンテナにだけ見せ、`ports` でホストへは公開しません。ホストからは user コンテナの `ai-desktop`（`aid`）が `127.0.0.1` で待ち受けて転送し、VS Code のポート転送経由で開きます。
 - **App トークンの権限の最小化:** `create-github-app-token` は `permission-*` を指定しないと App installation の全権限を継承するため、ワークフローごとに必要な権限だけを指定しています。
   - renovate: Contents / Issues / Pull requests / Checks / Commit statuses / Workflows（write）、Dependabot alerts（read。`vulnerabilityAlerts` 用）
