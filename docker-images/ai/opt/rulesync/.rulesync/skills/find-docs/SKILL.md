@@ -97,7 +97,7 @@ The available versions are listed in the `library` command output. Use the close
 Retrieves up-to-date documentation and code examples for the resolved library.
 
 ```bash
-ctx7 docs /facebook/react "How to clean up useEffect with async operations"
+ctx7 docs /reactjs/react.dev "How to clean up useEffect with async operations"
 ctx7 docs /vercel/next.js "How to add an authentication proxy to app router"
 ctx7 docs /prisma/prisma "How to define one-to-many relations with cascade delete"
 ```
@@ -148,7 +148,7 @@ Do not silently fall back to training data — always tell the user why Context7
 
 ## Common Mistakes
 
-- Library IDs require a `/` prefix — `/facebook/react` not `facebook/react`
+- Library IDs require a `/` prefix — `/reactjs/react.dev` not `reactjs/react.dev`
 - Always run `ctx7 library` first — `ctx7 docs react "hooks"` will fail without a valid ID
 - Use descriptive queries, not single words — `"React useEffect cleanup function"` not `"hooks"`
 - One topic per query — split `"routing and auth and caching"` into a separate `docs` command per concept, unless the question is about how they interact
