@@ -322,8 +322,17 @@
       // mise.lock は update-mise-lock ワークフローが作り直す（チェックサムの補完を含む）。
       // Renovate 自身が `mise lock` を実行すると、チェックサムを持たない成果物の lock が
       // 不完全なままコミットされるため、Renovate による lock 更新は行わない。
+      //
+      // 【同じグループの他のファイルも対象にすること】skipArtifactsUpdate はブランチ単位で判定され、
+      // ブランチ内の全ての更新が true のときだけ効く（1つでも false が混ざると全ファイルの
+      // artifact が更新される）。ai の mise ツールのグループには rulesync.jsonc の ref
+      // （custom.regex）も入るため、ここに含めないと Renovate が `mise lock` を実行してしまう。
+      // その際は custom.regex の depName がそのまま渡され（`mise lock kiro-cli`）、mise の
+      // ツール名（http:kiro-cli）と一致しないため失敗する（#140 で発生）。
+      // rulesync.lock は update-rulesync-lock ワークフローが作り直すため、こちらも Renovate は更新しない。
       matchFileNames: [
         'docker-images/**/mise/config.toml',
+        'docker-images/**/rulesync.jsonc',
       ],
       skipArtifactsUpdate: true,
     },
