@@ -223,6 +223,6 @@ specifiers = ["0.1.23"]
 
 [[tools."npm:ctx7"]]
 version = "0.10.0"
-aube = { path = ".mise/locks/npm-ctx7/0.10.0", digest = "sha256:1b9157314abe929e02d9493d824913e96f7e5b72197e6809fad362ae87e5f1b0" }
+aube = { path = ".mise/locks/npm-ctx7/0.10.0", digest = "sha256:531987a54ad3f0c85b32e83a8460cc3baa8bae628b3104b7426c0bf16bedad04" }
 backend = "npm:ctx7"
 specifiers = ["0.10.0"]
