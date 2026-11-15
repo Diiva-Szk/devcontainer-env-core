@@ -2,7 +2,7 @@
 # docker-images 配下の mise 設定（dev-base / ai / user）の mise.lock を作り直す。
 #
 # mise lock を既存の lock に対して実行すると、オプション変更前やバージョン更新前の
-# 古いエントリが残ることがあるため、毎回ゼロから生成して「lock = 設定から決まる値」にする。
+# 古いエントリが残ることがあるため、毎回作り直して「lock = 設定から決まる値」にする。
 # チェックサムを提供しない配布元の成果物は fill-mise-lock-checksums.sh で補完する
 # （変わっていない URL は旧 lock の値を再利用するため、再ダウンロードは発生しない）。
 #
@@ -10,8 +10,24 @@
 # サイドカー（package.json / aube-lock.yaml）として書き出され、mise.lock にはその digest が記録される。
 # サイドカーも mise.lock と一緒にコミットすること（mise 2026.9.7 以上が必要）。
 #
+# 【npm backend のエントリだけは旧 lock から引き継ぐ】mise lock は、lock が参照している依存グラフを
+# ツールの版が同じなら再利用する。lock をゼロから作ると、版が同じでも間接依存を解決し直すため、
+# ツールと関係のない PR（Dockerfile の変更など）に間接依存の更新が混ざっていた。
+# 版が変わったツールのエントリは置き換えられ、設定から消したツールのエントリとサイドカーは消える
+# （mise 2026.10.25 で確認）。
+#
+# 【間接依存は公開から7日以上経った版だけを使う】MISE_MINIMUM_RELEASE_AGE は、npm backend の
+# 間接依存を解決するときにも効く。Renovate の minimumReleaseAge（npm は 7 days）と揃える。
+# 設定で版を固定したツール自体には効かない（AI ツールは Renovate が1日で更新するため、ここで待たせない）。
+# 設定の版はすべて固定しているため、npm 以外のツールの lock は変わらない。
+#
 # 使い方（リポジトリ内のどこからでも可。mise はイメージと同じバージョンを使うこと）:
 #   bash scripts/update-mise-locks.sh
+#
+# 間接依存を最新にし直したいとき（脆弱性の修正を取り込むときなど）や、mise の更新で lock の形式
+# （lockfile_version）が上がったときは、npm backend のエントリも含めてゼロから作る
+# （引き継ぐと、旧 lock の lockfile_version がそのまま残るため）:
+#   UPDATE_MISE_LOCKS_FRESH=1 bash scripts/update-mise-locks.sh
 #
 # GitHub API を多用するため、GITHUB_TOKEN を設定して実行することを推奨する。
 set -euo pipefail
@@ -29,6 +45,8 @@ export MISE_SYSTEM_CONFIG_DIR="$empty_dir"
 export MISE_GLOBAL_CONFIG_FILE="$empty_dir/config.toml"
 export MISE_SAFE=1
 export MISE_YES=1
+# 間接依存は公開から7日以上経った版だけを使う（冒頭のコメント）
+export MISE_MINIMUM_RELEASE_AGE=7d
 
 # lock を順序に依存しない形に正規化して出力する。
 # [[tools...]] から次の [[ までを1エントリとし、エントリ単位で並べ替える。
@@ -57,9 +75,18 @@ for config in docker-images/*/etc/mise/config.toml docker-images/*/opt/mise/conf
     if [ -f "$lock" ]; then
         cp "$lock" "$old_lock"
         rm -f "$lock"
+        # npm backend のエントリ（サブテーブルを含む）と、先頭の lockfile_version だけを残す（冒頭のコメント）。
+        # lockfile_version が無いと mise lock は古い形式で書き出すため、先頭も残す。
+        if [ "${UPDATE_MISE_LOCKS_FRESH:-}" != 1 ] && grep -q '^\[\[tools\."npm:' "$old_lock"; then
+            awk '
+                /^\[\[/   { section = 1; keep = ($0 ~ /^\[\[tools\."npm:/) }
+                /^\[[^[]/ { section = 1; keep = ($0 ~ /^\[tools\."npm:/) }
+                !section || keep
+            ' "$old_lock" >"$lock"
+        fi
     fi
-    # サイドカーは消さずに残す（mise lock は既存の依存グラフを再利用し、参照されなくなったものを消す）。
-    # 失敗時に戻せるよう退避だけしておく。
+    # サイドカーは消さずに残す（lock が参照している依存グラフは mise lock が再利用し、
+    # 参照されなくなったものは消す）。失敗時に戻せるよう退避だけしておく。
     if [ -d "$sidecars" ]; then
         cp -a "$sidecars" "$old_sidecars"
     fi

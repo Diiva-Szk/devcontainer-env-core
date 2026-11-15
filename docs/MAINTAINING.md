@@ -98,10 +98,12 @@ CLI ツールと言語ランタイム（Python / Node.js）は [mise](https://mi
 
 `scripts/update-mise-locks.sh` は次を行います。
 
-- lock をゼロから生成する（古いエントリが残らないようにするため）。そのため lock はその mise が新しく作る形式（mise 2026.10.25 では `lockfile_version = 3`）になる。`update-mise-lock.yml` はこの版を検証しているため、mise の更新で版が上がったら合わせて更新する。
+- lock を作り直す（古いエントリが残らないようにするため）。ただし npm backend のツールのエントリは、先頭の `lockfile_version` と一緒に旧 lock から引き継ぐ。`mise lock` は lock が参照している依存グラフを、ツールの版が同じなら再利用するためで、ゼロから作ると版が同じでも間接依存を解決し直し、関係のない PR に間接依存の更新が混ざる。版が変わったツールのエントリは置き換えられ、設定から消したツールのエントリは消える。
+- npm backend の間接依存を解決するときは、公開から7日以上経った版だけを使う（`MISE_MINIMUM_RELEASE_AGE=7d`。Renovate の `minimumReleaseAge` と揃える）。設定で版を固定したツール自体には効かないため、AI ツールの1日の待機（Renovate の設定）はそのまま。
+- 間接依存を最新にし直したいとき（脆弱性の修正を取り込むときなど）は、`UPDATE_MISE_LOCKS_FRESH=1 bash scripts/update-mise-locks.sh` で npm backend のエントリも含めてゼロから作る。mise の更新で lock の形式（mise 2026.10.25 では `lockfile_version = 3`）が上がったときも同じ（引き継ぐと旧 lock の版が残るため）。`update-mise-lock.yml` はこの版を検証しているため、合わせて更新する。
 - 配布元がチェックサムを提供しない成果物（aws-cli, google-cloud-sdk, claude-code など）は `mise lock` がチェックサムを記録しないため、`scripts/fill-mise-lock-checksums.sh` で成果物をダウンロードして sha256 を補完する。URL が変わっていなければ旧 lock の値を再利用する。
 - linux-x64 / linux-arm64 のどちらかのエントリが無いツールや、linux-arm64 に x86_64 向けの成果物が記録されたエントリがあれば失敗する。mise 2026.10.19 以降の既定（`lockfile_mode = "generate"`）では `mise lock` が解決できなかった件数（skipped）を出力しないため、生成された lock の中身で確認する。npm backend のツールはプラットフォーム別の成果物を持たないため対象外とし、代わりに依存グラフ（`aube`）の記録があることを確認する。
-- npm backend のサイドカー（`.mise/locks/`）は消さずに残し、`mise lock` に再利用・整理させる（参照されなくなった版のディレクトリは `mise lock` が消す）。
+- npm backend のサイドカー（`.mise/locks/`）は消さずに残し、`mise lock` に再利用・整理させる（lock が参照している依存グラフは再利用され、参照されなくなった版のディレクトリは `mise lock` が消す）。
 - エントリの並び順だけが変わった場合は旧 lock を残す（mise lock は複数エントリの並び順が実行ごとに揺れるため）。
 
 **プラットフォーム別の成果物を指定する場合の注意:** github backend の `asset_pattern` に `{{ arch() }}` を使うと、`mise lock` を実行したマシンのアーキテクチャで展開され、全プラットフォームに同じ成果物が記録されます。`[tools."github:owner/repo".platforms]` でプラットフォームごとに指定してください（`openai/codex` の設定を参照）。
