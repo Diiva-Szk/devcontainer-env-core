@@ -103,7 +103,7 @@ VS Code の draw.io 拡張（`hediet.vscode-drawio`）で編集した `.drawio.p
 - Web フォント（Google Fonts など）を指定した文字や、URL で参照している画像を含む図は、d-png-cli が外部への通信を既定で止めているため描画に失敗します（`--allow-network` が必要というエラーになります）。`d-png-cli write` に `--allow-network` を付けると描画できます。拡張で挿入した画像（貼り付け・ファイルから）やライブラリの画像は図に埋め込まれるため、そのまま描画できます。
 - 拡張の画像はホスト側の VS Code が描くため、ホストとコンテナのフォントの違いによる細かな画素の差は残ります。
 
-デスクトップ: KasmVNC、Openbox、Google Chrome、st（ターミナル）、fcitx5-mozc（日本語入力）
+デスクトップ: KasmVNC、Openbox、Google Chrome、1Password（git の署名に使う。[git の署名](#git-の署名)）、st（ターミナル）、fcitx5-mozc（日本語入力）
 
 Playwright CLI・agent-browser の使い方スキル、Context7 CLI（ctx7）のドキュメント検索スキル（find-docs）、d-png-cli の `.drawio.png` 編集スキル（d-png）は、各 CLI・公式リポジトリが配布しているものをビルド時に取得し、rulesync で Claude Code・Codex・Copilot・Kiro・Antigravity のグローバル設定へ展開しています。drawio-png-cli（dip）の頃から使っているコンテナでは、古いスキル（drawio-png）が volume に残るため、`sync-home-defaults` で入れ替えてください（[イメージが管理する設定の更新](#イメージが管理する設定の更新)）。
 
@@ -232,6 +232,7 @@ flowchart LR
 - ブラウザが自動で開かない場合（VS Code 以外のターミナルなど）は、VS Code の「ポート」タブで 8444 が転送されていることを確認し、表示された URL を開いてください。
 - mise のタスクとしても実行できます（`mise run ai-desktop`、短縮形 `mise run aid`、`mise run aid stop`）。ただし、trust していない `mise.toml` があるディレクトリでは mise がエラーになるため、`ai-desktop` コマンドを直接実行してください（[`mise trust` が必要](#user-コンテナでは-mise-trust-が必要)）。
 - デスクトップが起動していない場合は、`ai` コンテナで `start-desktop` を実行すると起動し直せます（ログは `ai` コンテナの `~/.vnc/`）。
+- git の署名に 1Password を使う設定では、1Password もこのデスクトップで起動します。ロックの解除や署名の承認はここで行います（[1Password で署名する](#1password-で署名する)）。
 - `ai` コンテナのシェルから起動した GUI アプリ（`google-chrome` など）も、このデスクトップに表示されます。Chrome は DevTools Protocol（`127.0.0.1:9222`、`ai` コンテナ内のみ）で AI エージェントから操作できます。
 
 ## VS Code の Feature
@@ -359,7 +360,9 @@ mise trust mise.toml  # 確認してから trust する
 | `USER_PASS` | `dev` | `user` コンテナの `sudo` のパスワード。**変更を推奨します**（イメージの最後の層で設定するため、変更してもビルドキャッシュは使われます） |
 | `AWS_REGION` | `ap-northeast-1` | `user` コンテナの AWS リージョン |
 | `KASMVNC_PASSWORD` | `dev` | `ai` コンテナのデスクトップ（KasmVNC）のログインパスワード。コンテナの起動時に反映する |
-| `GIT_SIGNING_KEY` | （空） | `ai` コンテナの git の署名に使う SSH の秘密鍵の中身。空なら署名しない。コンテナの起動時に反映する（[git の署名](#git-の署名)） |
+| `GIT_SIGNING_PUBLIC_KEY` | （空） | `ai` コンテナの git の署名を 1Password で行うときの SSH の公開鍵（1行）。コンテナの起動時に反映する（[git の署名](#git-の署名)） |
+| `GIT_SIGNING_1PASSWORD_VAULT` | （空） | 1Password の SSH エージェントに使わせる vault の名前。コンテナの起動時に反映する（[git の署名](#git-の署名)） |
+| `GIT_SIGNING_KEY` | （空） | 1Password を使わずに `ai` コンテナの git の署名をするときの SSH の秘密鍵の中身。`GIT_SIGNING_PUBLIC_KEY` も空なら署名しない。コンテナの起動時に反映する（[git の署名](#git-の署名)） |
 | `UID` / `GID` | `1000` | コンテナ内ユーザーの UID / GID。**通常は変更しないでください**（下記） |
 | `USER_NAME` | `dev` | コンテナ内のユーザー名。**通常は変更しないでください**（下記） |
 
@@ -368,7 +371,43 @@ mise trust mise.toml  # 確認してから trust する
 
 ### git の署名
 
-`user` コンテナの署名は、VS Code がホストの git の設定を転送するかどうかに任せており、このリポジトリでは対応していません（GnuPG は入っていないため GPG 署名は使えません。SSH 署名は `user.signingkey` を `key::` 形式で書き、ssh-agent を転送している場合などに限り動きます）。`ai` コンテナでは、`.env` の `GIT_SIGNING_KEY` に SSH の秘密鍵を書いたときだけ、コミットとタグに SSH 署名を付けます（書かなければ署名しません）。
+`user` コンテナの署名は、VS Code がホストの git の設定を転送するかどうかに任せており、このリポジトリでは対応していません（GnuPG は入っていないため GPG 署名は使えません。SSH 署名は `user.signingkey` を `key::` 形式で書き、ssh-agent を転送している場合などに限り動きます）。`ai` コンテナでは、次のどちらかでコミットとタグに SSH 署名を付けます（どちらも設定しなければ署名しません。両方設定した場合は 1Password を使います）。
+
+| 方式 | `.env` に書くもの | 秘密鍵の置き場所 |
+| --- | --- | --- |
+| [1Password](#1password-で署名する)（推奨） | `GIT_SIGNING_PUBLIC_KEY`（公開鍵）と `GIT_SIGNING_1PASSWORD_VAULT`（vault の名前） | 1Password の中だけ。`ai` のデスクトップで動く 1Password の SSH エージェントが署名する |
+| [秘密鍵](#秘密鍵を-env-に書く) | `GIT_SIGNING_KEY`（秘密鍵の中身） | `.env` と、`ai` コンテナに書き出したファイル（`~/.ssh/git_signing_key`） |
+
+- GitHub で Verified と表示されるには、コミットのメールアドレス（`user.email`）が鍵を登録したアカウントのものである必要があります。
+
+#### 1Password で署名する
+
+AI エージェント用の 1Password のユーザー（ゲストなど）を作り、署名用の鍵だけを入れた vault をそのユーザーに共有して使います。`ai` コンテナでサインインするのはそのユーザーだけなので、AI エージェントから見えるのはその vault だけになり、ほかの鍵には届きません。
+
+1. 署名用の vault を作り、AI エージェント用のユーザーに共有します。vault には署名用の鍵だけを入れてください。
+2. その vault に SSH 鍵を作ります（**New Item → SSH Key**、種類は Ed25519）。公開鍵を GitHub の **Settings → SSH and GPG keys → New SSH key** で、Key type を **Signing Key** にして登録します。
+3. `.env` に公開鍵（1行）と vault の名前を書きます。`GIT_SIGNING_KEY` を書いていた場合は消してください。
+
+   ```sh
+   # .devcontainer/devcontainer-env-core/.env
+   GIT_SIGNING_PUBLIC_KEY="ssh-ed25519 AAAA... git signing (devcontainer ai)"
+   GIT_SIGNING_1PASSWORD_VAULT="AI Signing"
+   ```
+
+4. コンテナを作り直します（**Dev Containers: Rebuild Container**）。起動時に `setup-git-signing` が公開鍵を `~/.ssh/git_signing_key.pub` に書き出し、`~/.gitconfig` に `gpg.format=ssh`・`user.signingkey`・`gpg.ssh.program`（`git-sign-1password`）・`commit.gpgsign=true`・`tag.gpgsign=true` を設定します。vault の名前は、1Password の SSH エージェントの設定（`~/.config/1Password/ssh/agent.toml`）に書きます（エージェントは既定では自分の Personal / Private / Employee vault の鍵しか使わないため）。
+5. **初回だけ:** `ai-desktop`（`aid`）でデスクトップを開くと、1Password が起動しています。AI エージェント用のユーザーでサインインし、次のように設定します。サインインの状態と設定は volume（`~/.config/1Password`）に残ります（設定の表記は 1Password の版によって異なることがあります）。
+   - **Settings → Developer:** SSH エージェントを有効にします（**Use the SSH agent**）。**Ask approval for each new** は **application**、**Remember key approval** は **until 1Password quits** にします。
+   - **Settings → Security:** 自動ロック（**Lock after the computer is idle**）をできるだけ長くし、**Lock when computer locks** は外します。
+6. **コンテナを起動するたび:** デスクトップで 1Password のロックを解除します。最初の署名で承認を求められたら、**Approve for all applications** にチェックを入れて承認します。以後は 1Password が終了する（コンテナを止める）まで、承認を求められません。
+
+- ロックの解除や承認を待っている間、AI エージェントの `git commit` は止まります。コンテナを起動したら、先にデスクトップでロックを解除してください。1Password はロック中も承認を覚えていますが、秘密鍵を使うにはロックの解除が必要です。
+- 1Password のウィンドウは閉じずに最小化してください（デスクトップにトレイが無いため、閉じると終了して SSH エージェントも止まることがあります）。閉じた場合は、デスクトップの 1Password のアイコンから起動し直せます。
+- **AI エージェント用のユーザーが使える鍵は、AI エージェントが取り出せる前提で扱ってください。** 1Password の **View and Copy Passwords** の権限はアプリの画面で隠すだけで、復号できるデータは端末（`ai` コンテナ）にあります（[How vault permissions are enforced](https://support.1password.com/permission-enforcement/)）。署名用の鍵だけを共有し、漏れた疑いがあれば共有を外して GitHub から鍵を削除します。
+- 1Password の SSH エージェントを使うのは git の署名だけです。`SSH_AUTH_SOCK` はコンテナ全体には設定していないため、ssh の接続（`git fetch` など）では使われず、承認を求められることもありません。
+
+#### 秘密鍵を `.env` に書く
+
+1Password を使わない場合は、`.env` の `GIT_SIGNING_KEY` に SSH の秘密鍵を書きます。
 
 1. 署名専用の鍵を作ります（パスフレーズは付けないでください。付けると起動時に読めず、署名は無効のままになります）。
 
@@ -389,7 +428,6 @@ mise trust mise.toml  # 確認してから trust する
 
 4. コンテナを作り直します（**Dev Containers: Rebuild Container**）。起動時に `setup-git-signing` が鍵を `~/.ssh/git_signing_key` に書き出し、`~/.gitconfig` に `gpg.format=ssh`・`user.signingkey`・`commit.gpgsign=true`・`tag.gpgsign=true` を設定します。
 
-- GitHub で Verified と表示されるには、コミットのメールアドレス（`user.email`）が鍵を登録したアカウントのものである必要があります。
 - **`ai` コンテナの AI エージェントは書き出された秘密鍵を読めます**（`docker exec` で入ったシェルからは環境変数 `GIT_SIGNING_KEY` も見えます。`ai` コマンドの ssh のセッションには引き継ぎません）。普段の認証用の鍵や他の署名鍵を使い回さず、署名専用の鍵にしてください。漏れた疑いがあれば GitHub から鍵を削除します。
 
 ## AI ツールの状態の保存
@@ -404,6 +442,7 @@ mise trust mise.toml  # 確認してから trust する
 | Kiro CLI | `~/.kiro` と `~/.local/share/kiro-cli`（認証情報は後者の `data.sqlite3`） |
 | Antigravity CLI | `~/.gemini` |
 | Context7 CLI（ctx7） | `~/.config/context7`（認証情報は `credentials.json`） |
+| 1Password（git の署名） | `~/.config/1Password`（サインインの状態・設定・SSH エージェントの設定 `ssh/agent.toml`） |
 
 - Claude Code のアカウント情報を持つ `.claude.json` は、既定ではホーム直下に置かれて volume に入らないため、`CLAUDE_CONFIG_DIR` で `~/.claude/.claude.json` に移しています。
 
