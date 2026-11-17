@@ -30,13 +30,13 @@ azure-batch==15.0.0b1 \
     --hash=sha256:dfbddd158ffade52193e3e4d86c996ea7236ffd2695a43734fae5e05a974e2ed \
     --hash=sha256:e9cacfa058405c77f27fbf35cecb8f3be81b220deed06d2d9535c8dacae5af10
     # via azure-cli
-azure-cli==2.91.0 \
-    --hash=sha256:998f2b7812e553520c0f4c7bbb8420487d83f9930711cef335401c1f3fc5e0b6 \
-    --hash=sha256:e83b6c3cea91a060f61525deb9e9205f9e3cf5ed8eb0e41f55f9ab94e13a86ca
+azure-cli==2.92.0 \
+    --hash=sha256:5099dd52f108fbd7bf2e50a9618d90cc29185f569f708e02876ca4215e9e2e54 \
+    --hash=sha256:7257ab8c949e3d412fc220686d2adce56e72f5190c6ffa2799c91441a3210291
     # via -r requirements.in
-azure-cli-core==2.91.0 \
-    --hash=sha256:1fc6366796c1c5d2ee532ef3d94c9a551ce07121a3c4749aeeb516fddc0eefb9 \
-    --hash=sha256:5b8ee74922c25e70ab238dd8739bcd77c6698a432ac27bde3c4cda8e5609d5c2
+azure-cli-core==2.92.0 \
+    --hash=sha256:1c80ab7e75cb7f759685d129f36891bc569b7ad206e3eabd14896da49f58c31a \
+    --hash=sha256:667987028d4f5ca211c24deb8e84321b399ae08b1aa5aca58a045da2ae06c1dd
     # via azure-cli
 azure-cli-telemetry==1.1.0 \
     --hash=sha256:2fc12608c0cf0ea6e69b392af9cab92f1249340b8caff7e9674cf91b3becb337 \
@@ -199,9 +199,9 @@ azure-mgmt-cdn==12.0.0 \
     --hash=sha256:531c17c7e785ed7490a4ba40a409a12c24f5e9bd6db75a79ab33bfa2b29babdc \
     --hash=sha256:b7c3ee2189234b4af51ace2924927c5fd733f3de748a642d6d5040067c8c9ddd
     # via azure-cli
-azure-mgmt-cognitiveservices==15.0.0b4 \
-    --hash=sha256:a5595a96e8499a44b7999973ce44757f9fb45be206a2414969991a8dbce9c209 \
-    --hash=sha256:e71bbd4da5e85c87be28e1d5012f77589f17f448b25ba34a0ef4d034144a5a9a
+azure-mgmt-cognitiveservices==15.0.0b6 \
+    --hash=sha256:b74ac5db8ec99f85265b90daf281fadc2ceeeed43e531a68b2140bac10f21dd9 \
+    --hash=sha256:f1b3905e84d3a4c57d667c826b84bfbcf90f386afb211deb945dd4e6a866cddd
     # via azure-cli
 azure-mgmt-compute==34.1.0 \
     --hash=sha256:5de9c4ba12a79c69e2db3d880f93869a0a80e5c99d8232dbebf6c19b1ada3638 \
@@ -219,9 +219,9 @@ azure-mgmt-containerregistrytasks==1.0.0b1 \
     --hash=sha256:1431d8f7290e115475ac84e90485cce0a79350e656fae8f7264683640e4f79be \
     --hash=sha256:d6730dd5c9bfca9fdf0fe0f933706d3c7fb855ca10c56850650b070e9c6caf51
     # via azure-cli
-azure-mgmt-containerservice==41.6.0 \
-    --hash=sha256:42aa7c6d3b7464ceb0bb5ef126ba4d354ad536a7019826a635e7795754228f71 \
-    --hash=sha256:592c83288d9cb0822ea031d8815d1d30fe30727da6fa7552d1e825c450ecca6a
+azure-mgmt-containerservice==41.8.0 \
+    --hash=sha256:87fdc0fcc517853b382127ca8bb1c746f6a1d3ac5bf6de58e60c86754e810d58 \
+    --hash=sha256:ef6569e0efe1b82d99554bcb9fd6d888850267d5c4ec94d54544c1fee26b7476
     # via azure-cli
 azure-mgmt-core==1.6.0 \
     --hash=sha256:0460d11e85c408b71c727ee1981f74432bc641bb25dfcf1bb4e90a49e776dbc4 \
@@ -387,9 +387,9 @@ azure-mgmt-policyinsights==1.1.0b4 \
     --hash=sha256:5a7f6c2f6eebe6cd694dcb89c396ab9c3f9dd6a192fe496b2ed2a966408dbca8 \
     --hash=sha256:681d7ac72ae13581c97a2b6f742795fa48a4db50762c2fb9fce4834081b04e92
     # via azure-cli
-azure-mgmt-postgresqlflexibleservers==3.0.0b2 \
-    --hash=sha256:bc8f472747a6da8eceab679735d79695007e99a7a858314ddf64a60d4e73d44e \
-    --hash=sha256:fdb59eaa707c3397dc88de02bbd41b23eaec630bbbab442f15bb3f74e98d4f58
+azure-mgmt-postgresqlflexibleservers==3.0.0b3 \
+    --hash=sha256:7383d7bff8112808c425e61fca3a203186f680f5c14d86d430f3e7543efc5b28 \
+    --hash=sha256:a1b7a3589318db5b8de18839bfc854a6038b5d461ad29dea99f305539bbeab4a
     # via azure-cli
 azure-mgmt-privatedns==1.0.0 \
     --hash=sha256:683a3eedb65b40c56b08b5636d2c1d125db58d536989a858fed8661d1ec011b6 \
