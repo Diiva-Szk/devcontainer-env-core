@@ -2,21 +2,21 @@
   "lockfileVersion": 1,
   "sources": {
     "vercel-labs/agent-browser": {
-      "requestedRef": "v0.43.0",
-      "resolvedRef": "1cc19526f3641c8543d55aa6700e7c55b37ac356",
-      "resolvedAt": "2026-11-15T12:57:32.710Z",
+      "requestedRef": "v0.45.0",
+      "resolvedRef": "f0a98351ec920bd826b22c98dacf8414f04b9832",
+      "resolvedAt": "2026-11-28T01:53:41.226Z",
       "skills": {
-        "slack": {
-          "integrity": "sha256-57f471158cab325680ccbdf629079f04e6098ad1191b4c907166ecad5afc5fe9"
+        "webmcp-gen": {
+          "integrity": "sha256-44bcde272e3afbea5bcee923565e7b5adb4f5b467a36e0ab7d80aae38f8c23ec"
         },
         "modern-web-guidance": {
           "integrity": "sha256-bc272cbce36fa39c4c4b53084c56689ee23c2d002bc6a522678326f2d885cb88"
         },
-        "protected-vercel-deployments": {
-          "integrity": "sha256-cd729c388db35537ed19506d6f2112e24539068111cb9460735959c039e19a34"
+        "dogfood": {
+          "integrity": "sha256-ea1252839e4f6bf2d4fdf94d621fc5e2a57fa3ec5407c80e9fc8344ece5a7741"
         },
-        "agentcore": {
-          "integrity": "sha256-194f6567ad83e506be6a6f29861aec0da3829ecbfdf118c25d5045aa65090108"
+        "vercel": {
+          "integrity": "sha256-d2854a294573eb8a8d87a50c482a9616342a72dab17a608767f1f21c8f7fca2d"
         },
         "vercel-sandbox": {
           "integrity": "sha256-72bf988d77ad98f4c95f150f6eb0ecc5af49c5a3551222d0ea31945f8fc7c47f"
@@ -24,17 +24,17 @@
         "derive-client": {
           "integrity": "sha256-bb3661124f864495d8619232b2d02b623114289f9624fa194c0557a76c86283e"
         },
-        "dogfood": {
-          "integrity": "sha256-ea1252839e4f6bf2d4fdf94d621fc5e2a57fa3ec5407c80e9fc8344ece5a7741"
-        },
-        "webmcp-gen": {
-          "integrity": "sha256-44bcde272e3afbea5bcee923565e7b5adb4f5b467a36e0ab7d80aae38f8c23ec"
-        },
-        "core": {
-          "integrity": "sha256-69fe276e658c5a62efb7324814456a5c0961eb59011abef07884be1efd94c8d8"
+        "agentcore": {
+          "integrity": "sha256-194f6567ad83e506be6a6f29861aec0da3829ecbfdf118c25d5045aa65090108"
         },
         "electron": {
           "integrity": "sha256-637d08276e7d16c4a4fa1a5d661cb88830ce39679053b74d0b48a7f792667f91"
+        },
+        "core": {
+          "integrity": "sha256-dd110ee2e5add71d32a144c2d95811aec40306b2ccc6ae610098d2483c3a1e58"
+        },
+        "slack": {
+          "integrity": "sha256-57f471158cab325680ccbdf629079f04e6098ad1191b4c907166ecad5afc5fe9"
         }
       },
       "skillSelection": [
