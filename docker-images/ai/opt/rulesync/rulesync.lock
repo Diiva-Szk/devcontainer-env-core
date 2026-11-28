@@ -2,12 +2,12 @@
   "lockfileVersion": 1,
   "sources": {
     "vercel-labs/agent-browser": {
-      "requestedRef": "v0.43.0",
-      "resolvedRef": "1cc19526f3641c8543d55aa6700e7c55b37ac356",
-      "resolvedAt": "2026-11-15T12:57:33.732Z",
+      "requestedRef": "v0.45.0",
+      "resolvedRef": "f0a98351ec920bd826b22c98dacf8414f04b9832",
+      "resolvedAt": "2026-11-28T01:53:43.100Z",
       "skills": {
         "agent-browser": {
-          "integrity": "sha256-1369f96acbedfa4bfc3fe3be8a51ddd852449b2a6399159c81bf4b7e2112434e"
+          "integrity": "sha256-bb10760ef4a133f773d663dcf6085af2e4b45846822e8f1794daefe01efa1821"
         }
       },
       "skillSelection": [
